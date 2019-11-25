@@ -5,6 +5,7 @@
 package xml
 
 import (
+	"bytes"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -41,6 +42,8 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 		return &CodecRequest{err: err}
 	}
 	defer r.Body.Close()
+
+	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawxml))
 
 	var request ServerRequest
 	if err := xml.Unmarshal(rawxml, &request); err != nil {

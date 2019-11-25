@@ -63,9 +63,9 @@ func xml2RPC(xmlraw string, rpc interface{}) error {
 	}
 
 	// Structures should have equal number of fields
-	if reflect.TypeOf(rpc).Elem().NumField() != len(ret.Params) {
-		return FaultWrongArgumentsNumber
-	}
+	//if reflect.TypeOf(rpc).Elem().NumField() != len(ret.Params) {
+	//	return FaultWrongArgumentsNumber
+	//}
 
 	// Now, convert temporal structure into the
 	// passed rpc variable, according to it's structure
@@ -75,6 +75,42 @@ func xml2RPC(xmlraw string, rpc interface{}) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func xml2RPC_(xmlraw string, rpc interface{}) error {
+	// Unmarshal raw XML into the temporal structure
+	var ret response
+	decoder := xml.NewDecoder(bytes.NewReader([]byte(xmlraw)))
+	decoder.CharsetReader = charset.NewReader
+	err := decoder.Decode(&ret)
+	if err != nil {
+		return FaultDecode
+	}
+
+	if !ret.Fault.IsEmpty() {
+		return getFaultResponse(ret.Fault)
+	}
+
+	// Structures should have equal number of fields
+	//if reflect.TypeOf(rpc).Elem().NumField() != len(ret.Params) {
+	//	return FaultWrongArgumentsNumber
+	//}
+
+	// Now, convert temporal structure into the
+	// passed rpc variable, according to it's structure
+
+	for i, param := range ret.Params {
+		field := reflect.ValueOf(rpc).Elem().Field(i)
+
+		val, err := value2Field_(param.Value)
+
+		if err != nil {
+			return err
+		}
+		field.Set(reflect.ValueOf(val))
 	}
 
 	return nil
@@ -163,18 +199,69 @@ func value2Field(value value, field *reflect.Value) error {
 	}
 
 	if val != nil {
-		if reflect.TypeOf(val) != reflect.TypeOf(field.Interface()) {
+		/*if reflect.TypeOf(val) != reflect.TypeOf(field.Interface()) {
 			fault := FaultInvalidParams
 			fault.String += fmt.Sprintf(": fields type mismatch: %s != %s",
 				reflect.TypeOf(val),
 				reflect.TypeOf(field.Interface()))
 			return fault
-		}
+		}*/
 
 		field.Set(reflect.ValueOf(val))
 	}
 
 	return err
+}
+
+func value2Field_(value value) (interface{}, error) {
+	var (
+		err error
+		val interface{}
+	)
+
+	switch {
+	case value.Int != "":
+		val, _ = strconv.Atoi(value.Int)
+	case value.Int4 != "":
+		val, _ = strconv.Atoi(value.Int4)
+	case value.Double != "":
+		val, _ = strconv.ParseFloat(value.Double, 64)
+	case value.String != "":
+		val = value.String
+	case value.Boolean != "":
+		val = xml2Bool(value.Boolean)
+	case value.DateTime != "":
+		val, err = xml2DateTime(value.DateTime)
+	case value.Base64 != "":
+		val, err = xml2Base64(value.Base64)
+	case len(value.Struct) != 0:
+		s := value.Struct
+		m := make(map[string]interface{})
+		for i := 0; i < len(s); i++ {
+			// Uppercase first letter for field name to deal with
+			// methods in lowercase, which cannot be used
+			field_name := uppercaseFirst(s[i].Name)
+			m[field_name], _ = value2Field_(s[i].Value)
+		}
+		val = m
+	case len(value.Array) != 0:
+		a := value.Array
+		slice := make([]interface{}, len(a))
+		for i := 0; i < len(a); i++ {
+			slice[i], _ = value2Field_(a[i])
+		}
+		val = slice
+	case len(value.Array) == 0:
+		val = val
+
+	default:
+		// value field is default to string, see http://en.wikipedia.org/wiki/XML-RPC#Data_types
+		// also can be <nil/>
+		if value.Raw != "<nil/>" {
+			val = value.Raw
+		}
+	}
+	return val, err
 }
 
 func xml2Bool(value string) bool {

@@ -24,3 +24,13 @@ func DecodeClientResponse(r io.Reader, reply interface{}) error {
 	}
 	return xml2RPC(string(rawxml), reply)
 }
+
+// DecodeClientResponse decodes the response body of a client request into
+// the interface reply.
+func DecodeClientResponse_(r io.Reader, reply interface{}) error {
+	rawxml, err := ioutil.ReadAll(r)
+	if err != nil {
+		return FaultSystemError
+	}
+	return xml2RPC_(string(rawxml), reply)
+}

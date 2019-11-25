@@ -33,12 +33,22 @@ func rpcResponse2XML(rpc interface{}) (string, error) {
 func rpcParams2XML(rpc interface{}) (string, error) {
 	var err error
 	buffer := "<params>"
-	for i := 0; i < reflect.ValueOf(rpc).Elem().NumField(); i++ {
-		var xml string
-		buffer += "<param>"
-		xml, err = rpc2XML(reflect.ValueOf(rpc).Elem().Field(i).Interface())
-		buffer += xml
-		buffer += "</param>"
+	value := reflect.ValueOf(rpc).Elem()
+	if value.Kind() == reflect.Slice {
+		for i := 0; i < value.Len(); i++ {
+			buffer += "<param>"
+			item_xml, _ := rpc2XML(value.Index(i).Interface())
+			buffer += item_xml
+			buffer += "</param>"
+		}
+	} else {
+		for i := 0; i < reflect.ValueOf(rpc).Elem().NumField(); i++ {
+			var xml string
+			buffer += "<param>"
+			xml, err = rpc2XML(reflect.ValueOf(rpc).Elem().Field(i).Interface())
+			buffer += xml
+			buffer += "</param>"
+		}
 	}
 	buffer += "</params>"
 	return buffer, err
@@ -61,6 +71,8 @@ func rpc2XML(value interface{}) (string, error) {
 		} else {
 			out += time2XML(value.(time.Time))
 		}
+	case reflect.Map:
+		out += map2XML(value)
 	case reflect.Slice, reflect.Array:
 		// FIXME: is it the best way to recognize '[]byte'?
 		if reflect.TypeOf(value).String() != "[]uint8" {
@@ -93,6 +105,18 @@ func string2XML(value string) string {
 	value = strings.Replace(value, "<", "&lt;", -1)
 	value = strings.Replace(value, ">", "&gt;", -1)
 	return fmt.Sprintf("<string>%s</string>", value)
+}
+
+func map2XML(value interface{}) (out string) {
+	out += "<struct>"
+	tempMap := reflect.ValueOf(value)
+	for _, key := range tempMap.MapKeys() {
+		field_value, _ := rpc2XML(tempMap.MapIndex(key).Interface())
+		field_name := fmt.Sprintf("<name>%s</name>", key)
+		out += fmt.Sprintf("<member>%s%s</member>", field_name, field_value)
+	}
+	out += "</struct>"
+	return
 }
 
 func struct2XML(value interface{}) (out string) {
