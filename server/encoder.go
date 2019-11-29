@@ -1,4 +1,4 @@
-package serverencoder
+package server
 
 import (
 	"reflect"
