@@ -4,9 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/serverencoder"
 	"github.com/gorilla/rpc"
-	"github.com/kolo/xmlrpc"
 )
 
 type Auth struct{}
@@ -33,7 +33,7 @@ type DefaultCallParams struct {
 func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallParams, reply *struct{ Data map[string]interface{} }) error {
 	//TODO: check the hubToken
 
-	endpoints := []string{"http://192.168.122.76/rpc/api"}
+	endpoints := []string{"http://192.168.122.76/rpc/api", "http://192.168.122.2/rpc/api"}
 
 	method, _ := serverencoder.NewCodec().NewRequest(r).Method()
 
@@ -42,7 +42,7 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallParams,
 	for i, url := range endpoints {
 		response, err := executeXMLRPCCall(url, method, args.Elems[i])
 		if err != nil {
-			log.Fatal(err)
+			log.Println("Call error: %v", err)
 		}
 		responses[url] = response
 		log.Printf("Response: %s\n", response)
@@ -52,16 +52,14 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallParams,
 }
 
 func executeXMLRPCCall(url string, method string, args []interface{}) (reply interface{}, err error) {
-	client, err := xmlrpc.NewClient(url, nil)
+	client, err := client.GetClientWithTimeout(url, 2, 5)
 	if err != nil {
 		return
 	}
 	defer client.Close()
 
 	err = client.Call(method, args, &reply)
-	if err != nil {
-		log.Println("Call error: %v", err)
-	}
+
 	return reply, err
 }
 
