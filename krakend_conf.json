@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "timeout": "3000s",
+  "output_encoding": "xml",
+  "port": 8000,
+  "read_timeout": "3000s",
+  "write_timeout": "3000s",
+  "idle_timeout": "3000s",
+  "read_header_timeout": "3000s",
+  "disable_rest": true,
+  "name": "Krakend_test",
+  "host": ["http://localhost:8000"],
+  "endpoints": [{
+		"endpoint": "/RPC2",
+		"method": "POST",
+		"backend": [{
+				"url_pattern": "/rpc/api",
+				"host": ["http://192.168.122.76"],
+				"encoding": "xml"
+			}
+		],
+		"encoding": "xml",
+		"concurrent_calls": 1	
+	}
+  ],
+  "idle_connection_timeout": "3000s",
+  "response_header_timeout": "3000s",
+  "expect_continue_timeout": "3000s",
+  "dialer_timeout": "3000s",
+  "dialer_fallback_delay": "3000s",
+  "dialer_keep_alive": "3000s"
+}

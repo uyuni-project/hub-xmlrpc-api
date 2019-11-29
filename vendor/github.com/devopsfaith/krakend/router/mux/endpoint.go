@@ -42,6 +42,8 @@ func CustomEndpointHandlerWithHTTPError(rb RequestBuilder, errF router.ToHTTPErr
 		method := strings.ToTitle(configuration.Method)
 
 		return func(w http.ResponseWriter, r *http.Request) {
+			r.Header.Set("Content-Type", "text/xml")
+
 			w.Header().Set(core.KrakendHeaderName, core.KrakendHeaderValue)
 			if r.Method != method {
 				w.Header().Set(router.CompleteResponseHeaderName, router.HeaderIncompleteResponseValue)

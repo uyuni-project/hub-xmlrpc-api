@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"sync"
 
+	"encoding/xml"
+
 	"github.com/devopsfaith/krakend/config"
 	"github.com/devopsfaith/krakend/encoding"
 	"github.com/devopsfaith/krakend/proxy"
@@ -23,6 +25,7 @@ var (
 	renderRegister = map[string]Render{
 		encoding.STRING: stringRender,
 		encoding.JSON:   jsonRender,
+		encoding.XML:    xmlRender,
 		encoding.NOOP:   noopRender,
 	}
 )
@@ -58,6 +61,21 @@ func getWithFallback(key string, fallback Render) Render {
 }
 
 var emptyResponse = []byte("{}")
+
+func xmlRender(w http.ResponseWriter, response *proxy.Response) {
+	w.Header().Set("Content-Type", "text/xml")
+	if response == nil {
+		w.Write(emptyResponse)
+		return
+	}
+
+	js, err := xml.Marshal(response.Data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Write(js)
+}
 
 func jsonRender(w http.ResponseWriter, response *proxy.Response) {
 	w.Header().Set("Content-Type", "application/json")

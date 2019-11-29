@@ -2,6 +2,7 @@ package encoding
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"io"
 )
 
@@ -28,6 +29,32 @@ func JSONCollectionDecoder(r io.Reader, v *map[string]interface{}) error {
 	var collection []interface{}
 	d := json.NewDecoder(r)
 	d.UseNumber()
+	if err := d.Decode(&collection); err != nil {
+		return err
+	}
+	*(v) = map[string]interface{}{"collection": collection}
+	return nil
+}
+
+const XML = "xml"
+
+func NewXMLDecoder(isCollection bool) func(io.Reader, *map[string]interface{}) error {
+	if isCollection {
+		return XMLCollectionDecoder
+	}
+	return XMLDecoder
+}
+
+func XMLDecoder(r io.Reader, v *map[string]interface{}) error {
+	d := xml.NewDecoder(r)
+	//d.UseNumber()
+	return d.Decode(v)
+}
+
+func XMLCollectionDecoder(r io.Reader, v *map[string]interface{}) error {
+	var collection []interface{}
+	d := xml.NewDecoder(r)
+	//d.UseNumber()
 	if err := d.Decode(&collection); err != nil {
 		return err
 	}

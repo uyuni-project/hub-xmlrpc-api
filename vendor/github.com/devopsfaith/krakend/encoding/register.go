@@ -38,6 +38,7 @@ var (
 	decoders        = initDecoderRegister()
 	defaultDecoders = map[string]func(bool) func(io.Reader, *map[string]interface{}) error{
 		JSON:   NewJSONDecoder,
+		XML:    NewXMLDecoder,
 		STRING: NewStringDecoder,
 		NOOP:   noOpDecoderFactory,
 	}
