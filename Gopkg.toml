@@ -33,6 +33,10 @@
   name = "github.com/gorilla/rpc"
   version = "1.2.0"
 
+[[constraint]]
+  branch = "master"
+  name = "github.com/kolo/xmlrpc"
+
 [prune]
   go-tests = true
   unused-packages = true

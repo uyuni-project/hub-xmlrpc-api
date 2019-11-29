@@ -19,6 +19,14 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:e7b5d4168e986a38630a5cd290bb7a9097f0d8dcb5092a8b38f4763702e8ff0c"
+  name = "github.com/kolo/xmlrpc"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "56d5ec7c422e68702b2cd04a3c2b3849d645f962"
+
+[[projects]]
+  branch = "master"
   digest = "1:edf8d4440761882454cbed705a8c200f210f60c807952587fbea372f62b37e14"
   name = "github.com/rogpeppe/go-charset"
   packages = [
@@ -34,6 +42,7 @@
   input-imports = [
     "github.com/divan/gorilla-xmlrpc/xml",
     "github.com/gorilla/rpc",
+    "github.com/kolo/xmlrpc",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
