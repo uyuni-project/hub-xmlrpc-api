@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
 	"github.com/gorilla/rpc"
@@ -37,17 +38,22 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallParams,
 	method, _ := NewCodec().NewRequest(r).Method()
 
 	responses := make(map[string]interface{})
+	//Execute the calls concurrently but wait before we get the response from all the servers.
+	var wg sync.WaitGroup
+	wg.Add(len(endpoints))
 
 	for i, url := range endpoints {
-		//TODO: execute this in ||
-		go executeXMLRPCCall(url, method, args.Elems[i])
-		response, err := executeXMLRPCCall(url, method, args.Elems[i])
-		if err != nil {
-			log.Println("Call error: %v", err)
-		}
-		responses[url] = response
-		log.Printf("Response: %s\n", response)
+		go func(url string, args []interface{}) {
+			defer wg.Done()
+			response, err := executeXMLRPCCall(url, method, args)
+			if err != nil {
+				log.Println("Call error: %v", err)
+			}
+			responses[url] = response
+			log.Printf("Response: %s\n", response)
+		}(url, args.Elems[i])
 	}
+	wg.Wait()
 	reply.Data = responses
 	return nil
 }
