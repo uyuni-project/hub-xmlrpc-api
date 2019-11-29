@@ -2,38 +2,60 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:3a81d8bd9bc729d1421c651f151299dabb0872934a472c1a2df00f206437a595"
-  name = "github.com/divan/gorilla-xmlrpc"
-  packages = ["xml"]
+  digest = "1:0cf8c456d25c99c122693adbc606ab0b1d4f27d184952d4d8ce633697abc7972"
+  name = "github.com/devopsfaith/flatmap"
+  packages = ["tree"]
   pruneopts = "UT"
-  revision = "f0686da74fda77e81e97600c22916f979cf57330"
+  revision = "90b768d6668b9f6073a702264372fbca8cb60ace"
+  version = "1.0"
 
 [[projects]]
-  digest = "1:f925e333cd264e456d45428cb2e7d6b37dca32f1228864e1a7a34bfbae16020a"
-  name = "github.com/gorilla/rpc"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "bffcfa752ad4e523cc8f720afeb5b985ed41ae16"
-  version = "v1.2.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:edf8d4440761882454cbed705a8c200f210f60c807952587fbea372f62b37e14"
-  name = "github.com/rogpeppe/go-charset"
+  digest = "1:f967c08fa009233bda99b5d6b6f3cc4ddb564de862fb031bcf163fa505331265"
+  name = "github.com/devopsfaith/krakend"
   packages = [
-    "charset",
-    "data",
+    "config",
+    "core",
+    "encoding",
+    "logging",
+    "proxy",
+    "register",
+    "register/internal",
+    "router",
+    "router/gorilla",
+    "router/mux",
+    "sd",
+    "transport/http/client",
+    "transport/http/server",
   ]
   pruneopts = "UT"
-  revision = "0dc95cdf6f31678708e098003b9ed4286a29a16d"
+  revision = "696db14166d26ffe0bddcb9da55b82e62f07c4a1"
+  version = "1.1.0"
+
+[[projects]]
+  digest = "1:cbec35fe4d5a4fba369a656a8cd65e244ea2c743007d8f6c1ccb132acf9d1296"
+  name = "github.com/gorilla/mux"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "00bdffe0f3c77e27d2cf6f5c70232a2d3e4d9c15"
+  version = "v1.7.3"
+
+[[projects]]
+  digest = "1:b779c126b31f65b90e1a8ef9db2937414cb9c6bfae00dd3cf4707c2ee4f71fb4"
+  name = "github.com/valyala/fastrand"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "de27aeef8e28dd2bbf18ac43a0277f0f119ad14c"
+  version = "v1.0.0"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/divan/gorilla-xmlrpc/xml",
-    "github.com/gorilla/rpc",
+    "github.com/devopsfaith/krakend/config",
+    "github.com/devopsfaith/krakend/logging",
+    "github.com/devopsfaith/krakend/proxy",
+    "github.com/devopsfaith/krakend/router/gorilla",
+    "github.com/devopsfaith/krakend/router/mux",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

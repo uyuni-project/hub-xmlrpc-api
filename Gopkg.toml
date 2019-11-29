@@ -26,12 +26,8 @@
 
 
 [[constraint]]
-  branch = "master"
-  name = "github.com/divan/gorilla-xmlrpc"
-
-[[constraint]]
-  name = "github.com/gorilla/rpc"
-  version = "1.2.0"
+  name = "github.com/devopsfaith/krakend"
+  version = "1.1.0"
 
 [prune]
   go-tests = true
