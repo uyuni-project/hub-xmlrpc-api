@@ -36,6 +36,49 @@ type decoder struct {
 	*xml.Decoder
 }
 
+func UnmarshalToStructWrapper(data []byte, v interface{}) (err error) {
+	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
+
+	if CharsetReader != nil {
+		dec.CharsetReader = CharsetReader
+	}
+
+	i := 0
+	var tok xml.Token
+	for {
+		if tok, err = dec.Token(); err != nil {
+			return err
+		}
+
+		if t, ok := tok.(xml.StartElement); ok {
+			if t.Name.Local == "value" {
+				val := reflect.ValueOf(v)
+				if val.Kind() != reflect.Ptr {
+					return errors.New("non-pointer value passed to unmarshal")
+				}
+				field := val.Elem().Field(i)
+				i++
+				if err = dec.decodeValue(field); err != nil {
+					return err
+				}
+				continue
+			}
+		} else if t, ok := tok.(xml.EndElement); ok {
+			if t.Name.Local == "methodCall" {
+				break
+			}
+		}
+	}
+
+	// read until end of document
+	err = dec.Skip()
+	if err != nil && err != io.EOF {
+		return err
+	}
+
+	return nil
+}
+
 func unmarshal(data []byte, v interface{}) (err error) {
 	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
