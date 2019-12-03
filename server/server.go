@@ -14,74 +14,93 @@ var conf = config.New()
 
 type Auth struct{}
 
-//TODO: session
+//TODO: remove when Abid's PR is merged
 var hubSessionKey = ""
+
+//TODO: session
 var username = ""
 var pass = ""
-var userServerUrlByKey = make(map[string]interface{})
+var userServerUrlByKey = make(map[string]string)
 
-var serverEndpoints = []string{"http://192.168.122.76/rpc/api", "http://192.168.122.2/rpc/api"}
+//TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
+var serverUrlByServerId = map[int64]string{1000010000: "http://192.168.122.203/rpc/api"}
 
 func isHubSessionValid(in string) bool {
-	//TODO:
+	//TODO: we should check this on session or through the SUMA api
 	return in == hubSessionKey
 }
 
 func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data map[string]interface{} }) error {
 	sessionkeys := make(map[string]interface{})
+
+	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{args.Username, args.Password})
+	if err != nil {
+		log.Println("Login error: %v", err)
+	}
+	//TODO: remove when Abids PR is merged
+	hubSessionKey = response.(string)
+
+	sessionkeys["hubSessionKey"] = hubSessionKey
+
 	if conf.RelayMode {
 		//save credentials in session
 		username = args.Username
 		pass = args.Password
 
 		if conf.AutoConnectMode {
-			serverKeys, err := loginIntoUserSystems(username, pass)
+			serverSessionKeys, err := loginIntoUserSystems(hubSessionKey, username, pass)
 			if err != nil {
 				log.Println("Call error: %v", err)
 			}
-			sessionkeys["serverKeys"] = serverKeys
+			sessionkeys["serverSessionKeys"] = serverSessionKeys
 		}
 	}
-	response, _ := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{args.Username, args.Password})
-	//save in session
-	hubSessionKey = response.(string)
-	//update respnse
-	sessionkeys["hubSessionKey"] = response.(string)
 	reply.Data = sessionkeys
 	return nil
 }
 
-func loginIntoUserSystems(username, pass string) (map[string]interface{}, error) {
-	//get user servers
-	_, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{username, pass})
+func loginIntoUserSystems(hubSessionKey, username, password string) (map[string]interface{}, error) {
+	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
 		return nil, err
 	}
+	userSystemArr := userSystems.([]interface{})
+	serverArgsByURL := make(map[string][]interface{})
 
-	//TODO:
-	serverCredentials := make([][]interface{}, 1)
+	for _, userSystem := range userSystemArr {
+		//TODO: we should get the server URL from the 'userSystem'
+		systemID := userSystem.(map[string]interface{})["id"].(int64)
+		url := serverUrlByServerId[systemID]
+		serverArgsByURL[url] = []interface{}{username, password}
+	}
+	loginResponses := multicastCall("auth.login", serverArgsByURL)
 
-	serverCredentials[0] = make([]interface{}, 2)
-	serverCredentials[0][0] = struct{ Username, Password string }{"admin", "admin"}
-	serverCredentials[0][1] = struct{ Username, Password string }{"admin", "admin"}
-
-	loginResponses := multicastCall("auth.login", serverCredentials)
-
+	//save in session
 	for url, sessionKey := range loginResponses {
-		//save in session
 		userServerUrlByKey[sessionKey.(string)] = url
 	}
 	return loginResponses, nil
 }
 
-type DefaultService struct{}
+func loginIntoSystem(serverID int64, username, password string) (string, error) {
+	serverURL := getServerURLFromServerId(serverID)
+	response, err := executeXMLRPCCall(serverURL, "auth.login", []interface{}{username, password})
 
-type DefaultCallParams struct {
-	HubKey     string
-	ServerArgs [][]interface{}
+	if err != nil {
+		return "", err
+	}
+	//save in session
+	userServerUrlByKey[response.(string)] = serverURL
+	return response.(string), nil
 }
 
-func (h *Auth) AttachToServer(r *http.Request, args *struct{ HubSessionKey, ServerURL, Username, Password string }, reply *struct{ Data string }) error {
+type AttachToServerArgs struct {
+	HubSessionKey      string
+	ServerID           int64
+	Username, Password string
+}
+
+func (h *Auth) AttachToServer(r *http.Request, args *AttachToServerArgs, reply *struct{ Data string }) error {
 	if isHubSessionValid(args.HubSessionKey) {
 		serverUsername := args.Username
 		serverPass := args.Password
@@ -90,34 +109,51 @@ func (h *Auth) AttachToServer(r *http.Request, args *struct{ HubSessionKey, Serv
 			serverUsername = username
 			serverPass = pass
 		}
-		response, _ := executeXMLRPCCall(args.ServerURL, "auth.login", []interface{}{serverUsername, serverPass})
-		reply.Data = response.(string)
+		reply.Data, _ = loginIntoSystem(args.ServerID, serverUsername, serverPass)
 	} else {
 		log.Println("Hub session invalid error")
 	}
 	return nil
 }
 
-func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallParams, reply *struct{ Data map[string]interface{} }) error {
+func getServerURLFromServerId(serverID int64) string {
+	//TODO:
+	return serverUrlByServerId[serverID]
+}
+
+type DefaultService struct{}
+
+type DefaultCallArgs struct {
+	HubKey     string
+	ServerArgs [][]interface{}
+}
+
+func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data map[string]interface{} }) error {
 	if isHubSessionValid(args.HubKey) {
 		method, _ := NewCodec().NewRequest(r).Method()
-		reply.Data = multicastCall(method, args.ServerArgs)
+
+		serverArgsByURL := make(map[string][]interface{})
+
+		for _, args := range args.ServerArgs {
+			//TODO: support methods that don't need sessionkey
+			url := userServerUrlByKey[args[0].(string)]
+			serverArgsByURL[url] = args
+		}
+		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {
 		log.Println("Hub session invalid error")
 	}
 	return nil
 }
 
-func multicastCall(method string, serverArgs [][]interface{}) map[string]interface{} {
+func multicastCall(method string, serverArgsByURL map[string][]interface{}) map[string]interface{} {
 	responses := make(map[string]interface{})
-	//Execute the calls concurrently but wait before we get the response from all the servers.
+	//Execute the calls concurrently and wait until we get the response from all the servers.
 	var wg sync.WaitGroup
 
-	wg.Add(len(serverArgs))
+	wg.Add(len(serverArgsByURL))
 
-	for _, args := range serverArgs {
-		//TODO: check for conversion errors
-		url := userServerUrlByKey[args[0].(string)].(string)
+	for url, args := range serverArgsByURL {
 		go func(url string, args []interface{}) {
 			defer wg.Done()
 			response, err := executeXMLRPCCall(url, method, args)
