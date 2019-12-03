@@ -6,22 +6,19 @@ import (
 	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
+	"github.com/chiaradiamarcelo/hub_xmlrpc_api/config"
 	"github.com/gorilla/rpc"
 )
 
-type Auth struct{}
+var conf = config.New()
 
-const HUB_SUMA_API_URL = "http://192.168.122.76/rpc/api"
+type Auth struct{}
 
 //TODO: session
 var hubSessionKey = ""
 var username = ""
 var pass = ""
 var userServerUrlByKey = make(map[string]interface{})
-
-//FLAGS
-var autoRelayMode = true
-var autoConnectMode = true
 
 var serverEndpoints = []string{"http://192.168.122.76/rpc/api", "http://192.168.122.2/rpc/api"}
 
@@ -32,12 +29,12 @@ func isHubSessionValid(in string) bool {
 
 func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data map[string]interface{} }) error {
 	sessionkeys := make(map[string]interface{})
-	if autoRelayMode {
+	if conf.RelayMode {
 		//save credentials in session
 		username = args.Username
 		pass = args.Password
 
-		if autoConnectMode {
+		if conf.AutoConnectMode {
 			serverKeys, err := loginIntoUserSystems(username, pass)
 			if err != nil {
 				log.Println("Call error: %v", err)
@@ -45,7 +42,7 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 			sessionkeys["serverKeys"] = serverKeys
 		}
 	}
-	response, _ := executeXMLRPCCall(HUB_SUMA_API_URL, "auth.login", []interface{}{args.Username, args.Password})
+	response, _ := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{args.Username, args.Password})
 	//save in session
 	hubSessionKey = response.(string)
 	//update respnse
@@ -56,7 +53,7 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 
 func loginIntoUserSystems(username, pass string) (map[string]interface{}, error) {
 	//get user servers
-	_, err := executeXMLRPCCall(HUB_SUMA_API_URL, "system.listUserSystems", []interface{}{username, pass})
+	_, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{username, pass})
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +86,7 @@ func (h *Auth) AttachToServer(r *http.Request, args *struct{ HubSessionKey, Serv
 		serverUsername := args.Username
 		serverPass := args.Password
 
-		if autoRelayMode {
+		if conf.RelayMode {
 			serverUsername = username
 			serverPass = pass
 		}

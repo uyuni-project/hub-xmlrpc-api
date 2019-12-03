@@ -1,0 +1,8 @@
+{
+    "type": "json",
+     "hub": {
+        "manager_api_url": "http://locahost/rpc/api"
+     },
+    "relay_mode": false,
+    "auto_connect_mode": false 
+}
