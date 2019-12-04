@@ -1,8 +1,11 @@
 {
     "type": "json",
      "hub": {
-        "manager_api_url": "http://locahost/rpc/api"
+        "manager_api_url": "http://192.168.122.136/rpc/api"
      },
-    "relay_mode": false,
-    "auto_connect_mode": false 
+     "endpoints": {
+        "1000010000": "http://192.168.122.203/rpc/api"
+     },
+    "relay_mode": true,
+    "auto_connect_mode": true 
 }
