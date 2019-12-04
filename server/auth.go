@@ -66,20 +66,19 @@ func loginIntoUserSystems(hubSessionKey, username, password string) ([]map[strin
 		return nil, err
 	}
 	userSystemArr := userSystems.([]interface{})
-	out := []map[string]interface{}{}
+	out := make([]map[string]interface{}, len(userSystemArr))
 
 	var wg sync.WaitGroup
-
 	wg.Add(len(userSystemArr))
-	for _, userSystem := range userSystemArr {
-		go func(userSystem interface{}) {
+	for i, userSystem := range userSystemArr {
+		go func(i int, userSystem interface{}) {
 			defer wg.Done()
 			//TODO: we should get the server URL from the 'userSystem'
 			serverID := userSystem.(map[string]interface{})["id"].(int64)
 			url := conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
 			sessionKey, _ := loginIntoSystem(serverID, url, username, password)
-			out = append(out, map[string]interface{}{"url": url, "sessionKey": sessionKey, "serverID": serverID})
-		}(userSystem)
+			out[i] = map[string]interface{}{"url": url, "sessionKey": sessionKey, "serverID": serverID}
+		}(i, userSystem)
 	}
 	wg.Wait()
 	return out, nil
@@ -93,4 +92,9 @@ func loginIntoSystem(serverID int64, serverURL, username, password string) (stri
 	//save in session
 	apiSession.AddServerURLforServerKey(serverURL, response.(string))
 	return response.(string), nil
+}
+
+func getServerURLFromServerID(serverID int64) string {
+	//TODO:
+	return conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
 }

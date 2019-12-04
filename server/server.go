@@ -3,7 +3,6 @@ package server
 import (
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
@@ -20,11 +19,6 @@ func isHubSessionValid(in string) bool {
 	return in == apiSession.GetHubSessionKey()
 }
 
-func getServerURLFromServerID(serverID int64) string {
-	//TODO:
-	return conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
-}
-
 type DefaultService struct{}
 
 type DefaultCallArgs struct {
@@ -32,7 +26,7 @@ type DefaultCallArgs struct {
 	ServerArgs [][]interface{}
 }
 
-func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data map[string]interface{} }) error {
+func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data []multicastResponse }) error {
 	if isHubSessionValid(args.HubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		if err != nil {
@@ -52,23 +46,28 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, r
 	return nil
 }
 
-func multicastCall(method string, serverArgsByURL map[string][]interface{}) map[string]interface{} {
-	responses := make(map[string]interface{})
-	//Execute the calls concurrently and wait until we get the response from all the servers.
+type multicastResponse struct {
+	URL      string
+	Response interface{}
+}
+
+func multicastCall(method string, serverArgsByURL map[string][]interface{}) []multicastResponse {
+	responses := make([]multicastResponse, len(serverArgsByURL))
+
 	var wg sync.WaitGroup
-
 	wg.Add(len(serverArgsByURL))
-
+	i := 0
 	for url, args := range serverArgsByURL {
-		go func(url string, args []interface{}) {
+		go func(url string, args []interface{}, i int) {
 			defer wg.Done()
 			response, err := executeXMLRPCCall(url, method, args)
 			if err != nil {
 				log.Println("Call error: %v", err)
 			}
-			responses[url] = response
+			responses[i] = multicastResponse{url, response}
 			log.Printf("Response: %s\n", response)
-		}(url, args)
+		}(url, args, i)
+		i++
 	}
 	wg.Wait()
 	return responses
@@ -80,9 +79,7 @@ func executeXMLRPCCall(url string, method string, args []interface{}) (reply int
 		return
 	}
 	defer client.Close()
-
 	err = client.Call(method, args, &reply)
-
 	return reply, err
 }
 
