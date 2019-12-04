@@ -34,7 +34,10 @@ type DefaultCallArgs struct {
 
 func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data map[string]interface{} }) error {
 	if isHubSessionValid(args.HubKey) {
-		method, _ := NewCodec().NewRequest(r).Method()
+		method, err := NewCodec().NewRequest(r).Method()
+		if err != nil {
+			log.Println("Call error: %v", err)
+		}
 
 		serverArgsByURL := make(map[string][]interface{})
 

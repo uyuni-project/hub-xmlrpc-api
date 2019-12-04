@@ -37,7 +37,7 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 	return nil
 }
 
-func loginIntoUserSystems(hubSessionKey, username, password string) (map[string]interface{}, error) {
+func loginIntoUserSystems(hubSessionKey, username, password string) ([]map[string]interface{}, error) {
 	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
 		return nil, err
@@ -54,11 +54,14 @@ func loginIntoUserSystems(hubSessionKey, username, password string) (map[string]
 	//TODO: reuse loginIntoSystem method
 	loginResponses := multicastCall("auth.login", serverArgsByURL)
 
-	//save in session
+	out := []map[string]interface{}{}
+
 	for url, sessionKey := range loginResponses {
+		//save in session
 		apiSession.AddServerURLforServerKey(url, sessionKey.(string))
+		out = append(out, map[string]interface{}{"url": url, "sessionKey": sessionKey.(string)})
 	}
-	return loginResponses, nil
+	return out, nil
 }
 
 type AttachToServerArgs struct {
