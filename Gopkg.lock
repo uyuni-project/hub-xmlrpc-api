@@ -2,12 +2,12 @@
 
 
 [[projects]]
-  branch = "master"
-  digest = "1:3a81d8bd9bc729d1421c651f151299dabb0872934a472c1a2df00f206437a595"
-  name = "github.com/divan/gorilla-xmlrpc"
-  packages = ["xml"]
+  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
+  name = "github.com/fsnotify/fsnotify"
+  packages = ["."]
   pruneopts = "UT"
-  revision = "f0686da74fda77e81e97600c22916f979cf57330"
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  version = "v1.4.7"
 
 [[projects]]
   digest = "1:f925e333cd264e456d45428cb2e7d6b37dca32f1228864e1a7a34bfbae16020a"
@@ -18,6 +18,19 @@
   version = "v1.2.0"
 
 [[projects]]
+  digest = "1:409dc59de50e0a6ba3da127a748f586e24da4b7b98db958aaae3ad692829cc7d"
+  name = "github.com/knadh/koanf"
+  packages = [
+    ".",
+    "maps",
+    "parsers/json",
+    "providers/file",
+  ]
+  pruneopts = "UT"
+  revision = "a1272d0c07ad8ab89903a1394b97f20b5e8df35c"
+  version = "v0.6.0"
+
+[[projects]]
   branch = "master"
   digest = "1:e7b5d4168e986a38630a5cd290bb7a9097f0d8dcb5092a8b38f4763702e8ff0c"
   name = "github.com/kolo/xmlrpc"
@@ -26,22 +39,29 @@
   revision = "56d5ec7c422e68702b2cd04a3c2b3849d645f962"
 
 [[projects]]
-  branch = "master"
-  digest = "1:edf8d4440761882454cbed705a8c200f210f60c807952587fbea372f62b37e14"
-  name = "github.com/rogpeppe/go-charset"
-  packages = [
-    "charset",
-    "data",
-  ]
+  digest = "1:53bc4cd4914cd7cd52139990d5170d6dc99067ae31c56530621b18b35fc30318"
+  name = "github.com/mitchellh/mapstructure"
+  packages = ["."]
   pruneopts = "UT"
-  revision = "0dc95cdf6f31678708e098003b9ed4286a29a16d"
+  revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
+  version = "v1.1.2"
+
+[[projects]]
+  branch = "master"
+  digest = "1:4da420ceda5f68e8d748aa2169d0ed44ffadb1bbd6537cf778a49563104189b8"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  pruneopts = "UT"
+  revision = "ce4227a45e2eb77e5c847278dcc6a626742e2945"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/divan/gorilla-xmlrpc/xml",
     "github.com/gorilla/rpc",
+    "github.com/knadh/koanf",
+    "github.com/knadh/koanf/parsers/json",
+    "github.com/knadh/koanf/providers/file",
     "github.com/kolo/xmlrpc",
   ]
   solver-name = "gps-cdcl"
