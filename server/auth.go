@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 )
 
 type Auth struct{}
@@ -37,33 +38,6 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 	return nil
 }
 
-func loginIntoUserSystems(hubSessionKey, username, password string) ([]map[string]interface{}, error) {
-	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
-	if err != nil {
-		return nil, err
-	}
-	userSystemArr := userSystems.([]interface{})
-	serverArgsByURL := make(map[string][]interface{})
-
-	for _, userSystem := range userSystemArr {
-		//TODO: we should get the server URL from the 'userSystem'
-		systemID := userSystem.(map[string]interface{})["id"].(int64)
-		url := conf.ServerURLByServerID[strconv.FormatInt(systemID, 10)]
-		serverArgsByURL[url] = []interface{}{username, password}
-	}
-	//TODO: reuse loginIntoSystem method
-	loginResponses := multicastCall("auth.login", serverArgsByURL)
-
-	out := []map[string]interface{}{}
-
-	for url, sessionKey := range loginResponses {
-		//save in session
-		apiSession.AddServerURLforServerKey(url, sessionKey.(string))
-		out = append(out, map[string]interface{}{"url": url, "sessionKey": sessionKey.(string)})
-	}
-	return out, nil
-}
-
 type AttachToServerArgs struct {
 	HubSessionKey      string
 	ServerID           int64
@@ -78,17 +52,41 @@ func (h *Auth) AttachToServer(r *http.Request, args *AttachToServerArgs, reply *
 		if conf.RelayMode {
 			serverUsername, serverPass = apiSession.GetUsernameAndPassword()
 		}
-		reply.Data, _ = loginIntoSystem(args.ServerID, serverUsername, serverPass)
+		serverURL := getServerURLFromServerID(args.ServerID)
+		reply.Data, _ = loginIntoSystem(args.ServerID, serverURL, serverUsername, serverPass)
 	} else {
 		log.Println("Hub session invalid error")
 	}
 	return nil
 }
 
-func loginIntoSystem(serverID int64, username, password string) (string, error) {
-	serverURL := getServerURLFromServerID(serverID)
-	response, err := executeXMLRPCCall(serverURL, "auth.login", []interface{}{username, password})
+func loginIntoUserSystems(hubSessionKey, username, password string) ([]map[string]interface{}, error) {
+	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
+	if err != nil {
+		return nil, err
+	}
+	userSystemArr := userSystems.([]interface{})
+	out := []map[string]interface{}{}
 
+	var wg sync.WaitGroup
+
+	wg.Add(len(userSystemArr))
+	for _, userSystem := range userSystemArr {
+		go func(userSystem interface{}) {
+			defer wg.Done()
+			//TODO: we should get the server URL from the 'userSystem'
+			serverID := userSystem.(map[string]interface{})["id"].(int64)
+			url := conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
+			sessionKey, _ := loginIntoSystem(serverID, url, username, password)
+			out = append(out, map[string]interface{}{"url": url, "sessionKey": sessionKey, "serverID": serverID})
+		}(userSystem)
+	}
+	wg.Wait()
+	return out, nil
+}
+
+func loginIntoSystem(serverID int64, serverURL, username, password string) (string, error) {
+	response, err := executeXMLRPCCall(serverURL, "auth.login", []interface{}{username, password})
 	if err != nil {
 		return "", err
 	}

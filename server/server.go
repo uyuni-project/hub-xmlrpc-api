@@ -42,7 +42,6 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, r
 		serverArgsByURL := make(map[string][]interface{})
 
 		for _, args := range args.ServerArgs {
-			//TODO: support methods that don't need sessionkey
 			url := apiSession.GetServerURLbyServerKey(args[0].(string))
 			serverArgsByURL[url] = args
 		}
