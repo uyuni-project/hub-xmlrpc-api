@@ -75,7 +75,7 @@ func multicastCall(method string, serverArgsByURL map[string][]interface{}) map[
 }
 
 func executeXMLRPCCall(url string, method string, args []interface{}) (reply interface{}, err error) {
-	client, err := client.GetClientWithTimeout(url, 2, 5)
+	client, err := client.GetClientWithTimeout(url, conf.ConnectTimeout, conf.ReadWriteTimeout)
 	if err != nil {
 		return
 	}
