@@ -19,11 +19,13 @@ type Config struct {
 	Hub             HubConfig
 	RelayMode       bool
 	AutoConnectMode bool
+	//TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
+	ServerURLByServerID map[string]string
 }
 
 // New returns a new Config struct
 func New() *Config {
-
+	os.Setenv("HUB_CONFIG_FILE", "/home/marcelo/go/xmlrpc_conf.conf")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
@@ -34,6 +36,8 @@ func New() *Config {
 			},
 			RelayMode:       k.Bool("relay_mode"),
 			AutoConnectMode: k.Bool("auto_connect_mode"),
+			//TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
+			ServerURLByServerID: k.StringMap("endpoints"),
 		}
 	}
 	return &Config{}

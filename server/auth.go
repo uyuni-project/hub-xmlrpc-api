@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type Auth struct{}
@@ -47,9 +48,10 @@ func loginIntoUserSystems(hubSessionKey, username, password string) (map[string]
 	for _, userSystem := range userSystemArr {
 		//TODO: we should get the server URL from the 'userSystem'
 		systemID := userSystem.(map[string]interface{})["id"].(int64)
-		url := serverURLByServerID[systemID]
+		url := conf.ServerURLByServerID[strconv.FormatInt(systemID, 10)]
 		serverArgsByURL[url] = []interface{}{username, password}
 	}
+	//TODO: reuse loginIntoSystem method
 	loginResponses := multicastCall("auth.login", serverArgsByURL)
 
 	//save in session

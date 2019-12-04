@@ -3,6 +3,7 @@ package server
 import (
 	"log"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
@@ -14,17 +15,14 @@ import (
 var conf = config.New()
 var apiSession = session.New()
 
-//TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
-var serverURLByServerID = map[int64]string{1000010000: "http://192.168.122.203/rpc/api"}
-
 func isHubSessionValid(in string) bool {
-	//TODO: we should check this on session or through the SUMA api
+	//TODO: we should check through the SUMA api
 	return in == apiSession.GetHubSessionKey()
 }
 
 func getServerURLFromServerID(serverID int64) string {
 	//TODO:
-	return serverURLByServerID[serverID]
+	return conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
 }
 
 type DefaultService struct{}
