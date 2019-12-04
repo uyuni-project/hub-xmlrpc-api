@@ -7,118 +7,24 @@ import (
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/config"
+	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
 	"github.com/gorilla/rpc"
 )
 
 var conf = config.New()
-
-type Auth struct{}
-
-//TODO: remove when Abid's PR is merged
-var hubSessionKey = ""
-
-//TODO: session
-var username = ""
-var pass = ""
-var userServerUrlByKey = make(map[string]string)
+var apiSession = session.New()
 
 //TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
-var serverUrlByServerId = map[int64]string{1000010000: "http://192.168.122.203/rpc/api"}
+var serverURLByServerID = map[int64]string{1000010000: "http://192.168.122.203/rpc/api"}
 
 func isHubSessionValid(in string) bool {
 	//TODO: we should check this on session or through the SUMA api
-	return in == hubSessionKey
+	return in == apiSession.GetHubSessionKey()
 }
 
-func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data map[string]interface{} }) error {
-	sessionkeys := make(map[string]interface{})
-
-	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{args.Username, args.Password})
-	if err != nil {
-		log.Println("Login error: %v", err)
-	}
-	//TODO: remove when Abids PR is merged
-	hubSessionKey = response.(string)
-
-	sessionkeys["hubSessionKey"] = hubSessionKey
-
-	if conf.RelayMode {
-		//save credentials in session
-		username = args.Username
-		pass = args.Password
-
-		if conf.AutoConnectMode {
-			serverSessionKeys, err := loginIntoUserSystems(hubSessionKey, username, pass)
-			if err != nil {
-				log.Println("Call error: %v", err)
-			}
-			sessionkeys["serverSessionKeys"] = serverSessionKeys
-		}
-	}
-	reply.Data = sessionkeys
-	return nil
-}
-
-func loginIntoUserSystems(hubSessionKey, username, password string) (map[string]interface{}, error) {
-	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
-	if err != nil {
-		return nil, err
-	}
-	userSystemArr := userSystems.([]interface{})
-	serverArgsByURL := make(map[string][]interface{})
-
-	for _, userSystem := range userSystemArr {
-		//TODO: we should get the server URL from the 'userSystem'
-		systemID := userSystem.(map[string]interface{})["id"].(int64)
-		url := serverUrlByServerId[systemID]
-		serverArgsByURL[url] = []interface{}{username, password}
-	}
-	loginResponses := multicastCall("auth.login", serverArgsByURL)
-
-	//save in session
-	for url, sessionKey := range loginResponses {
-		userServerUrlByKey[sessionKey.(string)] = url
-	}
-	return loginResponses, nil
-}
-
-func loginIntoSystem(serverID int64, username, password string) (string, error) {
-	serverURL := getServerURLFromServerId(serverID)
-	response, err := executeXMLRPCCall(serverURL, "auth.login", []interface{}{username, password})
-
-	if err != nil {
-		return "", err
-	}
-	//save in session
-	userServerUrlByKey[response.(string)] = serverURL
-	return response.(string), nil
-}
-
-type AttachToServerArgs struct {
-	HubSessionKey      string
-	ServerID           int64
-	Username, Password string
-}
-
-func (h *Auth) AttachToServer(r *http.Request, args *AttachToServerArgs, reply *struct{ Data string }) error {
-	if isHubSessionValid(args.HubSessionKey) {
-		serverUsername := args.Username
-		serverPass := args.Password
-
-		if conf.RelayMode {
-			serverUsername = username
-			serverPass = pass
-		}
-		reply.Data, _ = loginIntoSystem(args.ServerID, serverUsername, serverPass)
-	} else {
-		log.Println("Hub session invalid error")
-	}
-	return nil
-}
-
-func getServerURLFromServerId(serverID int64) string {
+func getServerURLFromServerID(serverID int64) string {
 	//TODO:
-	return serverUrlByServerId[serverID]
+	return serverURLByServerID[serverID]
 }
 
 type DefaultService struct{}
@@ -136,7 +42,7 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, r
 
 		for _, args := range args.ServerArgs {
 			//TODO: support methods that don't need sessionkey
-			url := userServerUrlByKey[args[0].(string)]
+			url := apiSession.GetServerURLbyServerKey(args[0].(string))
 			serverArgsByURL[url] = args
 		}
 		reply.Data = multicastCall(method, serverArgsByURL)
