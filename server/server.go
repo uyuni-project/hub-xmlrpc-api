@@ -14,30 +14,32 @@ import (
 var conf = config.New()
 var apiSession = session.New()
 
-func isHubSessionValid(in string) bool {
-	//TODO: we should check through the SUMA api
-	return in == apiSession.GetHubSessionKey()
-}
-
 type DefaultService struct{}
 
 type DefaultCallArgs struct {
 	HubKey     string
+	ServerIds  []int64
 	ServerArgs [][]interface{}
 }
 
 func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data []multicastResponse }) error {
-	if isHubSessionValid(args.HubKey) {
+	if apiSession.IsHubSessionValid(args.HubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		if err != nil {
 			log.Println("Call error: %v", err)
 		}
-
+		//TODO: check args.ServerArgs lists have the same size
 		serverArgsByURL := make(map[string][]interface{})
 
-		for _, args := range args.ServerArgs {
-			url := apiSession.GetServerURLbyServerKey(args[0].(string))
-			serverArgsByURL[url] = args
+		for i, serverID := range args.ServerIds {
+			out := make([]interface{}, len(args.ServerArgs)+1)
+
+			for j, serverArgs := range args.ServerArgs {
+				out[j+1] = serverArgs[i]
+			}
+			sessionKey, url := apiSession.GetServerSessionInfoByServerID(args.HubKey, serverID)
+			out[0] = sessionKey
+			serverArgsByURL[url] = out
 		}
 		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {
@@ -56,6 +58,7 @@ func multicastCall(method string, serverArgsByURL map[string][]interface{}) []mu
 
 	var wg sync.WaitGroup
 	wg.Add(len(serverArgsByURL))
+
 	i := 0
 	for url, args := range serverArgsByURL {
 		go func(url string, args []interface{}, i int) {
@@ -85,13 +88,14 @@ func executeXMLRPCCall(url string, method string, args []interface{}) (reply int
 
 func InitServer() {
 	xmlrpcCodec := NewCodec()
-	xmlrpcCodec.RegisterMethod("Auth.Login")
-	xmlrpcCodec.RegisterMethod("Auth.AttachToServer")
+	xmlrpcCodec.RegisterMethod("Hub.Login")
+	xmlrpcCodec.RegisterMethod("Hub.AttachToServers")
+	xmlrpcCodec.RegisterMethod("Hub.ListServerIds")
 	xmlrpcCodec.RegisterDefaultMethod("DefaultService.DefaultMethod")
 
 	RPC := rpc.NewServer()
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
-	RPC.RegisterService(new(Auth), "")
+	RPC.RegisterService(new(Hub), "")
 	RPC.RegisterService(new(DefaultService), "")
 
 	http.Handle("/RPC2", RPC)
