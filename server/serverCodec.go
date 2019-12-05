@@ -13,20 +13,26 @@ import (
 	"github.com/kolo/xmlrpc"
 )
 
-func NewCodec() *Codec {
-	return &Codec{
-		methods:       make(map[string]string),
-		defaultMethod: "",
-	}
+type Codec struct {
+	methods                  map[string]string
+	defaultMethodByNamespace map[string]string
+	defaultMethod            string
 }
 
-type Codec struct {
-	methods       map[string]string
-	defaultMethod string
+func NewCodec() *Codec {
+	return &Codec{
+		methods:                  make(map[string]string),
+		defaultMethodByNamespace: make(map[string]string),
+		defaultMethod:            "",
+	}
 }
 
 func (c *Codec) RegisterMethod(method string) {
 	c.methods[method] = method
+}
+
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string) {
+	c.defaultMethodByNamespace[namespace] = method
 }
 
 func (c *Codec) RegisterDefaultMethod(method string) {
@@ -47,26 +53,42 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 		return &CodecRequest{err: err}
 	}
 	request.rawxml = rawxml
-	if method, ok := c.methods[request.Method]; ok {
-		request.Method = parseMethod(method)
+
+	namespace, methodStr := getNamespaceAndMethod(request.Method)
+	if _, ok := c.methods[request.Method]; ok {
+		request.Method = toLowerCase(namespace, methodStr)
+	} else if method, ok := c.defaultMethodByNamespace[namespace]; ok {
+		request.Method = method
 	} else if c.defaultMethod != "" {
 		request.Method = c.defaultMethod
 	}
 	return &CodecRequest{request: &request}
 }
 
-func parseMethod(requestMethod string) string {
+func (r *CodecRequest) GetMethod() string {
+	_, methodStr := getNamespaceAndMethod(r.request.Method)
+	return methodStr
+}
+
+func getNamespaceAndMethod(requestMethod string) (string, string) {
 	//TODO:
 	if len(requestMethod) > 1 {
 		parts := strings.Split(requestMethod, ".")
-		service, method := parts[0], parts[1]
+		slice := parts[1:len(parts)]
+		return parts[0], strings.Join(slice, ".")
+	}
+	return "", ""
+}
+
+func toLowerCase(namespace, method string) string {
+	//TODO:
+	if namespace != "" && method != "" {
 		r, n := utf8.DecodeRuneInString(method)
 		if unicode.IsLower(r) {
-			upMethod := service + "." + string(unicode.ToUpper(r)) + method[n:]
-			return upMethod
+			return namespace + "." + string(unicode.ToUpper(r)) + method[n:]
 		}
 	}
-	return requestMethod
+	return namespace + "." + method
 }
 
 type ServerRequest struct {
