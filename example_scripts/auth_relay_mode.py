@@ -10,12 +10,11 @@ hubKey = client.hub.login("admin", "admin" )
 print hubKey
 
 serverIds = client.hub.listServerIds(hubKey)
-
 print serverIds
 
 client.hub.attachToServers(hubKey, serverIds)
 
 usernames = ["admin" for s in serverIds]
 
-systemsPerServer = client.system.listUserSystems(hubKey, serverIds, [usernames])
+systemsPerServer = client.multicast.system.listUserSystems(hubKey, serverIds, [usernames])
 print systemsPerServer
