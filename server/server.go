@@ -83,14 +83,14 @@ func executeXMLRPCCall(url string, method string, args []interface{}) (reply int
 
 func InitServer() {
 	xmlrpcCodec := NewCodec()
-	xmlrpcCodec.RegisterMethod("Hub.Login")
-	xmlrpcCodec.RegisterMethod("Hub.AttachToServers")
-	xmlrpcCodec.RegisterMethod("Hub.ListServerIds")
+	xmlrpcCodec.RegisterMethod("hub.login")
+	xmlrpcCodec.RegisterMethod("hub.attachToServers")
+	xmlrpcCodec.RegisterMethod("hub.listServerIds")
 	xmlrpcCodec.RegisterDefaultMethod("DefaultService.DefaultMethod")
 
 	RPC := rpc.NewServer()
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
-	RPC.RegisterService(new(Hub), "")
+	RPC.RegisterService(new(Hub), "hub")
 	RPC.RegisterService(new(DefaultService), "")
 
 	http.Handle("/hub/rpc/api", RPC)

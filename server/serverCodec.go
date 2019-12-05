@@ -5,6 +5,9 @@ import (
 	"encoding/xml"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/gorilla/rpc"
 	"github.com/kolo/xmlrpc"
@@ -45,11 +48,25 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	}
 	request.rawxml = rawxml
 	if method, ok := c.methods[request.Method]; ok {
-		request.Method = method
+		request.Method = parseMethod(method)
 	} else if c.defaultMethod != "" {
 		request.Method = c.defaultMethod
 	}
 	return &CodecRequest{request: &request}
+}
+
+func parseMethod(requestMethod string) string {
+	//TODO:
+	if len(requestMethod) > 1 {
+		parts := strings.Split(requestMethod, ".")
+		service, method := parts[0], parts[1]
+		r, n := utf8.DecodeRuneInString(method)
+		if unicode.IsLower(r) {
+			upMethod := service + "." + string(unicode.ToUpper(r)) + method[n:]
+			return upMethod
+		}
+	}
+	return requestMethod
 }
 
 type ServerRequest struct {
