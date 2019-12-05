@@ -6,7 +6,7 @@ type ApiSession struct {
 
 type HubSessionInfo struct {
 	username, password string
-	serverSessionKeys  map[int64]*struct{ sessionKey, URL string }
+	serverSessionKeys  map[int64]struct{ URL, sessionKey string }
 }
 
 func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string) {
@@ -25,7 +25,7 @@ func (s *ApiSession) GetUsernameAndPassword(hubSessionKey string) (string, strin
 }
 
 func (s *ApiSession) SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string) {
-	s.sessions[hubSessionKey].serverSessionKeys[serverID] = &struct{ sessionKey, URL string }{serverURL, serverSessionKey}
+	s.sessions[hubSessionKey].serverSessionKeys[serverID] = struct{ URL, sessionKey string }{serverURL, serverSessionKey}
 }
 
 func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string) {
@@ -38,7 +38,7 @@ func NewHubSessionInfo(username, password string) *HubSessionInfo {
 	return &HubSessionInfo{
 		username:          username,
 		password:          password,
-		serverSessionKeys: make(map[int64]*struct{ sessionKey, URL string }),
+		serverSessionKeys: make(map[int64]struct{ URL, sessionKey string }),
 	}
 }
 

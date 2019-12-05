@@ -22,7 +22,7 @@ type DefaultCallArgs struct {
 	ServerArgs [][]interface{}
 }
 
-func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data []multicastResponse }) error {
+func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data []interface{} }) error {
 	if apiSession.IsHubSessionValid(args.HubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		if err != nil {
@@ -37,7 +37,7 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, r
 			for j, serverArgs := range args.ServerArgs {
 				out[j+1] = serverArgs[i]
 			}
-			sessionKey, url := apiSession.GetServerSessionInfoByServerID(args.HubKey, serverID)
+			url, sessionKey := apiSession.GetServerSessionInfoByServerID(args.HubKey, serverID)
 			out[0] = sessionKey
 			serverArgsByURL[url] = out
 		}
@@ -48,13 +48,8 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, r
 	return nil
 }
 
-type multicastResponse struct {
-	URL      string
-	Response interface{}
-}
-
-func multicastCall(method string, serverArgsByURL map[string][]interface{}) []multicastResponse {
-	responses := make([]multicastResponse, len(serverArgsByURL))
+func multicastCall(method string, serverArgsByURL map[string][]interface{}) []interface{} {
+	responses := make([]interface{}, len(serverArgsByURL))
 
 	var wg sync.WaitGroup
 	wg.Add(len(serverArgsByURL))
@@ -67,7 +62,7 @@ func multicastCall(method string, serverArgsByURL map[string][]interface{}) []mu
 			if err != nil {
 				log.Println("Call error: %v", err)
 			}
-			responses[i] = multicastResponse{url, response}
+			responses[i] = response
 			log.Printf("Response: %s\n", response)
 		}(url, args, i)
 		i++

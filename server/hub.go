@@ -124,8 +124,3 @@ func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, 
 	apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURL, response.(string))
 	return nil
 }
-
-func getServerURLFromServerID(serverID int64) string {
-	//TODO:
-	return conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
-}
