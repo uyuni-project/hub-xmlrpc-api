@@ -1,23 +1,21 @@
 #!/usr/bin/python
 import sys
 import xmlrpclib
-import datetime	
+import datetime    
 
 api_url = "http://localhost:8000/RPC2"
 client = xmlrpclib.Server(api_url, verbose=0)
 
-loginResponse = client.Auth.Login("admin", "admin")
-hubKey = loginResponse["hubSessionKey"]
+hubKey = client.Hub.Login("admin", "admin" )
 print hubKey
 
-serverKey1 = client.Auth.AttachToServer(hubKey, 1000010000)
-print serverKey1
+serverIds = client.Hub.ListServerIds(hubKey)
 
-serverKey2 = client.Auth.AttachToServer(hubKey, 1000010001)
-print serverKey2
+print serverIds
 
-systems = client.system.listUserSystems(hubKey, [[serverKey1, "admin"], [serverKey2, "admin"]])
-print systems
+client.Hub.AttachToServers(hubKey, serverIds)
 
+usernames = ["admin" for s in serverIds]
 
-
+systemsPerServer = client.system.listUserSystems(hubKey, serverIds, [usernames])
+print systemsPerServer
