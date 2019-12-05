@@ -10,7 +10,7 @@ import (
 type Hub struct{}
 
 func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
-	if apiSession.IsHubSessionValid(args.HubSessionKey) {
+	if IsHubSessionValid(args.HubSessionKey) {
 		systemList, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listSystems", []interface{}{args.HubSessionKey})
 		if err != nil {
 			log.Println("Login error: %v", err)
@@ -54,7 +54,7 @@ type AttachToServerArgs struct {
 }
 
 func (h *Hub) AttachToServers(r *http.Request, args *AttachToServerArgs, reply *struct{ Data []error }) error {
-	if apiSession.IsHubSessionValid(args.HubSessionKey) {
+	if IsHubSessionValid(args.HubSessionKey) {
 		usernames := args.Usernames
 		passwords := args.Passwords
 
@@ -123,4 +123,13 @@ func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, 
 	//save in session
 	apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURL, response.(string))
 	return nil
+}
+func IsHubSessionValid(hubSessionKey string) bool {
+	isValid, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
+	if err != nil {
+		log.Println("Login error: %v", err)
+		apiSession.RemoveHubSessionKey(hubSessionKey)
+		return false
+	}
+	return isValid.(bool)
 }

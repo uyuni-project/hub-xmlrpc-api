@@ -13,10 +13,10 @@ func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password s
 	s.sessions[hubSessionKey] = NewHubSessionInfo(username, password)
 }
 
-//TODO: remove when Abids PR is merged
-func (s *ApiSession) IsHubSessionValid(hubSessionKey string) bool {
-	_, isValid := s.sessions[hubSessionKey]
-	return isValid
+func (s *ApiSession) RemoveHubSessionKey(hubSessionKey string) {
+	if _, exists := s.sessions[hubSessionKey]; exists {
+		delete(s.sessions, hubSessionKey)
+	}
 }
 
 func (s *ApiSession) GetUsernameAndPassword(hubSessionKey string) (string, string) {

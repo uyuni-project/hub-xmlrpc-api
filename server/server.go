@@ -23,7 +23,7 @@ type DefaultCallArgs struct {
 }
 
 func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data []interface{} }) error {
-	if apiSession.IsHubSessionValid(args.HubKey) {
+	if IsHubSessionValid(args.HubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		if err != nil {
 			log.Println("Call error: %v", err)
