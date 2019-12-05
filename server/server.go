@@ -90,7 +90,7 @@ func InitServer() {
 
 	RPC := rpc.NewServer()
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
-	RPC.RegisterService(new(Hub), "")
+	RPC.RegisterService(new(Hub), "hub")
 	RPC.RegisterService(new(DefaultService), "")
 
 	http.Handle("/RPC2", RPC)
