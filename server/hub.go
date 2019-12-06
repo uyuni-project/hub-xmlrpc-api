@@ -43,7 +43,7 @@ func (h *Hub) Login(r *http.Request, args *struct{ ArgsList []interface{} }, rep
 	hubSessionKey := response.(string)
 	apiSession.SetHubSessionKey(hubSessionKey, username, password)
 
-	if conf.RelayMode && conf.AutoConnectMode {
+	if conf.AutoConnectMode {
 		err := loginIntoUserSystems(hubSessionKey, username, password)
 		if err != nil {
 			log.Println("Call error: %v", err)
@@ -157,5 +157,4 @@ func isHubSessionValid(hubSessionKey string) bool {
 		return false
 	}
 	return isValid.(bool)
-
 }
