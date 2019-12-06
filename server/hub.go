@@ -13,7 +13,7 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ ArgsList []interface{
 	//TODO: parse
 	hubSessionKey := args.ArgsList[0].(string)
 
-	if IsHubSessionValid(hubSessionKey) {
+	if isHubSessionValid(hubSessionKey) {
 		systemList, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listSystems", []interface{}{hubSessionKey})
 		if err != nil {
 			log.Println("Login error: %v", err)
@@ -57,7 +57,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interfac
 	//TODO: parse
 	hubSessionKey, serverIDs, usernamesArgs, passwordsArgs := parseAttachToServerArguments(args.ArgsList)
 
-	if IsHubSessionValid(hubSessionKey) {
+	if isHubSessionValid(hubSessionKey) {
 		usernames := usernamesArgs
 		passwords := passwordsArgs
 
@@ -70,7 +70,6 @@ func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interfac
 				usernames[i] = serverUsername
 				passwords[i] = serverPassword
 			}
-
 		}
 		loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
 	} else {
@@ -150,8 +149,7 @@ func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, 
 	apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURL, response.(string))
 	return nil
 }
-func IsHubSessionValid(hubSessionKey string) bool {
-	return true
+func isHubSessionValid(hubSessionKey string) bool {
 	isValid, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
 		log.Println("Login error: %v", err)
@@ -159,4 +157,5 @@ func IsHubSessionValid(hubSessionKey string) bool {
 		return false
 	}
 	return isValid.(bool)
+
 }

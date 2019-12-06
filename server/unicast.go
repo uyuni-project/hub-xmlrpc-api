@@ -12,7 +12,7 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interf
 	//TODO: HACK parse
 	hubKey, serverID, serverArgs := parseUnicastArgs(args.ArgsList)
 
-	if IsHubSessionValid(hubKey) {
+	if isHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: HACK for removing multicast namespace
 		method = removeUnicastNamespace(method)

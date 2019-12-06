@@ -13,7 +13,7 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []inte
 	//TODO: parse
 	hubKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
 
-	if IsHubSessionValid(hubKey) {
+	if isHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: HACK for removing multicast namespace
 		method = removeMulticastNamespace(method)
