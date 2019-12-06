@@ -1,50 +1,66 @@
 package session
 
+import "sync"
+
 type ApiSession struct {
-	sessions map[string]*HubSessionInfo
+	sessions *sync.Map
 }
 
 type HubSessionInfo struct {
 	username, password string
-	serverSessionKeys  map[int64]struct{ URL, sessionKey string }
+	serverSessionKeys  *sync.Map
+}
+
+type ServerSessionInfo struct {
+	URL, sessionKey string
 }
 
 func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string) {
-	s.sessions[hubSessionKey] = NewHubSessionInfo(username, password)
+	s.sessions.Store(hubSessionKey, NewHubSessionInfo(username, password))
 }
 
 func (s *ApiSession) RemoveHubSessionKey(hubSessionKey string) {
-	if _, exists := s.sessions[hubSessionKey]; exists {
-		delete(s.sessions, hubSessionKey)
+	if _, ok := s.sessions.Load(hubSessionKey); ok {
+		s.sessions.Delete(hubSessionKey)
 	}
 }
 
 func (s *ApiSession) GetUsernameAndPassword(hubSessionKey string) (string, string) {
-	hubSessionInfo := s.sessions[hubSessionKey]
-	return hubSessionInfo.username, hubSessionInfo.password
+	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
+		return hubSessionInfo.(*HubSessionInfo).username, hubSessionInfo.(*HubSessionInfo).password
+	}
+	return "", ""
 }
 
 func (s *ApiSession) SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string) {
-	s.sessions[hubSessionKey].serverSessionKeys[serverID] = struct{ URL, sessionKey string }{serverURL, serverSessionKey}
+	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
+		hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Store(serverID, &ServerSessionInfo{serverURL, serverSessionKey})
+	}
 }
 
 func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string) {
-	serverSessionInfo := s.sessions[hubSessionKey].serverSessionKeys[serverID]
-	return serverSessionInfo.URL, serverSessionInfo.sessionKey
+	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
+		if serverSessionInfo, ok := hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Load(serverID); ok {
+			return serverSessionInfo.(*ServerSessionInfo).URL, serverSessionInfo.(*ServerSessionInfo).sessionKey
+		}
+	}
+	return "", ""
 }
 
 // New returns a new HubSession struct
 func NewHubSessionInfo(username, password string) *HubSessionInfo {
+	var syncMap sync.Map
 	return &HubSessionInfo{
 		username:          username,
 		password:          password,
-		serverSessionKeys: make(map[int64]struct{ URL, sessionKey string }),
+		serverSessionKeys: &syncMap,
 	}
 }
 
 // New returns a new ApiSession struct
 func New() *ApiSession {
+	var syncMap sync.Map
 	return &ApiSession{
-		sessions: make(map[string]*HubSessionInfo),
+		sessions: &syncMap,
 	}
 }
