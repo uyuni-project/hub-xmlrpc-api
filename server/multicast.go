@@ -15,7 +15,7 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []inte
 
 	if isHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
-		//TODO: HACK for removing multicast namespace
+		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
 		if err != nil {
 			log.Println("Call error: %v", err)

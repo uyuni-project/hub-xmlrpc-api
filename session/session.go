@@ -42,7 +42,7 @@ func NewHubSessionInfo(username, password string) *HubSessionInfo {
 	}
 }
 
-// New returns a new apiSession struct
+// New returns a new ApiSession struct
 func New() *ApiSession {
 	return &ApiSession{
 		sessions: make(map[string]*HubSessionInfo),

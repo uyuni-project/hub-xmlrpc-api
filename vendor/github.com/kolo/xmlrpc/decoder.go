@@ -43,7 +43,7 @@ func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 		dec.CharsetReader = CharsetReader
 	}
 
-	//TODO: HACK: how can we do this?
+	//TODO: how can we do this?
 	argsList = make([]interface{}, 10)
 	items := reflect.ValueOf(argsList)
 
@@ -61,7 +61,6 @@ func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 				if err = dec.decodeValue(item); err != nil {
 					return nil, err
 				}
-				continue
 			}
 		} else if t, ok := tok.(xml.EndElement); ok {
 			if t.Name.Local == "methodCall" {
@@ -69,16 +68,12 @@ func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 			}
 		}
 	}
-
-	argsList = argsList[0:i]
-
 	// read until end of document
 	err = dec.Skip()
 	if err != nil && err != io.EOF {
 		return nil, err
 	}
-
-	return argsList, nil
+	return argsList[0:i], nil
 }
 
 func unmarshal(data []byte, v interface{}) (err error) {

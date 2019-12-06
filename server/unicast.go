@@ -9,12 +9,12 @@ import (
 type Unicast struct{}
 
 func (h *Unicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data interface{} }) error {
-	//TODO: HACK parse
+	//TODO: parse
 	hubKey, serverID, serverArgs := parseUnicastArgs(args.ArgsList)
 
 	if isHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
-		//TODO: HACK for removing multicast namespace
+		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeUnicastNamespace(method)
 		if err != nil {
 			log.Println("Call error: %v", err)
@@ -35,7 +35,7 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interf
 }
 
 func parseUnicastArgs(argsList []interface{}) (string, int64, []interface{}) {
-	//TODO: HACK
+	//TODO:
 	hubKey := argsList[0].(string)
 	serverID := argsList[1].(int64)
 	serverArgs := argsList[2:len(argsList)]
@@ -43,7 +43,7 @@ func parseUnicastArgs(argsList []interface{}) (string, int64, []interface{}) {
 }
 
 func removeUnicastNamespace(method string) string {
-	//TODO: HACK for removing multicast namespace
+	//TODO: removing multicast namespace
 	parts := strings.Split(method, ".")
 	slice := parts[1:len(parts)]
 	return strings.Join(slice, ".")
