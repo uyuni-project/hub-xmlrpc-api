@@ -15,13 +15,9 @@ var apiSession = session.New()
 
 type DefaultService struct{}
 
-type DefaultCallArgs struct {
-	HubArgs []interface{}
-}
-
-func (h *DefaultService) DefaultMethod(r *http.Request, args *DefaultCallArgs, reply *struct{ Data interface{} }) error {
+func (h *DefaultService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data interface{} }) error {
 	method, _ := NewCodec().NewRequest(r).Method()
-	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.HubArgs)
+	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.ArgsList)
 	if err != nil {
 		log.Println("Call error: %v", err)
 	}

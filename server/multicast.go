@@ -15,8 +15,11 @@ type MulticastArgs struct {
 	ServerArgs [][]interface{}
 }
 
-func (h *Multicast) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data []interface{} }) error {
-	if IsHubSessionValid(args.HubKey) {
+func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []interface{} }) error {
+	//TODO: parse
+	hubKey, serverIds, serverArgs := parseArgs(args.ArgsList)
+
+	if IsHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: HACK for removing multicast namespace
 		method = removeMulticastNamespace(method)
@@ -26,13 +29,13 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *MulticastArgs, reply *s
 		//TODO: check args.ServerArgs lists have the same size
 		serverArgsByURL := make(map[string][]interface{})
 
-		for i, serverID := range args.ServerIds {
-			out := make([]interface{}, len(args.ServerArgs)+1)
+		for i, serverID := range serverIds {
+			out := make([]interface{}, len(serverArgs)+1)
 
-			for j, serverArgs := range args.ServerArgs {
+			for j, serverArgs := range serverArgs {
 				out[j+1] = serverArgs[i]
 			}
-			url, sessionKey := apiSession.GetServerSessionInfoByServerID(args.HubKey, serverID)
+			url, sessionKey := apiSession.GetServerSessionInfoByServerID(hubKey, serverID)
 			out[0] = sessionKey
 			serverArgsByURL[url] = out
 		}
@@ -41,6 +44,23 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *MulticastArgs, reply *s
 		log.Println("Hub session invalid error")
 	}
 	return nil
+}
+
+func parseArgs(argsList []interface{}) (string, []int64, [][]interface{}) {
+	//TODO:
+	hubKey := argsList[0].(string)
+	serverIDs := make([]int64, len(argsList[1].([]interface{})))
+	for i, elem := range argsList[1].([]interface{}) {
+		serverIDs[i] = elem.(int64)
+	}
+
+	rest := argsList[2:len(argsList)]
+	serverArgs := make([][]interface{}, len(rest))
+
+	for i, list := range rest {
+		serverArgs[i] = list.([]interface{})
+	}
+	return hubKey, serverIDs, serverArgs
 }
 
 func removeMulticastNamespace(method string) string {

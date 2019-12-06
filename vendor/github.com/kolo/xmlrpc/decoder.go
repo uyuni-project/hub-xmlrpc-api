@@ -36,30 +36,30 @@ type decoder struct {
 	*xml.Decoder
 }
 
-func UnmarshalToStructWrapper(data []byte, v interface{}) (err error) {
+func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
 	if CharsetReader != nil {
 		dec.CharsetReader = CharsetReader
 	}
 
+	//TODO: HACK: how can we do this?
+	argsList = make([]interface{}, 10)
+	items := reflect.ValueOf(argsList)
+
 	i := 0
 	var tok xml.Token
 	for {
 		if tok, err = dec.Token(); err != nil {
-			return err
+			return nil, err
 		}
 
 		if t, ok := tok.(xml.StartElement); ok {
 			if t.Name.Local == "value" {
-				val := reflect.ValueOf(v)
-				if val.Kind() != reflect.Ptr {
-					return errors.New("non-pointer value passed to unmarshal")
-				}
-				field := val.Elem().Field(i)
+				item := items.Index(i)
 				i++
-				if err = dec.decodeValue(field); err != nil {
-					return err
+				if err = dec.decodeValue(item); err != nil {
+					return nil, err
 				}
 				continue
 			}
@@ -70,13 +70,15 @@ func UnmarshalToStructWrapper(data []byte, v interface{}) (err error) {
 		}
 	}
 
+	argsList = argsList[0:i]
+
 	// read until end of document
 	err = dec.Skip()
 	if err != nil && err != io.EOF {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return argsList, nil
 }
 
 func unmarshal(data []byte, v interface{}) (err error) {

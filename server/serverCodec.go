@@ -3,8 +3,10 @@ package server
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -110,7 +112,19 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	c.err = xmlrpc.UnmarshalToStructWrapper(c.request.rawxml, args)
+	//TODO:
+	val := reflect.ValueOf(args)
+	if val.Kind() != reflect.Ptr {
+		return errors.New("non-pointer value passed to unmarshal")
+	}
+
+	field := val.Elem().Field(0)
+
+	if field.Kind() == reflect.Slice {
+		var argsList []interface{}
+		argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
+		field.Set(reflect.ValueOf(argsList))
+	}
 	return nil
 }
 
