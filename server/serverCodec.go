@@ -33,12 +33,12 @@ func (c *Codec) RegisterMethod(method string) {
 	c.methods[method] = method
 }
 
-func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string) {
-	c.defaultMethodByNamespace[namespace] = method
-}
-
 func (c *Codec) RegisterDefaultMethod(method string) {
 	c.defaultMethod = method
+}
+
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string) {
+	c.defaultMethodByNamespace[namespace] = method
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
@@ -55,21 +55,20 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 		return &CodecRequest{err: err}
 	}
 	request.rawxml = rawxml
-
-	namespace, methodStr := getNamespaceAndMethod(request.Method)
-	if _, ok := c.methods[request.Method]; ok {
-		request.Method = toLowerCase(namespace, methodStr)
-	} else if method, ok := c.defaultMethodByNamespace[namespace]; ok {
-		request.Method = method
-	} else if c.defaultMethod != "" {
-		request.Method = c.defaultMethod
-	}
+	request.Method = c.resolveMethod(request.Method)
 	return &CodecRequest{request: &request}
 }
 
-func (r *CodecRequest) GetMethod() string {
-	_, methodStr := getNamespaceAndMethod(r.request.Method)
-	return methodStr
+func (c *Codec) resolveMethod(requestMethod string) string {
+	namespace, methodStr := getNamespaceAndMethod(requestMethod)
+	if _, ok := c.methods[requestMethod]; ok {
+		return toLowerCase(namespace, methodStr)
+	} else if method, ok := c.defaultMethodByNamespace[namespace]; ok {
+		return method
+	} else if c.defaultMethod != "" {
+		return c.defaultMethod
+	}
+	return ""
 }
 
 func getNamespaceAndMethod(requestMethod string) (string, string) {
