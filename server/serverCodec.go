@@ -68,7 +68,7 @@ func (c *Codec) resolveMethod(requestMethod string) string {
 	} else if c.defaultMethod != "" {
 		return c.defaultMethod
 	}
-	return ""
+	return requestMethod
 }
 
 func getNamespaceAndMethod(requestMethod string) (string, string) {
