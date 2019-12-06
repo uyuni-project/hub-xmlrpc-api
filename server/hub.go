@@ -125,6 +125,11 @@ func loginIntoUserSystems(hubSessionKey, username, password string) error {
 
 func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []string) error {
 	//TODO: check usernames, passwords and serverIDs have the same size
+	if !areSameLength(make([]interface{}, len(serverIDs)), make([]interface{}, len(usernames)), make([]interface{}, len(passwords))) {
+		log.Println("Arrays of not same length")
+		return nil
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(len(serverIDs))
 	for i, serverID := range serverIDs {
@@ -158,4 +163,16 @@ func isHubSessionValid(hubSessionKey string) bool {
 	}
 	return isValid.(bool)
 
+}
+func areSameLength(allArrays ...[]interface{}) bool {
+	if len(allArrays) < 2 {
+		return true
+	}
+	lengthToCompare := len(allArrays[0])
+	for _, array := range allArrays[1:] {
+		if lengthToCompare != len(array) {
+			return false
+		}
+	}
+	return true
 }
