@@ -9,15 +9,9 @@ import (
 
 type Multicast struct{}
 
-type MulticastArgs struct {
-	HubKey     string
-	ServerIds  []int64
-	ServerArgs [][]interface{}
-}
-
 func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []interface{} }) error {
 	//TODO: parse
-	hubKey, serverIds, serverArgs := parseArgs(args.ArgsList)
+	hubKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
 
 	if IsHubSessionValid(hubKey) {
 		method, err := NewCodec().NewRequest(r).Method()
@@ -46,7 +40,7 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []inte
 	return nil
 }
 
-func parseArgs(argsList []interface{}) (string, []int64, [][]interface{}) {
+func parseMulticastArgs(argsList []interface{}) (string, []int64, [][]interface{}) {
 	//TODO:
 	hubKey := argsList[0].(string)
 	serverIDs := make([]int64, len(argsList[1].([]interface{})))

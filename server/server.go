@@ -41,6 +41,7 @@ func InitServer() {
 	xmlrpcCodec.RegisterMethod("hub.attachToServers")
 	xmlrpcCodec.RegisterMethod("hub.listServerIds")
 	xmlrpcCodec.RegisterDefaultMethodForNamespace("multicast", "Multicast.DefaultMethod")
+	xmlrpcCodec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod")
 	xmlrpcCodec.RegisterDefaultMethod("DefaultService.DefaultMethod")
 
 	RPC := rpc.NewServer()
@@ -48,6 +49,7 @@ func InitServer() {
 	RPC.RegisterService(new(Hub), "hub")
 	RPC.RegisterService(new(DefaultService), "")
 	RPC.RegisterService(new(Multicast), "")
+	RPC.RegisterService(new(Unicast), "")
 
 	http.Handle("/hub/rpc/api", RPC)
 
