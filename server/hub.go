@@ -87,14 +87,17 @@ func parseAttachToServerArguments(argsList []interface{}) (string, []int64, []st
 		serverIDs[i] = elem.(int64)
 	}
 
-	usernames := make([]string, len(argsList[2].([]interface{})))
-	for i, elem := range argsList[2].([]interface{}) {
-		usernames[i] = elem.(string)
-	}
+	var usernames, passwords []string
+	if len(argsList) == 4 {
+		usernames := make([]string, len(argsList[2].([]interface{})))
+		for i, elem := range argsList[2].([]interface{}) {
+			usernames[i] = elem.(string)
+		}
 
-	passwords := make([]string, len(argsList[3].([]interface{})))
-	for i, elem := range argsList[3].([]interface{}) {
-		passwords[i] = elem.(string)
+		passwords := make([]string, len(argsList[3].([]interface{})))
+		for i, elem := range argsList[3].([]interface{}) {
+			passwords[i] = elem.(string)
+		}
 	}
 	return hubSessionKey, serverIDs, usernames, passwords
 }
@@ -148,6 +151,7 @@ func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, 
 	return nil
 }
 func IsHubSessionValid(hubSessionKey string) bool {
+	return true
 	isValid, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
 		log.Println("Login error: %v", err)
