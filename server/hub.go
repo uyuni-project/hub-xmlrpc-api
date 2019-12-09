@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+
+	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
 )
 
 type Hub struct{}
@@ -36,21 +38,55 @@ func (h *Hub) Login(r *http.Request, args *struct{ ArgsList []interface{} }, rep
 	username := args.ArgsList[0].(string)
 	password := args.ArgsList[1].(string)
 
+	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_MANUAL_MODE)
+	if err != nil {
+		log.Println("Login error: %v", err)
+	}
+	reply.Data = hubSessionKey
+	return nil
+}
+
+func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data string }) error {
+	//TODO: parse
+	username := args.ArgsList[0].(string)
+	password := args.ArgsList[1].(string)
+
+	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_AUTOCONNECT_MODE)
+	if err != nil {
+		log.Println("Login error: %v", err)
+	}
+	reply.Data = hubSessionKey
+	return nil
+}
+
+func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data string }) error {
+	//TODO: parse
+	username := args.ArgsList[0].(string)
+	password := args.ArgsList[1].(string)
+
+	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_RELAY_MODE)
+	if err != nil {
+		log.Println("Login error: %v", err)
+	}
+	reply.Data = hubSessionKey
+	return nil
+}
+
+func (h *Hub) loginToHub(username, password string, loginMode int) (string, error) {
 	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Println("Login error: %v", err)
 	}
 	hubSessionKey := response.(string)
-	apiSession.SetHubSessionKey(hubSessionKey, username, password)
+	apiSession.SetHubSessionKey(hubSessionKey, username, password, loginMode)
 
-	if conf.AutoConnectMode {
+	if loginMode == session.LOGIN_AUTOCONNECT_MODE || conf.AutoConnectMode {
 		err := loginIntoUserSystems(hubSessionKey, username, password)
 		if err != nil {
 			log.Println("Call error: %v", err)
 		}
 	}
-	reply.Data = hubSessionKey
-	return nil
+	return hubSessionKey, nil
 }
 
 func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []error }) error {
@@ -61,7 +97,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interfac
 		usernames := usernamesArgs
 		passwords := passwordsArgs
 
-		if conf.RelayMode {
+		if apiSession.GetLoginMode(hubSessionKey) == session.LOGIN_RELAY_MODE || conf.RelayMode {
 			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(hubSessionKey)
 			usernames = make([]string, len(serverIDs))
 			passwords = make([]string, len(serverIDs))

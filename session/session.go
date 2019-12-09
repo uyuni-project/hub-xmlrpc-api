@@ -6,8 +6,15 @@ type ApiSession struct {
 	sessions *sync.Map
 }
 
+const (
+	LOGIN_MANUAL_MODE      = iota // 0
+	LOGIN_RELAY_MODE              // 1
+	LOGIN_AUTOCONNECT_MODE        // 2
+)
+
 type HubSessionInfo struct {
 	username, password string
+	loginMode          int
 	serverSessionKeys  *sync.Map
 }
 
@@ -15,14 +22,21 @@ type ServerSessionInfo struct {
 	URL, sessionKey string
 }
 
-func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string) {
-	s.sessions.Store(hubSessionKey, NewHubSessionInfo(username, password))
+func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string, loginMode int) {
+	s.sessions.Store(hubSessionKey, NewHubSessionInfo(username, password, loginMode))
 }
 
 func (s *ApiSession) RemoveHubSessionKey(hubSessionKey string) {
 	if _, ok := s.sessions.Load(hubSessionKey); ok {
 		s.sessions.Delete(hubSessionKey)
 	}
+}
+
+func (s *ApiSession) GetLoginMode(hubSessionKey string) int {
+	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
+		return hubSessionInfo.(*HubSessionInfo).loginMode
+	}
+	return 0
 }
 
 func (s *ApiSession) GetUsernameAndPassword(hubSessionKey string) (string, string) {
@@ -48,11 +62,12 @@ func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, server
 }
 
 // New returns a new HubSession struct
-func NewHubSessionInfo(username, password string) *HubSessionInfo {
+func NewHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
 	var syncMap sync.Map
 	return &HubSessionInfo{
 		username:          username,
 		password:          password,
+		loginMode:         loginMode,
 		serverSessionKeys: &syncMap,
 	}
 }
