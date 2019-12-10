@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"reflect"
@@ -140,6 +141,18 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}
 				fault.String += fmt.Sprintf(": %v", c.err)
 			}
 			xmlstr = fault2XML(fault)*/
+		return c.err
+	} else if methodErr != nil {
+
+		var fault Fault
+		switch methodErr.(type) {
+		case Fault:
+			fault = methodErr.(Fault)
+		default:
+			fault = FaultApplicationError
+			fault.String += fmt.Sprintf(": %v", methodErr)
+		}
+		xmlstr = fault2XML(fault)
 	} else {
 		xmlstr, _ = encodeResponseToXML(response)
 	}

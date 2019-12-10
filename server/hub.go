@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -41,6 +42,7 @@ func (h *Hub) Login(r *http.Request, args *struct{ ArgsList []interface{} }, rep
 	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_MANUAL_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
+		return err
 	}
 	reply.Data = hubSessionKey
 	return nil
@@ -67,6 +69,7 @@ func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ ArgsList []i
 	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_RELAY_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
+		return err
 	}
 	reply.Data = hubSessionKey
 	return nil
@@ -76,6 +79,7 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Println("Login error: %v", err)
+		return "", errors.New(err.Error())
 	}
 	hubSessionKey := response.(string)
 	apiSession.SetHubSessionKey(hubSessionKey, username, password, loginMode)
