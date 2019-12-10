@@ -12,7 +12,9 @@ type MulticastService struct{}
 func (h *MulticastService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data MulticastResponse }) error {
 	//TODO: parse
 	hubSessionKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
-
+	if areAllArgumentsOfSameLength(serverArgs) {
+		return FaultInvalidParams
+	}
 	if isHubSessionValid(hubSessionKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server

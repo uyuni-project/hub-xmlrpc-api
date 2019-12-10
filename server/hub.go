@@ -189,6 +189,7 @@ func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, 
 	apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURL, response.(string))
 	return nil
 }
+
 func isHubSessionValid(hubSessionKey string) bool {
 	isValid, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
@@ -197,4 +198,17 @@ func isHubSessionValid(hubSessionKey string) bool {
 		return false
 	}
 	return isValid.(bool)
+}
+
+func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
+	if len(allArrays) < 1 {
+		return true
+	}
+	lengthToCompare := len(allArrays[0])
+	for _, array := range allArrays[1:] {
+		if lengthToCompare != len(array) {
+			return false
+		}
+	}
+	return true
 }
