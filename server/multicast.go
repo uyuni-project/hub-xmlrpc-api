@@ -102,7 +102,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastRes
 			if err != nil {
 				log.Println("Call error: %v", err)
 				mutexForFailedResponses.Lock()
-				failedResponses[serverId] = err
+				failedResponses[serverId] = err.Error()
 				mutexForFailedResponses.Unlock()
 			} else {
 				log.Printf("Response: %s\n", response)

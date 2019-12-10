@@ -56,6 +56,7 @@ func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ ArgsList [
 	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_AUTOCONNECT_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
+		return err
 	}
 	reply.Data = hubSessionKey
 	return nil
