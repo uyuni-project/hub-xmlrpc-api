@@ -39,11 +39,10 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-         tag_name: 'Octocat2'
-         release_name: 'billa2' 
-         body: 'just testing2'
+         tag_name: ${{ github.ref }}
+         release_name: Release ${{ github.ref }}
     - name: Output Release URL File
-      run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
+      run: echo "${{ steps.create_release.outputs.upload_url}}" > release_url.txt
     - name: Save Release URL File for publish
       uses: actions/upload-artifact@v1
       with:
