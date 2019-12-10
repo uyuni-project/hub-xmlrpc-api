@@ -21,7 +21,6 @@ jobs:
       run: |
             pwd 
             ls
-            export GOPATH=~/go      
     - name: Build
-      run: go build
+      run: go build main.go
    
