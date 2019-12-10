@@ -39,9 +39,9 @@ jobs:
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-         tag_name: 'Octocat1'
-         release_name: 'billa1' 
-         body: 'just testing1'
+         tag_name: 'Octocat2'
+         release_name: 'billa2' 
+         body: 'just testing2'
     - name: Output Release URL File
       run: echo "${{ steps.create_release.outputs.upload_url }}" > release_url.txt
     - name: Save Release URL File for publish
