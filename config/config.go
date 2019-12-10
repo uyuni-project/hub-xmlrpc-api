@@ -26,7 +26,6 @@ type Config struct {
 
 // New returns a new Config struct
 func New() *Config {
-	os.Setenv("HUB_CONFIG_FILE", "/home/marcelo/go/xmlrpc_conf.conf")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
