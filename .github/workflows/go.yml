@@ -24,7 +24,13 @@ jobs:
             go get -u github.com/admd/hub_xmlrpc_api
     - name: Build
       run: go build main.go
-   
+    - name: Package
+      run: |
+           pwd
+           tar cvzf hub-api-linux-amd64.tar.gz main 
+           sha512sum hub-linux-amd64.tar.gz > hub-linux-amd64.tar.gz.sha512
+           pwd
+           
     - name: Create a Release
       uses: actions/create-release@v1
       env:
@@ -33,3 +39,13 @@ jobs:
          tag_name: 'Octocat'
          release_name: 'billa' 
          body: 'just testing'
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+          asset_path: ./hub-api-linux-amd64.tar.gz
+          asset_name: my-artifact.zip
+          asset_content_type: application/zip    
