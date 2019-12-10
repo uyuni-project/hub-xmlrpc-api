@@ -18,9 +18,10 @@ jobs:
     - name: Run a one-line script
       run: echo Hello, world!
     - name: Tests
-      run: pwd 
-    - name: Tests1
-      run: ls      
+      run: |
+            pwd 
+            ls
+            export GOPATH=~/go      
     - name: Build
       run: go build
    
