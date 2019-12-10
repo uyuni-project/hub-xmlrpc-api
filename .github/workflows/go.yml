@@ -27,9 +27,11 @@ jobs:
     - name: Package
       run: |
            pwd
+           ls
+           echo Building
            tar cvzf hub-api-linux-amd64.tar.gz main 
-           sha512sum hub-linux-amd64.tar.gz > hub-linux-amd64.tar.gz.sha512
-           pwd
+            echo Built
+           ls
            
     - name: Create a Release
       uses: actions/create-release@v1
