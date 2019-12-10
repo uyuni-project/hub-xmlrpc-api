@@ -29,3 +29,5 @@ jobs:
       uses: actions/create-release@v1
       with:
          tag_name: 'Octocat'
+         release_name: 'billa' 
+         body: 'just testing'
