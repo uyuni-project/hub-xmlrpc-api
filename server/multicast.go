@@ -84,6 +84,9 @@ type MulticastStateResponse struct {
 }
 
 func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastResponse {
+	var mutexForSuccesfulResponses = &sync.Mutex{}
+	var mutexForFailedResponses = &sync.Mutex{}
+
 	successfulResponses := make(map[int64]interface{})
 	failedResponses := make(map[int64]interface{})
 
@@ -96,10 +99,14 @@ func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastRes
 			response, err := executeXMLRPCCall(url, method, args)
 			if err != nil {
 				log.Println("Call error: %v", err)
+				mutexForFailedResponses.Lock()
 				failedResponses[serverId] = err
+				mutexForFailedResponses.Unlock()
 			} else {
 				log.Printf("Response: %s\n", response)
+				mutexForSuccesfulResponses.Lock()
 				successfulResponses[serverId] = response
+				mutexForSuccesfulResponses.Unlock()
 			}
 		}(args.url, args.args, args.serverID)
 	}
