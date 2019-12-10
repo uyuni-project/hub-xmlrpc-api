@@ -38,9 +38,11 @@ func executeXMLRPCCall(url string, method string, args []interface{}) (reply int
 func InitServer() {
 	xmlrpcCodec := NewCodec()
 	xmlrpcCodec.RegisterMethod("hub.login")
+	xmlrpcCodec.RegisterMethod("hub.loginWithAutoconnectMode")
+	xmlrpcCodec.RegisterMethod("hub.loginWithAuthRelayMode")
 	xmlrpcCodec.RegisterMethod("hub.attachToServers")
 	xmlrpcCodec.RegisterMethod("hub.listServerIds")
-	xmlrpcCodec.RegisterDefaultMethodForNamespace("multicast", "Multicast.DefaultMethod")
+	xmlrpcCodec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod")
 	xmlrpcCodec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod")
 	xmlrpcCodec.RegisterDefaultMethod("DefaultService.DefaultMethod")
 
@@ -48,7 +50,7 @@ func InitServer() {
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
 	RPC.RegisterService(new(Hub), "hub")
 	RPC.RegisterService(new(DefaultService), "")
-	RPC.RegisterService(new(Multicast), "")
+	RPC.RegisterService(new(MulticastService), "")
 	RPC.RegisterService(new(Unicast), "")
 
 	http.Handle("/hub/rpc/api", RPC)

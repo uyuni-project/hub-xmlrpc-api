@@ -7,13 +7,13 @@ import (
 	"sync"
 )
 
-type Multicast struct{}
+type MulticastService struct{}
 
-func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []interface{} }) error {
+func (h *MulticastService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data MulticastResponse }) error {
 	//TODO: parse
-	hubKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
+	hubSessionKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
 
-	if isHubSessionValid(hubKey) {
+	if isHubSessionValid(hubSessionKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
@@ -21,18 +21,7 @@ func (h *Multicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []inte
 			log.Println("Call error: %v", err)
 		}
 		//TODO: check args.ServerArgs lists have the same size
-		serverArgsByURL := make(map[string][]interface{})
-
-		for i, serverID := range serverIds {
-			out := make([]interface{}, len(serverArgs)+1)
-
-			for j, serverArgs := range serverArgs {
-				out[j+1] = serverArgs[i]
-			}
-			url, sessionKey := apiSession.GetServerSessionInfoByServerID(hubKey, serverID)
-			out[0] = sessionKey
-			serverArgsByURL[url] = out
-		}
+		serverArgsByURL := resolveMulticastServerArgs(hubSessionKey, serverIds, serverArgs)
 		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {
 		log.Println("Hub session invalid error")
@@ -57,31 +46,78 @@ func parseMulticastArgs(argsList []interface{}) (string, []int64, [][]interface{
 	return hubKey, serverIDs, serverArgs
 }
 
+type MulticastServerArgs struct {
+	url      string
+	serverID int64
+	args     []interface{}
+}
+
+func resolveMulticastServerArgs(hubSessionKey string, serverIDs []int64, serversArgs [][]interface{}) []MulticastServerArgs {
+	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
+	for i, serverID := range serverIDs {
+		args := make([]interface{}, 0, len(serversArgs)+1)
+
+		url, sessionKey := apiSession.GetServerSessionInfoByServerID(hubSessionKey, serverID)
+		args = append(args, sessionKey)
+
+		for _, serverArgs := range serversArgs {
+			args = append(args, serverArgs[i])
+		}
+		multicastServerArgs[i] = MulticastServerArgs{url, serverID, args}
+	}
+	return multicastServerArgs
+}
+
 func removeMulticastNamespace(method string) string {
 	parts := strings.Split(method, ".")
 	slice := parts[1:len(parts)]
 	return strings.Join(slice, ".")
 }
 
-func multicastCall(method string, serverArgsByURL map[string][]interface{}) []interface{} {
-	responses := make([]interface{}, len(serverArgsByURL))
+type MulticastResponse struct {
+	Successfull, Failed MulticastStateResponse
+}
+
+type MulticastStateResponse struct {
+	Responses []interface{}
+	ServerIds []int64
+}
+
+func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastResponse {
+	successfulResponses := make(map[int64]interface{})
+	failedResponses := make(map[int64]interface{})
 
 	var wg sync.WaitGroup
-	wg.Add(len(serverArgsByURL))
+	wg.Add(len(serverArgs))
 
-	i := 0
-	for url, args := range serverArgsByURL {
-		go func(url string, args []interface{}, i int) {
+	for _, args := range serverArgs {
+		go func(url string, args []interface{}, serverId int64) {
 			defer wg.Done()
 			response, err := executeXMLRPCCall(url, method, args)
 			if err != nil {
 				log.Println("Call error: %v", err)
+				failedResponses[serverId] = err
+			} else {
+				log.Printf("Response: %s\n", response)
+				successfulResponses[serverId] = response
 			}
-			responses[i] = response
-			log.Printf("Response: %s\n", response)
-		}(url, args, i)
-		i++
+		}(args.url, args.args, args.serverID)
 	}
 	wg.Wait()
-	return responses
+
+	successfulKeys, successfulValues := getKeysAndValuesFromMap(successfulResponses)
+	failedKeys, failedValues := getKeysAndValuesFromMap(failedResponses)
+
+	return MulticastResponse{MulticastStateResponse{successfulValues, successfulKeys}, MulticastStateResponse{failedValues, failedKeys}}
+}
+
+func getKeysAndValuesFromMap(in map[int64]interface{}) ([]int64, []interface{}) {
+	keys := make([]int64, 0, len(in))
+	values := make([]interface{}, 0, len(in))
+
+	for key, value := range in {
+		keys = append(keys, key)
+		values = append(values, value)
+	}
+	return keys, values
 }
