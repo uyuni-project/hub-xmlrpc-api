@@ -25,3 +25,5 @@ jobs:
     - name: Build
       run: go build main.go
    
+    - name: Create a Release
+      uses: actions/create-release@v1
