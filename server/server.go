@@ -10,7 +10,8 @@ import (
 	"github.com/gorilla/rpc"
 )
 
-var conf = config.New()
+var conf = config.InitializeConfig()
+
 var apiSession = session.New()
 
 type DefaultService struct{}

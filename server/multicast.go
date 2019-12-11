@@ -22,7 +22,6 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *struct{ ArgsList
 		if err != nil {
 			log.Println("Call error: %v", err)
 		}
-		//TODO: check args.ServerArgs lists have the same size
 		serverArgsByURL := resolveMulticastServerArgs(hubSessionKey, serverIds, serverArgs)
 		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {

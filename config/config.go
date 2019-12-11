@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -10,6 +11,16 @@ import (
 )
 
 var k = koanf.New(".")
+var exampleJsonContent = `
+{
+	"type":"json",
+	"hub":{
+	   "manager_api_url":"http://localhost/rpc/api"
+	},
+	"connect_timeout":10,
+	"read_write_timeout":10
+ }
+`
 
 type HubConfig struct {
 	SUMA_API_URL string
@@ -20,14 +31,14 @@ type Config struct {
 	ConnectTimeout, ReadWriteTimeout int
 }
 
-// New returns a new Config struct
-func New() *Config {
+// InitializeConfig returns a new Config struct
+func InitializeConfig() Config {
 	//os.Setenv("HUB_CONFIG_FILE", "/root/xmlrpc_conf.conf")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
 		}
-		return &Config{
+		return Config{
 			Hub: HubConfig{
 				SUMA_API_URL: k.String("hub.manager_api_url"),
 			},
@@ -35,5 +46,7 @@ func New() *Config {
 			ReadWriteTimeout: k.Int("read_write_timeout"),
 		}
 	}
-	return &Config{}
+	errorToPrint := fmt.Errorf("Please set the HUB_CONFIG_FILE env variable which point to a json file."+
+		" An example content is given below\n %s", exampleJsonContent)
+	panic(errorToPrint)
 }
