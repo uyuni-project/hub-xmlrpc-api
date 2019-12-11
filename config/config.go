@@ -20,13 +20,11 @@ type Config struct {
 	RelayMode                        bool
 	AutoConnectMode                  bool
 	ConnectTimeout, ReadWriteTimeout int
-	//TODO:WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
-	ServerURLByServerID map[string]string
 }
 
 // New returns a new Config struct
 func New() *Config {
-	os.Setenv("HUB_CONFIG_FILE", "/home/marcelo/go/xmlrpc_conf.conf")
+	//os.Setenv("HUB_CONFIG_FILE", "/root/xmlrpc_conf.conf")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
@@ -39,8 +37,6 @@ func New() *Config {
 			AutoConnectMode:  k.Bool("auto_connect_mode"),
 			ConnectTimeout:   k.Int("connect_timeout"),
 			ReadWriteTimeout: k.Int("read_write_timeout"),
-			//TODO: REMOVE IT. WE SHOULD GET THIS FROM SUMA API (ie, on listUserSystems)
-			ServerURLByServerID: k.StringMap("endpoints"),
 		}
 	}
 	return &Config{}

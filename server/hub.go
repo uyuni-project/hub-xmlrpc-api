@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"strconv"
 	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
@@ -165,19 +164,36 @@ func loginIntoUserSystems(hubSessionKey, username, password string) error {
 }
 
 func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []string) error {
+	//TODO: reuse multicast method
 	//TODO: check usernames, passwords and serverIDs have the same size
 	var wg sync.WaitGroup
 	wg.Add(len(serverIDs))
 	for i, serverID := range serverIDs {
 		go func(serverID int64, username, password string) {
 			defer wg.Done()
-			//TODO: we should get the server URL from the 'userSystem'
-			url := conf.ServerURLByServerID[strconv.FormatInt(serverID, 10)]
+			//TODO: we should get all server URLs at the same time. Here we are calling N+1 times
+			url, err := retrieveServerXMLRPCApiURL(hubSessionKey, serverID)
+			if err != nil {
+				log.Println("Login error: %v", err)
+			}
 			loginIntoSystem(hubSessionKey, serverID, url, username, password)
 		}(serverID, usernames[i], passwords[i])
 	}
 	wg.Wait()
 	return nil
+}
+
+func retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
+	//TODO: we should deal with cases when we have more than one fqdn
+	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listFqdns", []interface{}{hubSessionKey, serverID})
+	if err != nil {
+		log.Println("Login error: %v", err)
+		return "", err
+	}
+	//TODO: check for casting errors.
+	//TODO: check the fqdn array is not empty
+	firstFqdn := response.([]interface{})[0].(string)
+	return "http://" + firstFqdn + "/rpc/api", nil
 }
 
 func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, password string) error {
@@ -202,11 +218,11 @@ func isHubSessionValid(hubSessionKey string) bool {
 }
 
 func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
-	if len(allArrays) < 1 {
+	if len(allArrays) <= 1 {
 		return true
 	}
 	lengthToCompare := len(allArrays[0])
-	for _, array := range allArrays[1:] {
+	for _, array := range allArrays {
 		if lengthToCompare != len(array) {
 			return false
 		}

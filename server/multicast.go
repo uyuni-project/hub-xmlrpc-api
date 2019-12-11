@@ -12,7 +12,7 @@ type MulticastService struct{}
 func (h *MulticastService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data MulticastResponse }) error {
 	//TODO: parse
 	hubSessionKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
-	if areAllArgumentsOfSameLength(serverArgs) {
+	if !areAllArgumentsOfSameLength(serverArgs) {
 		return FaultInvalidParams
 	}
 	if isHubSessionValid(hubSessionKey) {
