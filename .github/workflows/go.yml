@@ -21,9 +21,9 @@ jobs:
     - name: Ge the project on GOPATH
       run: go get -u github.com/chiaradiamarcelo/hub_xmlrpc_api
     - name: Build
-      run: go build main.go
+      run: go build hub_api_gateway.go
     - name: Package
-      run:  tar cvzf hub-api-linux-amd64.tar.gz main 
+      run:  tar cvzf hub-api-linux-amd64.tar.gz hub_api_gateway
     - name: Create a Release
       uses: actions/create-release@v1
       id: create_release
