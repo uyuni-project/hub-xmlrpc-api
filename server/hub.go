@@ -84,7 +84,7 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	hubSessionKey := response.(string)
 	apiSession.SetHubSessionKey(hubSessionKey, username, password, loginMode)
 
-	if loginMode == session.LOGIN_AUTOCONNECT_MODE || conf.AutoConnectMode {
+	if loginMode == session.LOGIN_AUTOCONNECT_MODE {
 		err := loginIntoUserSystems(hubSessionKey, username, password)
 		if err != nil {
 			log.Println("Call error: %v", err)
@@ -101,7 +101,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interfac
 		usernames := usernamesArgs
 		passwords := passwordsArgs
 
-		if apiSession.GetLoginMode(hubSessionKey) == session.LOGIN_RELAY_MODE || conf.RelayMode {
+		if apiSession.GetLoginMode(hubSessionKey) == session.LOGIN_RELAY_MODE {
 			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(hubSessionKey)
 			usernames = make([]string, len(serverIDs))
 			passwords = make([]string, len(serverIDs))

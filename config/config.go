@@ -17,8 +17,6 @@ type HubConfig struct {
 
 type Config struct {
 	Hub                              HubConfig
-	RelayMode                        bool
-	AutoConnectMode                  bool
 	ConnectTimeout, ReadWriteTimeout int
 }
 
@@ -33,8 +31,6 @@ func New() *Config {
 			Hub: HubConfig{
 				SUMA_API_URL: k.String("hub.manager_api_url"),
 			},
-			RelayMode:        k.Bool("relay_mode"),
-			AutoConnectMode:  k.Bool("auto_connect_mode"),
 			ConnectTimeout:   k.Int("connect_timeout"),
 			ReadWriteTimeout: k.Int("read_write_timeout"),
 		}
