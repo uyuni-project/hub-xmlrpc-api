@@ -9,42 +9,29 @@ import (
 
 type MulticastService struct{}
 
-func (h *MulticastService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data MulticastResponse }) error {
-	//TODO: parse
-	hubSessionKey, serverIds, serverArgs := parseMulticastArgs(args.ArgsList)
-	if !areAllArgumentsOfSameLength(serverArgs) {
+type MulticastArgs struct {
+	HubSessionKey string
+	ServerIDs     []int64
+	ServerArgs    [][]interface{}
+}
+
+func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data MulticastResponse }) error {
+	if !areAllArgumentsOfSameLength(args.ServerArgs) {
 		return FaultInvalidParams
 	}
-	if isHubSessionValid(hubSessionKey) {
+	if isHubSessionValid(args.HubSessionKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
 		if err != nil {
 			log.Println("Call error: %v", err)
 		}
-		serverArgsByURL := resolveMulticastServerArgs(hubSessionKey, serverIds, serverArgs)
+		serverArgsByURL := resolveMulticastServerArgs(args.HubSessionKey, args.ServerIDs, args.ServerArgs)
 		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {
 		log.Println("Hub session invalid error")
 	}
 	return nil
-}
-
-func parseMulticastArgs(argsList []interface{}) (string, []int64, [][]interface{}) {
-	//TODO:
-	hubKey := argsList[0].(string)
-	serverIDs := make([]int64, len(argsList[1].([]interface{})))
-	for i, elem := range argsList[1].([]interface{}) {
-		serverIDs[i] = elem.(int64)
-	}
-
-	rest := argsList[2:len(argsList)]
-	serverArgs := make([][]interface{}, len(rest))
-
-	for i, list := range rest {
-		serverArgs[i] = list.([]interface{})
-	}
-	return hubKey, serverIDs, serverArgs
 }
 
 type MulticastServerArgs struct {
