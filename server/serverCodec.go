@@ -65,7 +65,7 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 
 	parser := c.parsers[request.Method]
 
-	return &CodecRequest{request: &request, parser: &parser}
+	return &CodecRequest{request: &request, parser: parser}
 }
 
 func (c *Codec) resolveMethod(requestMethod string) string {
@@ -110,7 +110,7 @@ type ServerRequest struct {
 type CodecRequest struct {
 	request *ServerRequest
 	err     error
-	parser  *Parser
+	parser  Parser
 }
 
 func (c *CodecRequest) Method() (string, error) {
@@ -129,7 +129,7 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 	var argsList []interface{}
 	argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
 
-	err := (*c.parser).Parse(argsList, args)
+	err := c.parser.Parse(argsList, args)
 	if err != nil {
 		return err
 	}
