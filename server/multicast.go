@@ -26,7 +26,7 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 		if err != nil {
 			log.Println("Call error: %v", err)
 		}
-		serverArgsByURL := resolveMulticastServerArgs(args.HubSessionKey, args.ServerIDs, args.ServerArgs)
+		serverArgsByURL := resolveMulticastServerArgs(args)
 		reply.Data = multicastCall(method, serverArgsByURL)
 	} else {
 		log.Println("Hub session invalid error")
@@ -40,15 +40,15 @@ type MulticastServerArgs struct {
 	args     []interface{}
 }
 
-func resolveMulticastServerArgs(hubSessionKey string, serverIDs []int64, serversArgs [][]interface{}) []MulticastServerArgs {
-	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
-	for i, serverID := range serverIDs {
-		args := make([]interface{}, 0, len(serversArgs)+1)
+func resolveMulticastServerArgs(multicastArgs *MulticastArgs) []MulticastServerArgs {
+	multicastServerArgs := make([]MulticastServerArgs, len(multicastArgs.ServerIDs))
+	for i, serverID := range multicastArgs.ServerIDs {
+		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
 
-		url, sessionKey := apiSession.GetServerSessionInfoByServerID(hubSessionKey, serverID)
+		url, sessionKey := apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
 		args = append(args, sessionKey)
 
-		for _, serverArgs := range serversArgs {
+		for _, serverArgs := range multicastArgs.ServerArgs {
 			args = append(args, serverArgs[i])
 		}
 		multicastServerArgs[i] = MulticastServerArgs{url, serverID, args}

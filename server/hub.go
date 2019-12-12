@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
 )
@@ -131,24 +130,33 @@ func loginIntoUserSystems(hubSessionKey, username, password string) error {
 	return nil
 }
 
-func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []string) error {
-	//TODO: reuse multicast method
-	//TODO: check usernames, passwords and serverIDs have the same size
-	var wg sync.WaitGroup
-	wg.Add(len(serverIDs))
-	for i, serverID := range serverIDs {
-		go func(serverID int64, username, password string) {
-			defer wg.Done()
-			//TODO: we should get all server URLs at the same time. Here we are calling N+1 times
-			url, err := retrieveServerXMLRPCApiURL(hubSessionKey, serverID)
-			if err != nil {
-				log.Println("Login error: %v", err)
-			}
-			loginIntoSystem(hubSessionKey, serverID, url, username, password)
-		}(serverID, usernames[i], passwords[i])
+func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []string) (MulticastResponse, error) {
+	loginIntoSystemsArgs, serverURLByServerID, _ := resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
+	responses := multicastCall("auth.login", loginIntoSystemsArgs)
+	successfulResponses := responses.Successfull
+
+	//save in session
+	for i, serverID := range successfulResponses.ServerIds {
+		apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURLByServerID[serverID], successfulResponses.Responses[i].(string))
 	}
-	wg.Wait()
-	return nil
+	return responses, nil
+}
+
+func resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []string) ([]MulticastServerArgs, map[int64]string, error) {
+	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
+	serverURLByServerID := make(map[int64]string)
+
+	for i, serverID := range serverIDs {
+		url, err := retrieveServerXMLRPCApiURL(hubSessionKey, serverID)
+		if err != nil {
+			log.Println("Login error: %v", err)
+			//TODO: what to do with failing servers?
+		} else {
+			serverURLByServerID[serverID] = url
+			multicastServerArgs[i] = MulticastServerArgs{url, serverID, []interface{}{usernames[i], passwords[i]}}
+		}
+	}
+	return multicastServerArgs, serverURLByServerID, nil
 }
 
 func retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
@@ -162,17 +170,6 @@ func retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, e
 	//TODO: check the fqdn array is not empty
 	firstFqdn := response.([]interface{})[0].(string)
 	return "http://" + firstFqdn + "/rpc/api", nil
-}
-
-func loginIntoSystem(hubSessionKey string, serverID int64, serverURL, username, password string) error {
-	response, err := executeXMLRPCCall(serverURL, "auth.login", []interface{}{username, password})
-	if err != nil {
-		log.Println("Login error: %v", err)
-		return err
-	}
-	//save in session
-	apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURL, response.(string))
-	return nil
 }
 
 func isHubSessionValid(hubSessionKey string) bool {
