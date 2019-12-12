@@ -20,6 +20,7 @@ type Codec struct {
 	methods                  map[string]string
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
+	parsers                  map[string]Parser
 }
 
 func NewCodec() *Codec {
@@ -27,19 +28,23 @@ func NewCodec() *Codec {
 		methods:                  make(map[string]string),
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
+		parsers:                  make(map[string]Parser),
 	}
 }
 
-func (c *Codec) RegisterMethod(method string) {
+func (c *Codec) RegisterMethod(method string, parser Parser) {
 	c.methods[method] = method
+	c.parsers[c.resolveMethod(method)] = parser
 }
 
-func (c *Codec) RegisterDefaultMethod(method string) {
+func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
+	c.parsers[method] = parser
 }
 
-func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string) {
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
 	c.defaultMethodByNamespace[namespace] = method
+	c.parsers[c.resolveMethod(method)] = parser
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
@@ -57,7 +62,10 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	}
 	request.rawxml = rawxml
 	request.Method = c.resolveMethod(request.Method)
-	return &CodecRequest{request: &request}
+
+	parser := c.parsers[request.Method]
+
+	return &CodecRequest{request: &request, parser: &parser}
 }
 
 func (c *Codec) resolveMethod(requestMethod string) string {
@@ -102,6 +110,7 @@ type ServerRequest struct {
 type CodecRequest struct {
 	request *ServerRequest
 	err     error
+	parser  *Parser
 }
 
 func (c *CodecRequest) Method() (string, error) {
@@ -112,18 +121,17 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	//TODO:
 	val := reflect.ValueOf(args)
 	if val.Kind() != reflect.Ptr {
-		return errors.New("non-pointer value passed to unmarshal")
+		return errors.New("non-pointer value passed")
 	}
 
-	field := val.Elem().Field(0)
+	var argsList []interface{}
+	argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
 
-	if field.Kind() == reflect.Slice {
-		var argsList []interface{}
-		argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
-		field.Set(reflect.ValueOf(argsList))
+	err := (*c.parser).Parse(argsList, args)
+	if err != nil {
+		return err
 	}
 	return nil
 }

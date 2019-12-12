@@ -11,9 +11,8 @@ import (
 
 type Hub struct{}
 
-func (h *Hub) ListServerIds(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []int64 }) error {
-	//TODO: parse
-	hubSessionKey := args.ArgsList[0].(string)
+func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
+	hubSessionKey := args.HubSessionKey
 
 	if isHubSessionValid(hubSessionKey) {
 		systemList, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listSystems", []interface{}{hubSessionKey})
@@ -33,12 +32,8 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ ArgsList []interface{
 	return nil
 }
 
-func (h *Hub) Login(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data string }) error {
-	//TODO: parse
-	username := args.ArgsList[0].(string)
-	password := args.ArgsList[1].(string)
-
-	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_MANUAL_MODE)
+func (h *Hub) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_MANUAL_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
 		return err
@@ -47,12 +42,8 @@ func (h *Hub) Login(r *http.Request, args *struct{ ArgsList []interface{} }, rep
 	return nil
 }
 
-func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data string }) error {
-	//TODO: parse
-	username := args.ArgsList[0].(string)
-	password := args.ArgsList[1].(string)
-
-	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_AUTOCONNECT_MODE)
+func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_AUTOCONNECT_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
 		return err
@@ -61,12 +52,8 @@ func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ ArgsList [
 	return nil
 }
 
-func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data string }) error {
-	//TODO: parse
-	username := args.ArgsList[0].(string)
-	password := args.ArgsList[1].(string)
-
-	hubSessionKey, err := h.loginToHub(username, password, session.LOGIN_RELAY_MODE)
+func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_RELAY_MODE)
 	if err != nil {
 		log.Println("Login error: %v", err)
 		return err
@@ -93,52 +80,33 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	return hubSessionKey, nil
 }
 
-func (h *Hub) AttachToServers(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data []error }) error {
-	//TODO: parse
-	hubSessionKey, serverIDs, usernamesArgs, passwordsArgs := parseAttachToServerArguments(args.ArgsList)
+type AttachToServersArgs struct {
+	HubSessionKey string
+	ServerIDs     []int64
+	Usernames     []string
+	Passwords     []string
+}
 
-	if isHubSessionValid(hubSessionKey) {
-		usernames := usernamesArgs
-		passwords := passwordsArgs
+func (h *Hub) AttachToServers(r *http.Request, args *AttachToServersArgs, reply *struct{ Data []error }) error {
+	if isHubSessionValid(args.HubSessionKey) {
+		usernames := args.Usernames
+		passwords := args.Passwords
 
-		if apiSession.GetLoginMode(hubSessionKey) == session.LOGIN_RELAY_MODE {
-			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(hubSessionKey)
-			usernames = make([]string, len(serverIDs))
-			passwords = make([]string, len(serverIDs))
+		if apiSession.GetLoginMode(args.HubSessionKey) == session.LOGIN_RELAY_MODE {
+			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(args.HubSessionKey)
+			usernames = make([]string, len(args.ServerIDs))
+			passwords = make([]string, len(args.ServerIDs))
 
-			for i := range serverIDs {
+			for i := range args.ServerIDs {
 				usernames[i] = serverUsername
 				passwords[i] = serverPassword
 			}
 		}
-		loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
+		loginIntoSystems(args.HubSessionKey, args.ServerIDs, args.Usernames, args.Passwords)
 	} else {
 		log.Println("Hub session invalid error")
 	}
 	return nil
-}
-
-func parseAttachToServerArguments(argsList []interface{}) (string, []int64, []string, []string) {
-	hubSessionKey := argsList[0].(string)
-
-	serverIDs := make([]int64, len(argsList[1].([]interface{})))
-	for i, elem := range argsList[1].([]interface{}) {
-		serverIDs[i] = elem.(int64)
-	}
-
-	var usernames, passwords []string
-	if len(argsList) == 4 {
-		usernames := make([]string, len(argsList[2].([]interface{})))
-		for i, elem := range argsList[2].([]interface{}) {
-			usernames[i] = elem.(string)
-		}
-
-		passwords := make([]string, len(argsList[3].([]interface{})))
-		for i, elem := range argsList[3].([]interface{}) {
-			passwords[i] = elem.(string)
-		}
-	}
-	return hubSessionKey, serverIDs, usernames, passwords
 }
 
 func loginIntoUserSystems(hubSessionKey, username, password string) error {
