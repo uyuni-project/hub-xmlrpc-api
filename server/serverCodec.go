@@ -21,6 +21,7 @@ type Codec struct {
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
 	parsers                  map[string]Parser
+	defaultParser            Parser
 }
 
 func NewCodec() *Codec {
@@ -29,17 +30,21 @@ func NewCodec() *Codec {
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
 		parsers:                  make(map[string]Parser),
+		defaultParser:            nil,
 	}
 }
 
-func (c *Codec) RegisterMethod(method string, parser Parser) {
+func (c *Codec) RegisterDefaultParser(parser Parser) {
+	c.defaultParser = parser
+}
+
+func (c *Codec) RegisterMethod(method string) {
 	c.methods[method] = method
-	c.parsers[c.resolveMethod(method)] = parser
 }
 
 func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
-	c.parsers[method] = parser
+	c.parsers[c.resolveMethod(method)] = parser
 }
 
 func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
@@ -63,9 +68,16 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	request.rawxml = rawxml
 	request.Method = c.resolveMethod(request.Method)
 
-	parser := c.parsers[request.Method]
+	parser := c.resolveParser(request.Method)
 
 	return &CodecRequest{request: &request, parser: parser}
+}
+
+func (c *Codec) resolveParser(requestMethod string) Parser {
+	if parser, ok := c.parsers[requestMethod]; ok {
+		return parser
+	}
+	return c.defaultParser
 }
 
 func (c *Codec) resolveMethod(requestMethod string) string {
