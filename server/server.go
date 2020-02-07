@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/config"
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
 	"github.com/gorilla/rpc"
+	"github.com/uyuni-project/hub_xmlrpc_api/client"
+	"github.com/uyuni-project/hub_xmlrpc_api/config"
+	"github.com/uyuni-project/hub_xmlrpc_api/session"
 )
 
 var conf = config.InitializeConfig()

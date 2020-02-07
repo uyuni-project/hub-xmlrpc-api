@@ -5,7 +5,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
+	"github.com/uyuni-project/hub_xmlrpc_api/session"
 )
 
 type Hub struct{}

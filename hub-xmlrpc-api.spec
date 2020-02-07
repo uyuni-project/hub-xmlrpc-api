@@ -24,7 +24,7 @@
 
 
 Name:           %{project}
-Version:        0.1.0
+Version:        0.1.1
 Release:        1
 Summary:        Xmlrpc API to manage Hub
 License:        Apache-2.0
@@ -40,7 +40,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 Hub-xmlrpc-api package provide an API which allows access to Uyuni server functionality in a Server of Serves architecture (Hub)
 
 %prep
-%setup -q -n  %{org}-%{project}-%{version}
+%setup -q -n  %{project}-%{version}
 
 %build
 %goprep %{import_path}
@@ -60,6 +60,9 @@ Hub-xmlrpc-api package provide an API which allows access to Uyuni server functi
 
 
 %changelog
+* Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.1-1
+- new package built with tito
+
 
 * Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.1-1
 - new package built with tito
