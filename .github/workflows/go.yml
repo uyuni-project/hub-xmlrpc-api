@@ -19,7 +19,7 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v1
     - name: Ge the project on GOPATH
-      run: go get -u github.com/hub_xmlrpc_api/hub_xmlrpc_api
+      run: go get -u github.com/uyuni-project/hub-xmlrpc-api
     - name: Build
       run: go build hub_api_gateway.go
     - name: Package

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/uyuni-project/hub_xmlrpc_api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/server"
 )
 
 func main() {

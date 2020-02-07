@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/gorilla/rpc"
-	"github.com/uyuni-project/hub_xmlrpc_api/client"
-	"github.com/uyuni-project/hub_xmlrpc_api/config"
-	"github.com/uyuni-project/hub_xmlrpc_api/session"
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/config"
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 var conf = config.InitializeConfig()
