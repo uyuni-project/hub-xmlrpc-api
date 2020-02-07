@@ -55,16 +55,11 @@ Hub-xmlrpc-api package provide an API which allows access to Uyuni server functi
 %files -f file.lst
 %defattr(-,root,root)
 %doc README.md
-%{_bindir}/hub-xmlrpc-api-poc
+%{_bindir}/hub-xmlrpc-api
 
 
 
 %changelog
-* Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.2-1
--
-
-* Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.1-1
-- new package built with tito
 
 * Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.1-1
 - new package built with tito
