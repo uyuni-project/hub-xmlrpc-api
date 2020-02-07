@@ -4,10 +4,10 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/client"
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/config"
-	"github.com/chiaradiamarcelo/hub_xmlrpc_api/session"
 	"github.com/gorilla/rpc"
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/config"
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 var conf = config.InitializeConfig()
@@ -48,7 +48,7 @@ func InitServer() {
 
 	http.Handle("/hub/rpc/api", RPC)
 
-	log.Println("Starting XML-RPC server on localhost:8000/hub/rpc/api")
+	log.Println("Starting XML-RPC server on localhost:8888/hub/rpc/api")
 	log.Fatal(http.ListenAndServe(":8888", nil))
 }
 
