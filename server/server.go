@@ -48,7 +48,7 @@ func InitServer() {
 
 	http.Handle("/hub/rpc/api", RPC)
 
-	log.Println("Starting XML-RPC server on localhost:8000/hub/rpc/api")
+	log.Println("Starting XML-RPC server on localhost:8888/hub/rpc/api")
 	log.Fatal(http.ListenAndServe(":8888", nil))
 }
 
