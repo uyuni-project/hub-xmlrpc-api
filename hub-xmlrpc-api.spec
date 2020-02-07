@@ -24,7 +24,7 @@
 
 
 Name:           %{project}
-Version:        0.1.2
+Version:        0.1.3
 Release:        1
 Summary:        Xmlrpc API to manage Hub
 License:        Apache-2.0
@@ -60,6 +60,9 @@ Hub-xmlrpc-api package provide an API which allows access to Uyuni server functi
 
 
 %changelog
+* Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.3-1
+- Fix path (amehmood@suse.de)
+
 * Fri Feb 07 2020 Abid Mehmood <amehmood@suse.de> 0.1.2-1
 - Fix paths (amehmood@suse.de)
 
