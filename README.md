@@ -1,16 +1,69 @@
 # Hub xmlrpc API
 
-Hub XMLRPC API helps to manage servers of servers architecture from a single place. A usual architeture where Hub will be helpful and customer can get benefit from it, looks like this.
+A Hub is an Uyuni Server that can manage other Uyuni Servers registered to it. It can be seen as a "server of servers".
+
+Hub XMLRPC API helps to manage this architecture from a single place. A usual architeture where Hub will be helpful and customer can get benefit from it, looks like this:
 
 ![graphviz](https://user-images.githubusercontent.com/12951268/74736042-33518d80-5252-11ea-83a3-04d3d4ae5d11.png)
 
-An Hub user can now manage servers just like as they are normal client of the Uyuni. In addition to that, Hub provides a way to go even further and manage clients
-of each server, all from a single place without going to each servers individually.
+Users defined on the Hub can now manage Uyuni Servers registered to it as regular systems through the Hub XMLRPC API. In addition to that, the Hub XMLRPC API provides a way to go even further and manage the systems registered to each SUMA Server, all from a single place without the need to directly accessing to each server individually.
 
 ## Getting Started
 
-These instructions will help user to start with, this section will have some instructiion about the required setup and will give some basic examples which user can modify
-according to the needs and play around it.
+This section is a quick start guide with instructions to setup the Hub XMLRPC API. It also contains some basic examples scripts to work with, and instructions to setup a Hub architechture, as describe in https://github.com/uyuni-project/hub-xmlrpc-api/tree/master#hub-xmlrpc-api .
+
+### Setting up the environment
+
+To work with the Hub XMLRPC API you need a working Hub environment, as described in https://github.com/uyuni-project/hub-xmlrpc-api/tree/master#hub-xmlrpc-api . You can set up such installation by manual installation and registration of Uyuni Servers, or you can use Sumaform (https://github.com/uyuni-project/sumaform) for it, by adding the following modules in your main.tf file:
+
+```yaml
+module "hub-server" {
+  source = "./modules/libvirt/suse_manager"
+  base_configuration = "${module.base.configuration}"
+  product_version = "uyuni-master"
+  name = "hub-server"
+  image = "opensuse151"
+  use_os_released_updates = true
+}
+
+module "slave-server-1" {
+  source = "./modules/libvirt/suse_manager"
+  base_configuration = "${module.base.configuration}"
+  product_version = "uyuni-master"
+  name = "slave-server-1"
+  image = "opensuse151"
+  register_to_server = "mch-hub-server.tf.local"
+}
+
+module "min-for-slave-server-1" {
+  source = "./modules/libvirt/minion"
+  base_configuration = "${module.base.configuration}"
+  product_version = "uyuni-master"
+  name = "min-for-slave-server-1"
+  image = "sles12sp3"
+  server_configuration = "${module.slave-server-1.configuration}"
+}
+
+module "slave-server-2" {
+  source = "./modules/libvirt/suse_manager"
+  base_configuration = "${module.base.configuration}"
+  product_version = "uyuni-master"
+  name = "slave-server-2"
+  image = "opensuse151"
+  register_to_server = "mch-hub-server.tf.local"
+}
+
+module "min-for-slave-server-2" {
+  source = "./modules/libvirt/minion"
+  base_configuration = "${module.base.configuration}"
+  product_version = "uyuni-master"
+  name = "min-for-slave-server-1"
+  image = "sles12sp3"
+  server_configuration = "${module.slave-server-2.configuration}"
+}
+```
+
+This will create a Hub Uyuni Server (hub-server) with two slave Uyuni Servers (slave-server-1 and slave-server-2) registered to the Hub, and a minion registered to each slave Uyuni Server (min-for-slave-server-1 and min-for-slave-server-2).
 
 ### Prerequisites
 
@@ -18,9 +71,9 @@ An Hub server should be installed which is in reality a uyuni server with some s
 
 
 
-## Installation
+## Installation of the Hub XMLRPC API
 
-Package `hub-xmlrpc-api` is available in Uyuni repo. Refresh the repo if it is not already and install the package. Hub API needs to run on the same machine where Hub is running and will need some additional data. 
+Package `hub-xmlrpc-api` is available in the Uyuni repository. Refresh the repository if it is not already and install the package. The Hub XMLRPC API needs to run on the same machine where Hub Uyuni Server is running and will need some additional data. 
 It looks for `HUB_CONFIG_FILE` env variable which should be pointing to a json file with the contents like given below.
 
 ```json
@@ -34,19 +87,19 @@ It looks for `HUB_CONFIG_FILE` env variable which should be pointing to a json f
    }
  ```
 ## Namespaces
-Hub supports 3 different namespaces.
+Hub supports 3 different namespaces:
 
-1. Hub(default) &#8594; to target hub itself. 
+1. Hub(default) &#8594; to target the hub itself:
      - `client.hub.login(login, password)`
-2. Unicast &#8594; To target a single server
+2. Unicast &#8594; To target a single slave server:
      - `[systems] = client.unicast.system.method_to_call(hubKey, serverId, arg1, arg2)`
-3. Multicast &#8594; To target multiple servers
-     - `[ [systems], [systems] ] = client.multicast.system.list_systems(hubKey, [serverIds],[arg1..], [arg2..])`
+3. Multicast &#8594; To target multiple slave servers:
+     - `{ "Successfull": {"Responses": [systems], "ServerIds":[]}, "Failed": {"Responses": [systems], "ServerIds":[]} } = client.multicast.system.list_systems(hubKey, [serverIds],[arg1..], [arg2..])`
 
-Please note the return type here, in case of unicast, data comes back in an array while in case of multicast as array of array.     
-##Note : As hub is a uyuni server itself, user can call the existing uyuni xmlrpc api using the same connection instead of a seprate connection and Hub API will take care of rest.
+Please note the return type here, in case of unicast, data comes back in an array while in case of multicast the response format is a JSON object, with to fields: "Successfull" and "Failed". Each of these fields contain another JSON object with the fields "Responses" (the servers responses) and "ServerIds" (the Ids of the servers whose response is in the "Responses" field). "Responses" and "ServerIds" come in matchin order, meaning the first Response matches the first ServerId, and so on.
+##Note : As hub is an Uyuni Server itself, the user can call the existing Uyuni XMLRPC API using the same connection instead of a separate connection, and the Hub XMLRP API will take care of rest.
 ## Modes
-Hub supports 3 different modes
+Hub supports 3 different modes:
 
 1. manual mode(default) &#8594; User needs to provide  **credentials ** for each server she wants to perform operation
 2. relay mode  &#8594; Use Hub  **credentials ** but  **Servers** list will be provided by the user
