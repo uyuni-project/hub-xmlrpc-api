@@ -1,112 +1,76 @@
-# Hub xmlrpc API
+# Hub XMLRPC API
 
-A Hub is an Uyuni Server that can manage other Uyuni Servers registered to it. It can be seen as a "server of servers".
-
-Hub XMLRPC API helps to manage this architecture from a single place. A usual architeture where Hub will be helpful and customer can get benefit from it, looks like this:
+The Hub XMLRPC API helps to operate SUSE Manager or Uyuni infrastructures with one Server, called a Hub, managing several Servers. The typical architecture is represented below:
 
 ![graphviz](https://user-images.githubusercontent.com/12951268/74736042-33518d80-5252-11ea-83a3-04d3d4ae5d11.png)
 
-Users defined on the Hub can now manage Uyuni Servers registered to it as regular systems through the Hub XMLRPC API. In addition to that, the Hub XMLRPC API provides a way to go even further and manage the systems registered to each SUMA Server, all from a single place without the need to directly accessing to each server individually.
+Servers are registered and can be managed from the Hub just like normal SUSE Manager or Uyuni clients. In addition to that, the Hub XMLRPC API provides a more convenient way to access all Servers' XMLRPC APIs from one only endpoint in the Hub.
 
 ## Getting Started
 
-This section is a quick start guide with instructions to setup the Hub XMLRPC API. It also contains some basic examples scripts to work with, and instructions to setup a Hub architechture, as describe in https://github.com/uyuni-project/hub-xmlrpc-api/tree/master#hub-xmlrpc-api .
+### Requirements
+ - one central SUSE Manager/Uyuni Server (hereinafter: "Hub")
+ - two or more peripheral Servers registered to the Hub as Salt clients
+ - any number of end clients registered to peripheral Servers
 
-### Setting up the environment
+You will need credentials to all Server XMLRPC APIs, including the Hub's.
 
-To work with the Hub XMLRPC API you need a working Hub environment, as described in https://github.com/uyuni-project/hub-xmlrpc-api/tree/master#hub-xmlrpc-api . You can set up such installation by manual installation and registration of Uyuni Servers, or you can use Sumaform (https://github.com/uyuni-project/sumaform) for it, by adding the following modules in your main.tf file:
+### Installation
 
-```yaml
-module "hub-server" {
-  source = "./modules/libvirt/suse_manager"
-  base_configuration = "${module.base.configuration}"
-  product_version = "uyuni-master"
-  name = "hub-server"
-  image = "opensuse151"
-  use_os_released_updates = true
-}
+Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni repos, either on the Hub itself or on a host that has access to all Servers' XMLRPC APIs.
 
-module "slave-server-1" {
-  source = "./modules/libvirt/suse_manager"
-  base_configuration = "${module.base.configuration}"
-  product_version = "uyuni-master"
-  name = "slave-server-1"
-  image = "opensuse151"
-  register_to_server = "mch-hub-server.tf.local"
-}
-
-module "min-for-slave-server-1" {
-  source = "./modules/libvirt/minion"
-  base_configuration = "${module.base.configuration}"
-  product_version = "uyuni-master"
-  name = "min-for-slave-server-1"
-  image = "sles12sp3"
-  server_configuration = "${module.slave-server-1.configuration}"
-}
-
-module "slave-server-2" {
-  source = "./modules/libvirt/suse_manager"
-  base_configuration = "${module.base.configuration}"
-  product_version = "uyuni-master"
-  name = "slave-server-2"
-  image = "opensuse151"
-  register_to_server = "mch-hub-server.tf.local"
-}
-
-module "min-for-slave-server-2" {
-  source = "./modules/libvirt/minion"
-  base_configuration = "${module.base.configuration}"
-  product_version = "uyuni-master"
-  name = "min-for-slave-server-1"
-  image = "sles12sp3"
-  server_configuration = "${module.slave-server-2.configuration}"
-}
-```
-
-This will create a Hub Uyuni Server (hub-server) with two slave Uyuni Servers (slave-server-1 and slave-server-2) registered to the Hub, and a minion registered to each slave Uyuni Server (min-for-slave-server-1 and min-for-slave-server-2).
-
-### Prerequisites
-
-An Hub server should be installed which is in reality a uyuni server with some super powers. At least one uyuni server with one client, should be registered to the Hub to play with the API.
-
-
-
-## Installation of the Hub XMLRPC API
-
-Package `hub-xmlrpc-api` is available in the Uyuni repository. Refresh the repository if it is not already and install the package. The Hub XMLRPC API needs to run on the same machine where Hub Uyuni Server is running and will need some additional data. 
-It looks for `HUB_CONFIG_FILE` env variable which should be pointing to a json file with the contents like given below.
+Configuration of `hub-xmlrpc-api` is specified in a JSON file like the following:
 
 ```json
 {
    "type": "json",
     "hub": {
-       "manager_api_url": "http://hub-url/rpc/api"
+       "manager_api_url": "http://localhost/rpc/api"
    },
     "connect_timeout": 10,
     "read_write_timeout": 10,
    }
  ```
-## Namespaces
-Hub supports 3 different namespaces:
 
-1. Hub(default) &#8594; to target the hub itself:
-     - `client.hub.login(login, password)`
-2. Unicast &#8594; To target a single slave server:
-     - `[systems] = client.unicast.system.method_to_call(hubKey, serverId, arg1, arg2)`
-3. Multicast &#8594; To target multiple slave servers:
-     - `{ "Successfull": {"Responses": [systems], "ServerIds":[]}, "Failed": {"Responses": [systems], "ServerIds":[]} } = client.multicast.system.list_systems(hubKey, [serverIds],[arg1..], [arg2..])`
+Replace `localhost` in `http://localhost/rpc/api` above with the Hub's FQDN if necessary.
 
-Please note the return type here, in case of unicast, data comes back in an array while in case of multicast the response format is a JSON object, with to fields: "Successfull" and "Failed". Each of these fields contain another JSON object with the fields "Responses" (the servers responses) and "ServerIds" (the Ids of the servers whose response is in the "Responses" field). "Responses" and "ServerIds" come in matchin order, meaning the first Response matches the first ServerId, and so on.
-##Note : As hub is an Uyuni Server itself, the user can call the existing Uyuni XMLRPC API using the same connection instead of a separate connection, and the Hub XMLRP API will take care of rest.
-## Modes
-Hub supports 3 different modes:
+Set the `HUB_CONFIG_FILE` environment variable to point to the configuration file.
 
-1. manual mode(default) &#8594; User needs to provide  **credentials ** for each server she wants to perform operation
-2. relay mode  &#8594; Use Hub  **credentials ** but  **Servers** list will be provided by the user
-3. auto connect mode &#8594; Use Hub  **credentials ** +  **Servers** list will detected  **automatically** where Hub user has
-access to
+## Usage
 
-An example is given below to help it more clear. Here the auto connect mode is enabled and other modes are commented out. 
+`hub-xmlrpc-api` is a daemon, currently to be launched from the command line.
+
+
+Once running, you can connect to the `hub-xmlrpc-api` at port 8000 via any XMLRPC compliant client libraries (see examples below).
+
+
+### Namespaces
+
+Hub supports 3 different namespaces.
+
+1. `hub` &#8594; to target the Hub itself:
+     - example: `hubKey = client.hub.login(login, password)`
+2. `unicast` &#8594; to target a single Server registered in the Hub:
+     - example: `systems = client.unicast.system.list_systems(hubKey, serverId)`
+3. `multicast` &#8594; to target multiple Servers
+     - example: `systems_per_server = client.multicast.system.list_systems(hubKey, [serverId1, serverId2], [], [])`
+
+Note that:
+ - all XMLRPC API methods available in a single Server are exposed by the namespaces above. Generally speaking, they accept the same parameters and return the same values with the exceptions described below
+ - the `hubKey` can be obtained via the `client.hub.login(login, password)` method
+ - individual Server IDs can be obtained via `client.hub.listServerIds(hubKey)` (see example below)
+ - the `unicast` namespace assumes all methods receive `hubKey` and `serverId` as their first two parameters, then any other parameter as specified by the regular Server API
+ - the `multicast` namespace assumes all methods receive `hubKey`, a list of Server IDs, then lists of per-Server parameters as specified by the regular Server API. Return value will be an array, indexed per Server, of the results of individual Server calls
+
+### Authentication modes
+
+Hub supports 3 different authentication modes.
+
+1. manual mode (default): user needs to provide API credentials for each Server explicitly
+2. relay mode: the same credentials used to authenticate against the Hub will be re-used to authenticate Servers. The list of Servers to connect to will still be provided by the user
+3. auto connect mode: Hub credentials will be reused for Servers and any Server the user has access to will be automatically connected
+
+### Python example
 
 ```python
 
@@ -120,36 +84,33 @@ HUB_PASSWORD = "admin"
  
 client = xmlrpclib.Server(HUB_URL, verbose=0)
 
-#login
-#hubKey = client.hub.login(HUB_LOGIN, HUB_PASSWORD )
-#hubKey = client.hub.LoginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD )
-#hubKey = client.hub.LoginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD )
+# Login (uncomment one line)
+#hubKey = client.hub.login(HUB_LOGIN, HUB_PASSWORD)
+#hubKey = client.hub.LoginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
+#hubKey = client.hub.LoginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
 
-#get list of server ids registerd with hub
+# get list of Server ids registerd to the Hub
 serverIds = client.hub.listServerIds(hubKey)
 
-
-#Manual-------------
+# Manual authentication mode example. Uncomment if `login` was uncommented above
 #usernames = ["admin" for s in serverIds]
 #passwords = ["admin" for s in serverIds]
 #client.hub.attachToServers(hubKey, serverIds, usernames, passwords)
 
-
-#Relay_mode---------
+# Relay authentication mode example. Uncomment if `LoginWithAuthRelayMode` was uncommented above
 #client.hub.attachToServers(hubKey, serverIds)
 
+# Nothing has to be done if `LoginWithAutoconnectMode` was uncommented above
 
+# Run call
 systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
-
 
 for system in itertools.chain.from_iterable(systemsPerServer):
   print system.get('name')
 
 #logout
 client.auth.logout(hubKey)
-
 ```
-
 
 
 ## Contributing
@@ -162,12 +123,10 @@ We use [SemVer](http://semver.org/) for versioning. For the versions available, 
 
 ## Authors
 
-* **####** - *Initial work* 
-
-See also the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
+See the list of [contributors](https://github.com/your/project/contributors) who participated in this project.
 
 ## License
 
-This project is licensed under the --- License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
 
 
