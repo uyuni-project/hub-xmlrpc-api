@@ -15,53 +15,6 @@ Servers are registered and can be managed from the Hub just like normal SUSE Man
 
 You will need credentials to all Server XMLRPC APIs, including the Hub's.
 
-User can set up such environment manually or can use Sumaform (https://github.com/uyuni-project/sumaform) for it, by adding the following modules in your main.tf file:	
-
- ```yaml	
-module "hub-server" {	
-  source = "./modules/libvirt/suse_manager"	
-  base_configuration = "${module.base.configuration}"	
-  product_version = "uyuni-master"	
-  name = "hub-server"	
-  image = "opensuse151"	
-  use_os_released_updates = true	
-}	
- module "slave-server-1" {	
-  source = "./modules/libvirt/suse_manager"	
-  base_configuration = "${module.base.configuration}"	
-  product_version = "uyuni-master"	
-  name = "slave-server-1"	
-  image = "opensuse151"	
-  register_to_server = "mch-hub-server.tf.local"	
-}	
- module "min-for-slave-server-1" {	
-  source = "./modules/libvirt/minion"	
-  base_configuration = "${module.base.configuration}"	
-  product_version = "uyuni-master"	
-  name = "min-for-slave-server-1"	
-  image = "sles12sp3"	
-  server_configuration = "${module.slave-server-1.configuration}"	
-}	
- module "slave-server-2" {	
-  source = "./modules/libvirt/suse_manager"	
-  base_configuration = "${module.base.configuration}"	
-  product_version = "uyuni-master"	
-  name = "slave-server-2"	
-  image = "opensuse151"	
-  register_to_server = "mch-hub-server.tf.local"	
-}	
- module "min-for-slave-server-2" {	
-  source = "./modules/libvirt/minion"	
-  base_configuration = "${module.base.configuration}"	
-  product_version = "uyuni-master"	
-  name = "min-for-slave-server-1"	
-  image = "sles12sp3"	
-  server_configuration = "${module.slave-server-2.configuration}"	
-}	
-```	
-
- This will create a Hub Uyuni Server (hub-server) with two slave Uyuni Servers (slave-server-1 and slave-server-2)
-
 ### Installation
 
 Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni repos, either on the Hub itself or on a host that has access to all Servers' XMLRPC APIs.
