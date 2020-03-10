@@ -20,7 +20,7 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *struct{ ArgsList [
 	method, _ := NewCodec().NewRequest(r).Method()
 	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.ArgsList)
 	if err != nil {
-		log.Println("Call error: %v", err)
+		log.Printf("Call error: %v", err)
 	}
 	reply.Data = response
 	return nil
