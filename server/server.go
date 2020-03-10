@@ -10,7 +10,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
-var conf = config.InitializeConfig()
+var conf config.Config
 
 var apiSession = session.New()
 
@@ -34,6 +34,10 @@ func executeXMLRPCCall(url string, method string, args []interface{}) (reply int
 	defer client.Close()
 	err = client.Call(method, args, &reply)
 	return reply, err
+}
+
+func InitConfig() {
+	conf = config.InitializeConfig()
 }
 
 func InitServer() {
