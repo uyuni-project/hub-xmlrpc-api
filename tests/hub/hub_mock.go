@@ -40,6 +40,16 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 	return nil
 }
 
+func (h *Auth) IsSessionKeyValid(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data bool }) error {
+	log.Println("Hub -> auth.IsSessionKeyValid", args.SessionKey)
+	if args.SessionKey == sessionkey {
+		reply.Data = true
+	} else {
+		return server.Fault{Code: -1, String: "Session id:" + sessionkey + "is not valid."}
+	}
+	return nil
+}
+
 func (h *System) ListUserSystems(r *http.Request, args *struct{ Hubkey, UserLogin string }, reply *struct{ Data []SystemInfo }) error {
 	log.Println("Hub -> System.ListUserSystems", args.UserLogin)
 	if args.Hubkey == sessionkey && args.UserLogin == "admin" {
@@ -47,6 +57,15 @@ func (h *System) ListUserSystems(r *http.Request, args *struct{ Hubkey, UserLogi
 	}
 	return nil
 }
+
+func (h *System) ListSystems(r *http.Request, args *struct{ Hubkey string }, reply *struct{ Data []SystemInfo }) error {
+	log.Println("Hub -> System.ListSystems", args.Hubkey)
+	if args.Hubkey == sessionkey {
+		reply.Data = Systems
+	}
+	return nil
+}
+
 func (h *System) ListFqdns(r *http.Request, args *struct {
 	Hubkey   string
 	ServerId int64
@@ -67,7 +86,9 @@ func main() {
 	var codec = server.NewCodec()
 	codec.RegisterDefaultParser(new(server.StructParser))
 
+	codec.RegisterMethod("auth.isSessionKeyValid")
 	codec.RegisterMethod("auth.login")
+	codec.RegisterMethod("system.listSystems")
 	codec.RegisterMethod("system.listUserSystems")
 	codec.RegisterMethod("system.listFqdns")
 

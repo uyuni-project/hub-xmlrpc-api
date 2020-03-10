@@ -17,6 +17,7 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 		systemList, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listSystems", []interface{}{hubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)
+			return err
 		}
 		systemsSlice := systemList.([]interface{})
 
@@ -26,7 +27,8 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 		}
 		reply.Data = systemIDs
 	} else {
-		log.Println("Hub session invalid error")
+		log.Println("Provided session key is invalid.")
+		return errors.New("Provided session key is invalid.")
 	}
 	return nil
 }
@@ -103,7 +105,8 @@ func (h *Hub) AttachToServers(r *http.Request, args *AttachToServersArgs, reply 
 		}
 		loginIntoSystems(args.HubSessionKey, args.ServerIDs, args.Usernames, args.Passwords)
 	} else {
-		log.Println("Hub session invalid error")
+		log.Println("Provided session key is invalid.")
+		return errors.New("Provided session key is invalid.")
 	}
 	return nil
 }
