@@ -13,7 +13,7 @@ const SESSIONKEY = "300x2413800c14c02928568674dad9e71e0f061e2920be1d7c6542683d78
 
 func init() {
 	/* load test data */
-	os.Setenv("HUB_CONFIG_FILE", "/home/abid/go/src/github.com/uyuni-project/hub-xmlrpc-api/tests/config.json")
+	os.Setenv("HUB_CONFIG_FILE", "../tests/config.json")
 	InitConfig()
 }
 func TestIsHubSessionValid(t *testing.T) {
