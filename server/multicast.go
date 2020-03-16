@@ -24,7 +24,7 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
 		if err != nil {
-			log.Println("Call error: %v", err)
+			log.Printf("Call error: %v", err)
 		}
 		serverArgsByURL := resolveMulticastServerArgs(args)
 		reply.Data = multicastCall(method, serverArgsByURL)
@@ -86,7 +86,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastRes
 			defer wg.Done()
 			response, err := executeXMLRPCCall(url, method, args)
 			if err != nil {
-				log.Println("Call error: %v", err)
+				log.Printf("Call error: %v", err)
 				mutexForFailedResponses.Lock()
 				failedResponses[serverId] = err.Error()
 				mutexForFailedResponses.Unlock()

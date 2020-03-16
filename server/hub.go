@@ -16,7 +16,8 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 	if isHubSessionValid(hubSessionKey) {
 		systemList, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listSystems", []interface{}{hubSessionKey})
 		if err != nil {
-			log.Println("Login error: %v", err)
+			log.Printf("Login error: %v", err)
+			return err
 		}
 		systemsSlice := systemList.([]interface{})
 
@@ -26,7 +27,8 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 		}
 		reply.Data = systemIDs
 	} else {
-		log.Println("Hub session invalid error")
+		log.Println("Provided session key is invalid.")
+		return errors.New("Provided session key is invalid.")
 	}
 	return nil
 }
@@ -34,7 +36,7 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 func (h *Hub) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_MANUAL_MODE)
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return err
 	}
 	reply.Data = hubSessionKey
@@ -44,7 +46,7 @@ func (h *Hub) Login(r *http.Request, args *struct{ Username, Password string }, 
 func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_AUTOCONNECT_MODE)
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return err
 	}
 	reply.Data = hubSessionKey
@@ -54,7 +56,7 @@ func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, 
 func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_RELAY_MODE)
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return err
 	}
 	reply.Data = hubSessionKey
@@ -64,7 +66,7 @@ func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Pa
 func (h *Hub) loginToHub(username, password string, loginMode int) (string, error) {
 	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.login", []interface{}{username, password})
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return "", errors.New(err.Error())
 	}
 	hubSessionKey := response.(string)
@@ -73,7 +75,7 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	if loginMode == session.LOGIN_AUTOCONNECT_MODE {
 		err := loginIntoUserSystems(hubSessionKey, username, password)
 		if err != nil {
-			log.Println("Call error: %v", err)
+			log.Printf("Call error: %v", err)
 		}
 	}
 	return hubSessionKey, nil
@@ -103,7 +105,8 @@ func (h *Hub) AttachToServers(r *http.Request, args *AttachToServersArgs, reply 
 		}
 		loginIntoSystems(args.HubSessionKey, args.ServerIDs, args.Usernames, args.Passwords)
 	} else {
-		log.Println("Hub session invalid error")
+		log.Println("Provided session key is invalid.")
+		return errors.New("Provided session key is invalid.")
 	}
 	return nil
 }
@@ -111,7 +114,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *AttachToServersArgs, reply 
 func loginIntoUserSystems(hubSessionKey, username, password string) error {
 	userSystems, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return err
 	}
 	userSystemsSlice := userSystems.([]interface{})
@@ -149,7 +152,7 @@ func resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, userna
 	for i, serverID := range serverIDs {
 		url, err := retrieveServerXMLRPCApiURL(hubSessionKey, serverID)
 		if err != nil {
-			log.Println("Login error: %v", err)
+			log.Printf("Login error: %v", err)
 			//TODO: what to do with failing servers?
 		} else {
 			serverURLByServerID[serverID] = url
@@ -163,7 +166,7 @@ func retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, e
 	//TODO: we should deal with cases when we have more than one fqdn
 	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "system.listFqdns", []interface{}{hubSessionKey, serverID})
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		return "", err
 	}
 	//TODO: check for casting errors.
@@ -175,7 +178,7 @@ func retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, e
 func isHubSessionValid(hubSessionKey string) bool {
 	isValid, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
-		log.Println("Login error: %v", err)
+		log.Printf("Login error: %v", err)
 		apiSession.RemoveHubSessionKey(hubSessionKey)
 		return false
 	}

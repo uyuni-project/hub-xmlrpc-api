@@ -17,7 +17,7 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interf
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeUnicastNamespace(method)
 		if err != nil {
-			log.Println("Call error: %v", err)
+			log.Printf("Call error: %v", err)
 		}
 		argumentsForCall := make([]interface{}, len(serverArgs)+1)
 		url, sessionKey := apiSession.GetServerSessionInfoByServerID(hubKey, serverID)
@@ -25,7 +25,7 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *struct{ ArgsList []interf
 
 		response, err := executeXMLRPCCall(url, method, argumentsForCall)
 		if err != nil {
-			log.Println("Call error: %v", err)
+			log.Printf("Call error: %v", err)
 		}
 		reply.Data = response
 	} else {
