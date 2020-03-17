@@ -14,11 +14,13 @@ var conf config.Config
 
 var apiSession = session.New()
 
+type ListArgs struct{ Args []interface{} }
+
 type DefaultService struct{}
 
-func (h *DefaultService) DefaultMethod(r *http.Request, args *struct{ ArgsList []interface{} }, reply *struct{ Data interface{} }) error {
+func (h *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
 	method, _ := NewCodec().NewRequest(r).Method()
-	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.ArgsList)
+	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 	}
@@ -43,7 +45,7 @@ func InitConfig() {
 func InitServer() {
 	RPC := rpc.NewServer()
 
-	xmlrpcCodec := InitXMLRPCCodec()
+	xmlrpcCodec := initXMLRPCCodec()
 	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
 	RPC.RegisterService(new(Hub), "hub")
 	RPC.RegisterService(new(DefaultService), "")
@@ -56,10 +58,8 @@ func InitServer() {
 	log.Fatal(http.ListenAndServe(":8888", nil))
 }
 
-func InitXMLRPCCodec() *Codec {
+func initXMLRPCCodec() *Codec {
 	var codec = NewCodec()
-
-	listParser := new(ListParser)
 
 	codec.RegisterDefaultParser(new(StructParser))
 	codec.RegisterMethod("hub.login")
@@ -68,8 +68,8 @@ func InitXMLRPCCodec() *Codec {
 	codec.RegisterMethod("hub.attachToServers")
 	codec.RegisterMethod("hub.listServerIds")
 	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", new(MulticastArgsParser))
-	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", listParser)
-	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", listParser)
+	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", new(UnicastArgsParser))
+	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", new(ListParser))
 
 	return codec
 }
