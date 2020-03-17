@@ -58,3 +58,26 @@ func (p *ListParser) Parse(args []interface{}, output interface{}) error {
 	}
 	return nil
 }
+
+type UnicastArgsParser struct{}
+
+func (p *UnicastArgsParser) Parse(args []interface{}, output interface{}) error {
+	hubSessionKey := args[0].(string)
+	serverID := args[1].(int64)
+
+	rest := args[2:len(args)]
+	serverArgs := make([]interface{}, len(rest))
+
+	for i, list := range rest {
+		serverArgs[i] = list.(interface{})
+	}
+
+	unicastArgs := []interface{}{hubSessionKey, serverID, serverArgs}
+
+	val := reflect.ValueOf(output)
+	for i, arg := range unicastArgs {
+		field := val.Elem().Field(i)
+		field.Set(reflect.ValueOf(arg))
+	}
+	return nil
+}
