@@ -122,3 +122,63 @@ func TestResolveMulticastServerArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestMulticastCall(t *testing.T) {
+	input := [][]interface{}{[]interface{}{"admin", "admin"}}
+	//srvArgoutput := [][]interface{}{{"param1-server1", "param2-server1"}, {"param1-server2", "param2-server2"}}
+	tt := []struct {
+		name       string
+		parameters [][]interface{}
+		output     string
+	}{
+		{name: "system.listSystems"},
+		{name: "system.listUserSystems", parameters: input},
+		{name: "system.unknownmethod", parameters: input, output: "request error: bad status code - 400"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			hub := Hub{}
+			req, err := http.NewRequest("GET", "localhost:8888", nil)
+			if err != nil {
+				t.Fatalf("could not create request: %v", err)
+			}
+			//Login
+			//sessionKey := struct{ HubSessionKey string }{tc.sessionkey}
+			reply := struct{ Data string }{}
+			err = hub.LoginWithAutoconnectMode(req, &struct{ Username, Password string }{"admin", "admin"}, &reply)
+			if err != nil {
+				t.Fatalf("Login fails: %v", err)
+			}
+			sessionKey := struct{ HubSessionKey string }{reply.Data}
+			//Get the server Ids
+			serverIdsreply := struct{ Data []int64 }{}
+			hub.ListServerIds(req, &sessionKey, &serverIdsreply)
+			serverIds := serverIdsreply.Data
+
+			srvArgs := MulticastArgs{sessionKey.HubSessionKey, serverIds, tc.parameters}
+
+			result := resolveMulticastServerArgs(&srvArgs)
+
+			multicastResponse := multicastCall(tc.name, result)
+
+			failedResponses := len(multicastResponse.Failed.Responses)
+			successfulResponses := len(multicastResponse.Successfull.Responses)
+			totalResponses := failedResponses + successfulResponses
+			if totalResponses != len(serverIds) {
+				t.Fatalf("Results are not complete, there should be result for every server. Expected number of reponse %v , Got %v", len(serverIds), totalResponses)
+			}
+			//t.Fatalf("sss %v", multicastResponse)
+			if tc.name == "system.unknownmethod" {
+				if failedResponses != len(serverIds) {
+					t.Fatalf("Expected all response to come as failed but that didn't happen")
+				}
+				if multicastResponse.Failed.Responses[0] != tc.output {
+					t.Fatalf("Expected %v, Got %v", multicastResponse.Failed.Responses[0], tc.output)
+
+				}
+
+			}
+		})
+	}
+}
