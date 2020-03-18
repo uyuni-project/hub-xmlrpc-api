@@ -83,18 +83,19 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 
 func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
 	if isHubSessionValid(args.HubSessionKey) {
-		usernames := args.ServerArgs[0]
-		passwords := args.ServerArgs[1]
+		usernames := make([]interface{}, len(args.ServerIDs))
+		passwords := make([]interface{}, len(args.ServerIDs))
 
 		if apiSession.GetLoginMode(args.HubSessionKey) == session.LOGIN_RELAY_MODE {
 			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(args.HubSessionKey)
-			usernames = make([]interface{}, len(args.ServerIDs))
-			passwords = make([]interface{}, len(args.ServerIDs))
 
 			for i := range args.ServerIDs {
 				usernames[i] = serverUsername
 				passwords[i] = serverPassword
 			}
+		} else {
+			usernames = args.ServerArgs[0]
+			passwords = args.ServerArgs[1]
 		}
 		loginIntoSystems(args.HubSessionKey, args.ServerIDs, usernames, passwords)
 	} else {
