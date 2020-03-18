@@ -61,13 +61,15 @@ func InitServer() {
 func initXMLRPCCodec() *Codec {
 	var codec = NewCodec()
 
+	multicastArgsParser := new(MulticastArgsParser)
+
 	codec.RegisterDefaultParser(new(StructParser))
 	codec.RegisterMethod("hub.login")
 	codec.RegisterMethod("hub.loginWithAutoconnectMode")
 	codec.RegisterMethod("hub.loginWithAuthRelayMode")
-	codec.RegisterMethod("hub.attachToServers")
+	codec.RegisterMethodWithParser("hub.attachToServers", multicastArgsParser)
 	codec.RegisterMethod("hub.listServerIds")
-	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", new(MulticastArgsParser))
+	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", multicastArgsParser)
 	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", new(UnicastArgsParser))
 	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", new(ListParser))
 

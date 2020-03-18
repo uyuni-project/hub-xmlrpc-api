@@ -42,6 +42,11 @@ func (c *Codec) RegisterMethod(method string) {
 	c.methods[method] = method
 }
 
+func (c *Codec) RegisterMethodWithParser(method string, parser Parser) {
+	c.methods[method] = method
+	c.parsers[c.resolveMethod(method)] = parser
+}
+
 func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
 	c.parsers[c.resolveMethod(method)] = parser
