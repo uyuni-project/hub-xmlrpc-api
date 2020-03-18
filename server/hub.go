@@ -81,29 +81,22 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	return hubSessionKey, nil
 }
 
-type AttachToServersArgs struct {
-	HubSessionKey string
-	ServerIDs     []int64
-	Usernames     []string
-	Passwords     []string
-}
-
-func (h *Hub) AttachToServers(r *http.Request, args *AttachToServersArgs, reply *struct{ Data []error }) error {
+func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
 	if isHubSessionValid(args.HubSessionKey) {
-		usernames := args.Usernames
-		passwords := args.Passwords
+		usernames := args.ServerArgs[0]
+		passwords := args.ServerArgs[1]
 
 		if apiSession.GetLoginMode(args.HubSessionKey) == session.LOGIN_RELAY_MODE {
 			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(args.HubSessionKey)
-			usernames = make([]string, len(args.ServerIDs))
-			passwords = make([]string, len(args.ServerIDs))
+			usernames = make([]interface{}, len(args.ServerIDs))
+			passwords = make([]interface{}, len(args.ServerIDs))
 
 			for i := range args.ServerIDs {
 				usernames[i] = serverUsername
 				passwords[i] = serverPassword
 			}
 		}
-		loginIntoSystems(args.HubSessionKey, args.ServerIDs, args.Usernames, args.Passwords)
+		loginIntoSystems(args.HubSessionKey, args.ServerIDs, usernames, passwords)
 	} else {
 		log.Println("Provided session key is invalid.")
 		return errors.New("Provided session key is invalid.")
@@ -120,8 +113,8 @@ func loginIntoUserSystems(hubSessionKey, username, password string) error {
 	userSystemsSlice := userSystems.([]interface{})
 
 	serverIDs := make([]int64, len(userSystemsSlice))
-	usernames := make([]string, len(userSystemsSlice))
-	passwords := make([]string, len(userSystemsSlice))
+	usernames := make([]interface{}, len(userSystemsSlice))
+	passwords := make([]interface{}, len(userSystemsSlice))
 
 	for i, userSystem := range userSystemsSlice {
 		serverIDs[i] = userSystem.(map[string]interface{})["id"].(int64)
@@ -133,7 +126,7 @@ func loginIntoUserSystems(hubSessionKey, username, password string) error {
 	return nil
 }
 
-func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []string) (MulticastResponse, error) {
+func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (MulticastResponse, error) {
 	loginIntoSystemsArgs, serverURLByServerID, _ := resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
 	responses := multicastCall("auth.login", loginIntoSystemsArgs)
 	successfulResponses := responses.Successfull
@@ -145,7 +138,7 @@ func loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwo
 	return responses, nil
 }
 
-func resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []string) ([]MulticastServerArgs, map[int64]string, error) {
+func resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]MulticastServerArgs, map[int64]string, error) {
 	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
 	serverURLByServerID := make(map[int64]string)
 
