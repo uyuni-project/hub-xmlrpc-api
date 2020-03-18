@@ -86,9 +86,9 @@ func (c *Codec) resolveParser(requestMethod string) Parser {
 }
 
 func (c *Codec) resolveMethod(requestMethod string) string {
-	namespace, methodStr := getNamespaceAndMethod(requestMethod)
+	namespace, methodStr := c.getNamespaceAndMethod(requestMethod)
 	if _, ok := c.methods[requestMethod]; ok {
-		return toLowerCase(namespace, methodStr)
+		return c.toLowerCase(namespace, methodStr)
 	} else if method, ok := c.defaultMethodByNamespace[namespace]; ok {
 		return method
 	} else if c.defaultMethod != "" {
@@ -97,7 +97,7 @@ func (c *Codec) resolveMethod(requestMethod string) string {
 	return requestMethod
 }
 
-func getNamespaceAndMethod(requestMethod string) (string, string) {
+func (c *Codec) getNamespaceAndMethod(requestMethod string) (string, string) {
 	//TODO:
 	if len(requestMethod) > 1 {
 		parts := strings.Split(requestMethod, ".")
@@ -107,7 +107,7 @@ func getNamespaceAndMethod(requestMethod string) (string, string) {
 	return "", ""
 }
 
-func toLowerCase(namespace, method string) string {
+func (c *Codec) toLowerCase(namespace, method string) string {
 	//TODO:
 	if namespace != "" && method != "" {
 		r, n := utf8.DecodeRuneInString(method)
@@ -145,6 +145,9 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 
 	var argsList []interface{}
 	argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
+	if c.err != nil {
+		return c.err
+	}
 
 	err := c.parser.Parse(argsList, args)
 	if err != nil {
