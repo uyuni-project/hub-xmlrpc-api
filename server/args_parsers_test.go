@@ -9,28 +9,28 @@ func TestStructParser(t *testing.T) {
 	type testLoginStruct struct{ Username, Password string }
 
 	tt := []struct {
-		name              string
-		args              []interface{}
-		structToHidratate *testLoginStruct
-		expectedStruct    testLoginStruct
-		expectedResult    bool
+		name            string
+		args            []interface{}
+		structToHydrate *testLoginStruct
+		expectedStruct  testLoginStruct
+		expectedResult  bool
 	}{
 		{name: "StructParser Success",
-			args:              []interface{}{"username", "password"},
-			structToHidratate: &testLoginStruct{},
-			expectedStruct:    testLoginStruct{Username: "username", Password: "password"},
-			expectedResult:    true},
+			args:            []interface{}{"username", "password"},
+			structToHydrate: &testLoginStruct{},
+			expectedStruct:  testLoginStruct{Username: "username", Password: "password"},
+			expectedResult:  true},
 		{name: "StructParser Failed",
-			args:              []interface{}{"username", "password"},
-			structToHidratate: &testLoginStruct{},
-			expectedStruct:    testLoginStruct{Username: "", Password: "password"},
-			expectedResult:    false},
+			args:            []interface{}{"username", "password"},
+			structToHydrate: &testLoginStruct{},
+			expectedStruct:  testLoginStruct{Username: "", Password: "password"},
+			expectedResult:  false},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			new(StructParser).Parse(tc.args, tc.structToHidratate)
-			if reflect.DeepEqual(tc.structToHidratate, &tc.expectedStruct) != tc.expectedResult {
+			new(StructParser).Parse(tc.args, tc.structToHydrate)
+			if reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) != tc.expectedResult {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", true)
 			}
 		})
@@ -39,28 +39,28 @@ func TestStructParser(t *testing.T) {
 
 func TestMulticastArgsParser(t *testing.T) {
 	tt := []struct {
-		name              string
-		args              []interface{}
-		structToHidratate *MulticastArgs
-		expectedStruct    MulticastArgs
-		expectedResult    bool
+		name            string
+		args            []interface{}
+		structToHydrate *MulticastArgs
+		expectedStruct  MulticastArgs
+		expectedResult  bool
 	}{
 		{name: "MuticastArgsParser Success",
-			args:              []interface{}{"sessionKey", []interface{}{int64(1000010001), int64(1000010002)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}},
-			structToHidratate: &MulticastArgs{},
-			expectedStruct:    MulticastArgs{HubSessionKey: "sessionKey", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}},
-			expectedResult:    true},
+			args:            []interface{}{"sessionKey", []interface{}{int64(1000010001), int64(1000010002)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}},
+			structToHydrate: &MulticastArgs{},
+			expectedStruct:  MulticastArgs{HubSessionKey: "sessionKey", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}},
+			expectedResult:  true},
 		{name: "MuticastArgsParser Failed",
-			args:              []interface{}{"sessionKey", []interface{}{int64(1000010001), int64(1000010002)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}},
-			structToHidratate: &MulticastArgs{},
-			expectedStruct:    MulticastArgs{HubSessionKey: "", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}},
-			expectedResult:    false},
+			args:            []interface{}{"sessionKey", []interface{}{int64(1000010001), int64(1000010002)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}},
+			structToHydrate: &MulticastArgs{},
+			expectedStruct:  MulticastArgs{HubSessionKey: "", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}},
+			expectedResult:  false},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			new(MulticastArgsParser).Parse(tc.args, tc.structToHidratate)
-			if reflect.DeepEqual(tc.structToHidratate, &tc.expectedStruct) != tc.expectedResult {
+			new(MulticastArgsParser).Parse(tc.args, tc.structToHydrate)
+			if reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) != tc.expectedResult {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", true)
 			}
 		})
@@ -69,28 +69,28 @@ func TestMulticastArgsParser(t *testing.T) {
 
 func TestUnicastArgsParser(t *testing.T) {
 	tt := []struct {
-		name              string
-		args              []interface{}
-		structToHidratate *UnicastArgs
-		expectedStruct    UnicastArgs
-		expectedResult    bool
+		name            string
+		args            []interface{}
+		structToHydrate *UnicastArgs
+		expectedStruct  UnicastArgs
+		expectedResult  bool
 	}{
 		{name: "UnicastArgsParser Success",
-			args:              []interface{}{"sessionKey", int64(1000010001), "arg1_Server1", "arg2_Server1"},
-			structToHidratate: &UnicastArgs{},
-			expectedStruct:    UnicastArgs{HubSessionKey: "sessionKey", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}},
-			expectedResult:    true},
+			args:            []interface{}{"sessionKey", int64(1000010001), "arg1_Server1", "arg2_Server1"},
+			structToHydrate: &UnicastArgs{},
+			expectedStruct:  UnicastArgs{HubSessionKey: "sessionKey", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}},
+			expectedResult:  true},
 		{name: "UnicastArgsParser Failed",
-			args:              []interface{}{"sessionKey", int64(1000010001), "arg1_Server1", "arg2_Server1"},
-			structToHidratate: &UnicastArgs{},
-			expectedStruct:    UnicastArgs{HubSessionKey: "", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}},
-			expectedResult:    false},
+			args:            []interface{}{"sessionKey", int64(1000010001), "arg1_Server1", "arg2_Server1"},
+			structToHydrate: &UnicastArgs{},
+			expectedStruct:  UnicastArgs{HubSessionKey: "", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}},
+			expectedResult:  false},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			new(UnicastArgsParser).Parse(tc.args, tc.structToHidratate)
-			if reflect.DeepEqual(tc.structToHidratate, &tc.expectedStruct) != tc.expectedResult {
+			new(UnicastArgsParser).Parse(tc.args, tc.structToHydrate)
+			if reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) != tc.expectedResult {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", true)
 			}
 		})
@@ -99,28 +99,28 @@ func TestUnicastArgsParser(t *testing.T) {
 
 func TestListParser(t *testing.T) {
 	tt := []struct {
-		name              string
-		args              []interface{}
-		structToHidratate *ListArgs
-		expectedStruct    ListArgs
-		expectedResult    bool
+		name            string
+		args            []interface{}
+		structToHydrate *ListArgs
+		expectedStruct  ListArgs
+		expectedResult  bool
 	}{
 		{name: "ListParser Success",
-			args:              []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"},
-			structToHidratate: &ListArgs{},
-			expectedStruct:    ListArgs{[]interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"}},
-			expectedResult:    true},
+			args:            []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"},
+			structToHydrate: &ListArgs{},
+			expectedStruct:  ListArgs{[]interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"}},
+			expectedResult:  true},
 		{name: "ListParser Failed",
-			args:              []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"},
-			structToHidratate: &ListArgs{},
-			expectedStruct:    ListArgs{[]interface{}{"", "arg1_Hub", "arg2_Hub"}},
-			expectedResult:    false},
+			args:            []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"},
+			structToHydrate: &ListArgs{},
+			expectedStruct:  ListArgs{[]interface{}{"", "arg1_Hub", "arg2_Hub"}},
+			expectedResult:  false},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			new(ListParser).Parse(tc.args, tc.structToHidratate)
-			if reflect.DeepEqual(tc.structToHidratate, &tc.expectedStruct) != tc.expectedResult {
+			new(ListParser).Parse(tc.args, tc.structToHydrate)
+			if reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) != tc.expectedResult {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", true)
 			}
 		})
