@@ -43,8 +43,8 @@ func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 		dec.CharsetReader = CharsetReader
 	}
 
-	//TODO: how can we do this?
-	argsList = make([]interface{}, 10)
+	//xmlrpc protocol defines a max of 10000 arguments
+	argsList = make([]interface{}, 10000)
 	items := reflect.ValueOf(argsList)
 
 	i := 0
