@@ -22,9 +22,13 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struc
 		if err != nil {
 			log.Printf("Call error: %v", err)
 		}
-		argumentsForCall := make([]interface{}, len(args.ServerArgs)+1)
+		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
 		url, sessionKey := apiSession.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
-		argumentsForCall[0] = sessionKey
+		argumentsForCall = append(argumentsForCall, sessionKey)
+
+		for _, srvArg := range args.ServerArgs {
+			argumentsForCall = append(argumentsForCall, srvArg)
+		}
 
 		response, err := executeXMLRPCCall(url, method, argumentsForCall)
 		if err != nil {
