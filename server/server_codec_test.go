@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,12 +16,12 @@ func Test_RegisterDefaultMethodForNamespace(t *testing.T) {
 		name      string
 		namespace string
 		method    string
-		parser    Parser
+		parser    parser
 	}{
 		{name: "RegisterDefaultMethodForNamespace",
 			namespace: "multicast",
 			method:    "MulticastService.DefaultMethod",
-			parser:    new(MulticastArgsParser),
+			parser:    parseToMulitcastArgs,
 		},
 		{name: "RegisterDefaultMethodForNamespace",
 			namespace: "multicast",
@@ -36,7 +37,9 @@ func Test_RegisterDefaultMethodForNamespace(t *testing.T) {
 			if codec.defaultMethodByNamespace[tc.namespace] != tc.method {
 				t.Fatalf("defaultMethodByNamespace doesn't match, Expected value was: %v", tc.method)
 			}
-			if codec.parsers["MulticastService.DefaultMethod"] != tc.parser {
+
+			codecParser := codec.parsers["MulticastService.DefaultMethod"]
+			if runtime.FuncForPC(reflect.ValueOf(codecParser).Pointer()).Name() != runtime.FuncForPC(reflect.ValueOf(tc.parser).Pointer()).Name() {
 				t.Fatalf("parser for method doesn't match, Expected was: %v", reflect.TypeOf(tc.parser).String())
 			}
 		})
@@ -47,11 +50,11 @@ func Test_RegisterDefaultMethod(t *testing.T) {
 	tt := []struct {
 		name   string
 		method string
-		parser Parser
+		parser parser
 	}{
 		{name: "RegisterDefaultMethod",
 			method: "MulticastService.DefaultMethod",
-			parser: new(MulticastArgsParser),
+			parser: parseToMulitcastArgs,
 		},
 		{name: "RegisterDefaultMethod",
 			method: "MulticastService.DefaultMethod",
@@ -66,7 +69,8 @@ func Test_RegisterDefaultMethod(t *testing.T) {
 			if codec.defaultMethod != tc.method {
 				t.Fatalf("defaultMethod doesn't match, Expected value was: %v", tc.method)
 			}
-			if codec.parsers["MulticastService.DefaultMethod"] != tc.parser {
+			codecParser := codec.parsers["MulticastService.DefaultMethod"]
+			if runtime.FuncForPC(reflect.ValueOf(codecParser).Pointer()).Name() != runtime.FuncForPC(reflect.ValueOf(tc.parser).Pointer()).Name() {
 				t.Fatalf("parser for method doesn't match, Expected was: %v", reflect.TypeOf(tc.parser).String())
 			}
 		})
@@ -94,8 +98,8 @@ func Test_resolveMethod(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			codec := NewCodec()
-			codec.RegisterDefaultMethod(tc.defaultMethod, new(StructParser))
-			codec.RegisterDefaultMethodForNamespace(tc.namespace, tc.defaultMethodForNamespace, new(StructParser))
+			codec.RegisterDefaultMethod(tc.defaultMethod, parseToStruct)
+			codec.RegisterDefaultMethodForNamespace(tc.namespace, tc.defaultMethodForNamespace, parseToStruct)
 			codec.RegisterMethod(tc.method)
 
 			method := codec.resolveMethod(tc.method)
@@ -120,11 +124,11 @@ func Test_resolveParser(t *testing.T) {
 	tt := []struct {
 		name          string
 		method        string
-		defaultParser Parser
+		defaultParser parser
 	}{
 		{name: "CodecRequest resolveParser Success",
 			method:        "multicastService.method",
-			defaultParser: new(ListParser),
+			defaultParser: parseToList,
 		},
 	}
 
@@ -134,12 +138,12 @@ func Test_resolveParser(t *testing.T) {
 			codec.RegisterDefaultParser(tc.defaultParser)
 
 			parser := codec.resolveParser("unregistered_method")
-			if parser != tc.defaultParser {
+			if runtime.FuncForPC(reflect.ValueOf(parser).Pointer()).Name() != runtime.FuncForPC(reflect.ValueOf(tc.defaultParser).Pointer()).Name() {
 				t.Fatalf("Parser doesn't match with the defaultParser. Parser value was: %v, expected value was: %v", reflect.TypeOf(parser).String(), reflect.TypeOf(tc.defaultParser).String())
 			}
 
 			parser = codec.resolveParser(tc.method)
-			if parser != tc.defaultParser {
+			if runtime.FuncForPC(reflect.ValueOf(parser).Pointer()).Name() != runtime.FuncForPC(reflect.ValueOf(tc.defaultParser).Pointer()).Name() {
 				t.Fatalf("Parser doesn't match with the defaultParser. Parser value was: %v, expected value was: %v", reflect.TypeOf(parser).String(), reflect.TypeOf(tc.defaultParser).String())
 			}
 		})
@@ -161,10 +165,10 @@ func Test_NewRequest(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			codec := NewCodec()
-			codec.RegisterDefaultParser(new(MulticastArgsParser))
+			codec.RegisterDefaultParser(parseToMulitcastArgs)
 			codecRequest := codec.NewRequest(tc.httpRequest)
 
-			if !reflect.DeepEqual(codecRequest, &tc.expectedCodecRequest) {
+			if codecRequest == nil {
 				t.Fatalf("Expected and actual don't match")
 			}
 		})
@@ -201,22 +205,21 @@ func Test_CodecRequest_ReadRequest(t *testing.T) {
 			expectedError:        true,
 		},
 		{name: "Create new CodecRequest error_when_unmarshalling Failed",
-			httpRequest:          buildSuccessHTTPRequestWithBody(brokenRequestBodyForMulticastArgs),
-			expectedCodecRequest: buildSuccessCodecRequestWithBody(brokenRequestBodyForMulticastArgs),
-			structToHydrate:      &MulticastArgs{},
-			expectedStruct:       MulticastArgs{},
-			expectedError:        true,
+			httpRequest:     buildSuccessHTTPRequestWithBody(brokenRequestBodyForMulticastArgs),
+			structToHydrate: &MulticastArgs{},
+			expectedStruct:  MulticastArgs{},
+			expectedError:   true,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			codec := NewCodec()
-			codec.RegisterDefaultParser(new(MulticastArgsParser))
+			codec.RegisterDefaultParser(parseToMulitcastArgs)
 
 			codecRequest := codec.NewRequest(tc.httpRequest)
 
-			if !reflect.DeepEqual(codecRequest, &tc.expectedCodecRequest) {
+			if codecRequest == nil {
 				t.Fatalf("Expected and actual don't match")
 			}
 
@@ -239,7 +242,7 @@ func buildSuccessCodecRequestWithBody(body string) CodecRequest {
 	xml.Unmarshal(rawxml, &request)
 	request.rawxml = rawxml
 
-	return CodecRequest{request: &request, parser: new(MulticastArgsParser)}
+	return CodecRequest{request: &request, parser: parseToMulitcastArgs}
 }
 
 func buildSuccessHTTPRequestWithBody(body string) *http.Request {
