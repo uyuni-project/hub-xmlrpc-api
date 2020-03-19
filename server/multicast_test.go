@@ -3,6 +3,7 @@ package server
 import (
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -74,31 +75,42 @@ func TestResolveMulticastServerArgs(t *testing.T) {
 	input := [][]interface{}{[]interface{}{"param1-server1", "param1-server2"}, []interface{}{"param2-server1", "param2-server2"}}
 	srvArgoutput := [][]interface{}{{"param1-server1", "param2-server1"}, {"param1-server2", "param2-server2"}}
 	tt := []struct {
-		name       string
-		sessionkey string
-		data       [][]interface{}
-		output     [][]interface{}
+		name     string
+		username string
+		password string
+		data     [][]interface{}
+		output   [][]interface{}
+		err      string
 	}{
-		{name: "valid-values", sessionkey: SESSIONKEY, data: input, output: srvArgoutput},
-		{name: "empty-values", sessionkey: SESSIONKEY},
+		{name: "valid-values", username: "admin", password: "admin", data: input, output: srvArgoutput},
+		{name: "empty-values", username: "unknownuser", password: "unknownuser", err: FaultInvalidCredntials.String},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			hub := Hub{}
-			req, err := http.NewRequest("GET", "localhost:8888", nil)
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
-			sessionKey := struct{ HubSessionKey string }{tc.sessionkey}
+			reply := struct{ Data string }{""}
+			err = new(Hub).Login(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			if err != nil {
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
+				}
+				return
+			}
+			sessionKey := struct{ HubSessionKey string }{reply.Data}
 			serverIdsreply := struct{ Data []int64 }{}
-			hub.ListServerIds(req, &sessionKey, &serverIdsreply)
+			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
+			if err != nil {
+				t.Fatalf("could not get the sever ids : %v", err)
+			}
 			serverIds := serverIdsreply.Data
 
 			srvArgs := MulticastArgs{sessionKey.HubSessionKey, serverIds, tc.data}
-
 			result := resolveMulticastServerArgs(&srvArgs)
-
 			resultLength := len(result)
 			if resultLength != len(serverIds) {
 				t.Fatalf("Unexpected result. Length should be same but got %v & %v", resultLength, len(serverIds))
@@ -144,7 +156,6 @@ func TestMulticastCall(t *testing.T) {
 				t.Fatalf("could not create request: %v", err)
 			}
 			//Login
-			//sessionKey := struct{ HubSessionKey string }{tc.sessionkey}
 			reply := struct{ Data string }{}
 			err = hub.LoginWithAutoconnectMode(req, &struct{ Username, Password string }{"admin", "admin"}, &reply)
 			if err != nil {
