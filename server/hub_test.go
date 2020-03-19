@@ -288,14 +288,14 @@ func TestAttachToServers(t *testing.T) {
 			hub := Hub{}
 			sessionKey := struct{ HubSessionKey string }{tc.sessionkey}
 			reply := struct{ Data []error }{}
-			usernames := []string{"admin", "admin"}
-			passwords := []string{"admin", "admin"}
+			usernames := []interface{}{"admin", "admin"}
+			passwords := []interface{}{"admin", "admin"}
 
 			serverIdsreply := struct{ Data []int64 }{}
 			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
 			serverIds := serverIdsreply.Data
 
-			srvArgs := AttachToServersArgs{sessionKey.HubSessionKey, serverIds, usernames, passwords}
+			srvArgs := MulticastArgs{sessionKey.HubSessionKey, serverIds, [][]interface{}{usernames, passwords}}
 			err = hub.AttachToServers(req, &srvArgs, &reply)
 			if err != nil && err.Error() != tc.err {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.err, err.Error())
