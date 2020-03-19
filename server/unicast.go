@@ -25,14 +25,12 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struc
 		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
 		url, sessionKey := apiSession.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
 		argumentsForCall = append(argumentsForCall, sessionKey)
-
-		for _, srvArg := range args.ServerArgs {
-			argumentsForCall = append(argumentsForCall, srvArg)
-		}
+		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
 
 		response, err := executeXMLRPCCall(url, method, argumentsForCall)
 		if err != nil {
 			log.Printf("Call error: %v", err)
+			return err
 		}
 		reply.Data = response
 	} else {
