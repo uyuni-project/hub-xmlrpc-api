@@ -4,13 +4,9 @@ import (
 	"reflect"
 )
 
-type Parser interface {
-	Parse(args []interface{}, output interface{}) error
-}
+type parser func(args []interface{}, output interface{}) error
 
-type StructParser struct{}
-
-func (p *StructParser) Parse(args []interface{}, output interface{}) error {
+func parseToStruct(args []interface{}, output interface{}) error {
 	val := reflect.ValueOf(output)
 	for i, arg := range args {
 		field := val.Elem().Field(i)
@@ -19,9 +15,7 @@ func (p *StructParser) Parse(args []interface{}, output interface{}) error {
 	return nil
 }
 
-type MulticastArgsParser struct{}
-
-func (p *MulticastArgsParser) Parse(args []interface{}, output interface{}) error {
+func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 	hubSessionKey := args[0].(string)
 	serverIDs := make([]int64, len(args[1].([]interface{})))
 	for i, elem := range args[1].([]interface{}) {
@@ -45,9 +39,7 @@ func (p *MulticastArgsParser) Parse(args []interface{}, output interface{}) erro
 	return nil
 }
 
-type ListParser struct{}
-
-func (p *ListParser) Parse(args []interface{}, output interface{}) error {
+func parseToList(args []interface{}, output interface{}) error {
 	val := reflect.ValueOf(output)
 	if val.Elem().NumField() >= 1 {
 		field := val.Elem().Field(0)
@@ -59,9 +51,7 @@ func (p *ListParser) Parse(args []interface{}, output interface{}) error {
 	return nil
 }
 
-type UnicastArgsParser struct{}
-
-func (p *UnicastArgsParser) Parse(args []interface{}, output interface{}) error {
+func parseToUnicastArgs(args []interface{}, output interface{}) error {
 	hubSessionKey := args[0].(string)
 	serverID := args[1].(int64)
 
