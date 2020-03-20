@@ -13,7 +13,7 @@ var (
 	FaultApplicationError     = Fault{Code: -32500, String: "Application Error"}
 	FaultSystemError          = Fault{Code: -32400, String: "System Error"}
 	FaultDecode               = Fault{Code: -32700, String: "Parsing error: not well formed"}
-	FaultInvalidCredntials    = Fault{Code: 2950, String: "Either the password or username is incorrect."}
+	FaultInvalidCredentials   = Fault{Code: 2950, String: "Either the password or username is incorrect."}
 )
 
 type Fault struct {

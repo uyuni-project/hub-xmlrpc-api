@@ -83,7 +83,7 @@ func TestResolveMulticastServerArgs(t *testing.T) {
 		err      string
 	}{
 		{name: "valid-values", username: "admin", password: "admin", data: input, output: srvArgoutput},
-		{name: "empty-values", username: "unknownuser", password: "unknownuser", err: FaultInvalidCredntials.String},
+		{name: "empty-values", username: "unknownuser", password: "unknownuser", err: FaultInvalidCredentials.String},
 	}
 
 	for _, tc := range tt {

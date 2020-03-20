@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 func init() {
@@ -57,7 +59,44 @@ func TestAreAllArgumentsOfSameLength(t *testing.T) {
 		t.Fatalf("expected and actual doesn't match, Expected was: %v", true)
 	}
 }
+func TestLoginToHub(t *testing.T) {
 
+	tt := []struct {
+		name     string
+		username string
+		password string
+		err      string
+	}{
+		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: FaultInvalidCredentials.String},
+		{name: "Valid credentials", username: "admin", password: "admin"},
+	}
+
+	for _, tc := range tt {
+		t.Run(tc.name, func(t *testing.T) {
+			hubsessionkey, err := new(Hub).loginToHub(tc.username, tc.password, session.LOGIN_MANUAL_MODE)
+			if err != nil {
+				if !strings.Contains(err.Error(), tc.err) {
+					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
+				}
+				return
+			}
+			// test the hubkey
+			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, hubsessionkey)
+			if !matched {
+				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
+				return
+			}
+			username, password := apiSession.GetUsernameAndPassword(hubsessionkey)
+			if username != tc.username {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
+			}
+			if password != tc.password {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			}
+		})
+	}
+
+}
 func TestLogin(t *testing.T) {
 
 	tt := []struct {
@@ -66,7 +105,7 @@ func TestLogin(t *testing.T) {
 		password string
 		err      string
 	}{
-		{name: "Invalid credentials", username: "falsadmin", password: "falsadmin", err: FaultInvalidCredntials.String},
+		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: FaultInvalidCredentials.String},
 		{name: "Valid credentials", username: "admin", password: "admin"},
 	}
 
@@ -85,17 +124,9 @@ func TestLogin(t *testing.T) {
 				return
 			}
 			// test the hubkey
-			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, reply.Data)
-			if !matched {
-				t.Fatalf("Unexepected token pattern %v", reply.Data)
-				return
-			}
-			username, password := apiSession.GetUsernameAndPassword(reply.Data)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
-			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			hubsessionkey := reply.Data
+			if hubsessionkey == "" {
+				t.Fatalf("Invalid session key %v", reply.Data)
 			}
 		})
 	}
@@ -109,7 +140,7 @@ func TestLoginAutoconnect(t *testing.T) {
 		err      string
 	}{
 		{name: "Valid credentials", username: "admin", password: "admin"},
-		{name: "Invalid credentials", username: "falsadmin", password: "falsadmin", err: FaultInvalidCredntials.String},
+		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: FaultInvalidCredentials.String},
 	}
 
 	for _, tc := range tt {
@@ -129,17 +160,9 @@ func TestLoginAutoconnect(t *testing.T) {
 				return
 			}
 			// test the hubkey
-			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, reply.Data)
-			if !matched {
-				t.Fatalf("Unexepected token pattern %v", reply.Data)
-				return
-			}
-			username, password := apiSession.GetUsernameAndPassword(reply.Data)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
-			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			hubsessionkey := reply.Data
+			if hubsessionkey == "" {
+				t.Fatalf("Invalid session key %v", reply.Data)
 			}
 			//test if servers attached to hub have also been authenticated automatically
 			sessionKey := struct{ HubSessionKey string }{reply.Data}
@@ -184,17 +207,9 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 				return
 			}
 			// test the hubkey
-			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, reply.Data)
-			if !matched {
-				t.Fatalf("Unexepected token pattern %v", reply.Data)
-				return
-			}
-			username, password := apiSession.GetUsernameAndPassword(reply.Data)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
-			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			hubsessionkey := reply.Data
+			if hubsessionkey == "" {
+				t.Fatalf("Invalid session key %v", reply.Data)
 			}
 		})
 	}
@@ -296,7 +311,7 @@ func TestListServerIds(t *testing.T) {
 		err      string
 	}{
 		{name: "Valid credentials", username: "admin", password: "admin"},
-		{name: "With invalid  credentials", username: "unknownadmin", password: "unknownadmin", err: FaultInvalidCredntials.String},
+		{name: "With invalid  credentials", username: "unknownadmin", password: "unknownadmin", err: FaultInvalidCredentials.String},
 	}
 
 	for _, tc := range tt {
