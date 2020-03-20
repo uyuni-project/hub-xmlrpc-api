@@ -1,6 +1,11 @@
 package session
 
-import "sync"
+import (
+	"log"
+	"sync"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
+)
 
 type ApiSession struct {
 	sessions *sync.Map
@@ -23,13 +28,7 @@ type ServerSessionInfo struct {
 }
 
 func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string, loginMode int) {
-	s.sessions.Store(hubSessionKey, NewHubSessionInfo(username, password, loginMode))
-}
-
-func (s *ApiSession) RemoveHubSessionKey(hubSessionKey string) {
-	if _, ok := s.sessions.Load(hubSessionKey); ok {
-		s.sessions.Delete(hubSessionKey)
-	}
+	s.sessions.Store(hubSessionKey, newHubSessionInfo(username, password, loginMode))
 }
 
 func (s *ApiSession) GetLoginMode(hubSessionKey string) int {
@@ -61,8 +60,14 @@ func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, server
 	return "", ""
 }
 
+func (s *ApiSession) removeHubSessionKey(hubSessionKey string) {
+	if _, ok := s.sessions.Load(hubSessionKey); ok {
+		s.sessions.Delete(hubSessionKey)
+	}
+}
+
 // New returns a new HubSession struct
-func NewHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
+func newHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
 	var syncMap sync.Map
 	return &HubSessionInfo{
 		username:          username,
@@ -72,10 +77,18 @@ func NewHubSessionInfo(username, password string, loginMode int) *HubSessionInfo
 	}
 }
 
-// New returns a new ApiSession struct
-func New() *ApiSession {
-	var syncMap sync.Map
-	return &ApiSession{
-		sessions: &syncMap,
+func (s *ApiSession) IsHubSessionValid(hubSessionKey string, client *client.Client) bool {
+	isValid, err := client.ExecuteXMLRPCCallToHub("auth.isSessionKeyValid", []interface{}{hubSessionKey})
+	if err != nil {
+		log.Printf("Login error: %v", err)
+		s.removeHubSessionKey(hubSessionKey)
+		return false
 	}
+	return isValid.(bool)
+}
+
+// New returns a new ApiSession struct
+func NewApiSession() *ApiSession {
+	var syncMap sync.Map
+	return &ApiSession{sessions: &syncMap}
 }

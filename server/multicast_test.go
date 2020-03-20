@@ -8,6 +8,7 @@ import (
 
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 func TestGetKeysAndValuesFromMap(t *testing.T) {
@@ -91,8 +92,9 @@ func TestResolveMulticastServerArgs(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -113,7 +115,9 @@ func TestResolveMulticastServerArgs(t *testing.T) {
 			serverIds := serverIdsreply.Data
 
 			srvArgs := MulticastArgs{sessionKey.HubSessionKey, serverIds, tc.data}
-			result := resolveMulticastServerArgs(&srvArgs)
+
+			multicasService := NewMulticastService(hub.client, hub.apiSession)
+			result := multicasService.resolveMulticastServerArgs(&srvArgs)
 			resultLength := len(result)
 			if resultLength != len(serverIds) {
 				t.Fatalf("Unexpected result. Length should be same but got %v & %v", resultLength, len(serverIds))
@@ -153,7 +157,7 @@ func TestMulticastCall(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
+			hub := NewHubService(client.NewClient(config.InitializeConfig()), session.NewApiSession())
 			req, err := http.NewRequest("GET", "localhost:8888", nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
@@ -172,9 +176,10 @@ func TestMulticastCall(t *testing.T) {
 
 			srvArgs := MulticastArgs{sessionKey.HubSessionKey, serverIds, tc.parameters}
 
-			result := resolveMulticastServerArgs(&srvArgs)
+			multicasService := NewMulticastService(hub.client, hub.apiSession)
+			result := multicasService.resolveMulticastServerArgs(&srvArgs)
 
-			multicastResponse := multicastCall(tc.name, result, hub.Client)
+			multicastResponse := multicastCall(tc.name, result, hub.client)
 
 			failedResponses := len(multicastResponse.Failed.Responses)
 			successfulResponses := len(multicastResponse.Successfull.Responses)

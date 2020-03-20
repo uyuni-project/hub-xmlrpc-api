@@ -74,7 +74,7 @@ func TestLoginToHub(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
+			hub := NewHubService(client.NewClient(config.InitializeConfig()), session.NewApiSession())
 			hubsessionkey, err := hub.loginToHub(tc.username, tc.password, session.LOGIN_MANUAL_MODE)
 			if err != nil {
 				if !strings.Contains(err.Error(), tc.err) {
@@ -88,7 +88,7 @@ func TestLoginToHub(t *testing.T) {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
-			username, password := apiSession.GetUsernameAndPassword(hubsessionkey)
+			username, password := hub.apiSession.GetUsernameAndPassword(hubsessionkey)
 			if username != tc.username {
 				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
 			}
@@ -113,8 +113,9 @@ func TestLogin(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -148,8 +149,9 @@ func TestLoginAutoconnect(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -173,7 +175,7 @@ func TestLoginAutoconnect(t *testing.T) {
 			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
 			serverIds := serverIdsreply.Data
 			for _, s := range serverIds {
-				url, severSessionkey := apiSession.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
+				url, severSessionkey := hub.apiSession.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
 				if len(url) == 0 {
 					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", s, url)
 				}
@@ -197,8 +199,9 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -232,8 +235,9 @@ func TestAttachToServers(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -257,7 +261,7 @@ func TestAttachToServers(t *testing.T) {
 				return
 			}
 			for _, s := range serverIds {
-				url, severSessionkey := apiSession.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
+				url, severSessionkey := hub.apiSession.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
 				if len(url) == 0 {
 					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", s, url)
 				}
@@ -282,8 +286,9 @@ func TestIsHubSessionValid(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -295,12 +300,12 @@ func TestIsHubSessionValid(t *testing.T) {
 				return
 			}
 			//Test if key is valid
-			isvalid := isHubSessionValid(reply.Data, hub.Client)
+			isvalid := hub.apiSession.IsHubSessionValid(reply.Data, hub.client)
 			if isvalid != tc.result {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.result, isvalid)
 			}
 			//Append the key with some random string and test if it's invalid now
-			isvalid = isHubSessionValid(reply.Data+"invalid-part", hub.Client)
+			isvalid = hub.apiSession.IsHubSessionValid(reply.Data+"invalid-part", hub.client)
 			if isvalid != false {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.result, isvalid)
 			}
@@ -322,8 +327,9 @@ func TestListServerIds(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			hub := &Hub{Client: &client.Client{Conf: config.InitializeConfig()}}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, nil)
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}

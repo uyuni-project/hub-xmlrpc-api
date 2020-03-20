@@ -34,11 +34,15 @@ func getDefaultTimeoutClient(url string) (*xmlrpc.Client, error) {
 }
 
 type Client struct {
-	Conf config.Config
+	conf *config.Config
+}
+
+func NewClient(conf *config.Config) *Client {
+	return &Client{conf: conf}
 }
 
 func (c *Client) ExecuteXMLRPCCallWithURL(url string, method string, args []interface{}) (reply interface{}, err error) {
-	client, err := getClientWithTimeout(url, c.Conf.ConnectTimeout, c.Conf.ReadWriteTimeout)
+	client, err := getClientWithTimeout(url, c.conf.ConnectTimeout, c.conf.ReadWriteTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -48,5 +52,5 @@ func (c *Client) ExecuteXMLRPCCallWithURL(url string, method string, args []inte
 }
 
 func (c *Client) ExecuteXMLRPCCallToHub(method string, args []interface{}) (reply interface{}, err error) {
-	return c.ExecuteXMLRPCCallWithURL(c.Conf.Hub.SUMA_API_URL, method, args)
+	return c.ExecuteXMLRPCCallWithURL(c.conf.Hub.SUMA_API_URL, method, args)
 }

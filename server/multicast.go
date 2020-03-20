@@ -6,11 +6,18 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
+
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
 type MulticastService struct {
-	Client *client.Client
+	client     *client.Client
+	apiSession *session.ApiSession
+}
+
+func NewMulticastService(client *client.Client, apiSession *session.ApiSession) *MulticastService {
+	return &MulticastService{client: client, apiSession: apiSession}
 }
 
 type MulticastArgs struct {
@@ -23,15 +30,15 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 	if !areAllArgumentsOfSameLength(args.ServerArgs) {
 		return FaultInvalidParams
 	}
-	if isHubSessionValid(args.HubSessionKey, h.Client) {
+	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 		}
-		serverArgsByURL := resolveMulticastServerArgs(args)
-		reply.Data = multicastCall(method, serverArgsByURL, h.Client)
+		serverArgsByURL := h.resolveMulticastServerArgs(args)
+		reply.Data = multicastCall(method, serverArgsByURL, h.client)
 	} else {
 		log.Println("Hub session invalid error")
 	}
@@ -44,12 +51,12 @@ type MulticastServerArgs struct {
 	args     []interface{}
 }
 
-func resolveMulticastServerArgs(multicastArgs *MulticastArgs) []MulticastServerArgs {
+func (h *MulticastService) resolveMulticastServerArgs(multicastArgs *MulticastArgs) []MulticastServerArgs {
 	multicastServerArgs := make([]MulticastServerArgs, len(multicastArgs.ServerIDs))
 	for i, serverID := range multicastArgs.ServerIDs {
 		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
 
-		url, sessionKey := apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
+		url, sessionKey := h.apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
 		args = append(args, sessionKey)
 
 		for _, serverArgs := range multicastArgs.ServerArgs {

@@ -10,14 +10,19 @@ import (
 )
 
 type Hub struct {
-	Client *client.Client
+	client     *client.Client
+	apiSession *session.ApiSession
+}
+
+func NewHubService(client *client.Client, apiSession *session.ApiSession) *Hub {
+	return &Hub{client: client, apiSession: apiSession}
 }
 
 func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
 	hubSessionKey := args.HubSessionKey
 
-	if isHubSessionValid(hubSessionKey, h.Client) {
-		systemList, err := h.Client.ExecuteXMLRPCCallToHub("system.listSystems", []interface{}{hubSessionKey})
+	if h.apiSession.IsHubSessionValid(hubSessionKey, h.client) {
+		systemList, err := h.client.ExecuteXMLRPCCallToHub("system.listSystems", []interface{}{hubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			return err
@@ -67,12 +72,12 @@ func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Pa
 }
 
 func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
-	if isHubSessionValid(args.HubSessionKey, h.Client) {
+	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
 		usernames := make([]interface{}, len(args.ServerIDs))
 		passwords := make([]interface{}, len(args.ServerIDs))
 
-		if apiSession.GetLoginMode(args.HubSessionKey) == session.LOGIN_RELAY_MODE {
-			serverUsername, serverPassword := apiSession.GetUsernameAndPassword(args.HubSessionKey)
+		if h.apiSession.GetLoginMode(args.HubSessionKey) == session.LOGIN_RELAY_MODE {
+			serverUsername, serverPassword := h.apiSession.GetUsernameAndPassword(args.HubSessionKey)
 
 			for i := range args.ServerIDs {
 				usernames[i] = serverUsername
@@ -91,13 +96,13 @@ func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struc
 }
 
 func (h *Hub) loginToHub(username, password string, loginMode int) (string, error) {
-	response, err := h.Client.ExecuteXMLRPCCallToHub("auth.login", []interface{}{username, password})
+	response, err := h.client.ExecuteXMLRPCCallToHub("auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return "", errors.New(err.Error())
 	}
 	hubSessionKey := response.(string)
-	apiSession.SetHubSessionKey(hubSessionKey, username, password, loginMode)
+	h.apiSession.SetHubSessionKey(hubSessionKey, username, password, loginMode)
 
 	if loginMode == session.LOGIN_AUTOCONNECT_MODE {
 		err := h.loginIntoUserSystems(hubSessionKey, username, password)
@@ -109,7 +114,7 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 }
 
 func (h *Hub) loginIntoUserSystems(hubSessionKey, username, password string) error {
-	userSystems, err := h.Client.ExecuteXMLRPCCallToHub("system.listUserSystems", []interface{}{hubSessionKey, username})
+	userSystems, err := h.client.ExecuteXMLRPCCallToHub("system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
@@ -132,12 +137,12 @@ func (h *Hub) loginIntoUserSystems(hubSessionKey, username, password string) err
 
 func (h *Hub) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (MulticastResponse, error) {
 	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
-	responses := multicastCall("auth.login", loginIntoSystemsArgs, h.Client)
+	responses := multicastCall("auth.login", loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successfull
 
 	//save in session
 	for i, serverID := range successfulResponses.ServerIds {
-		apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURLByServerID[serverID], successfulResponses.Responses[i].(string))
+		h.apiSession.SetServerSessionInfo(hubSessionKey, serverID, serverURLByServerID[serverID], successfulResponses.Responses[i].(string))
 	}
 	return responses, nil
 }
@@ -161,7 +166,7 @@ func (h *Hub) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int6
 
 func (h *Hub) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
-	response, err := h.Client.ExecuteXMLRPCCallToHub("system.listFqdns", []interface{}{hubSessionKey, serverID})
+	response, err := h.client.ExecuteXMLRPCCallToHub("system.listFqdns", []interface{}{hubSessionKey, serverID})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return "", err
@@ -170,16 +175,6 @@ func (h *Hub) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (
 	//TODO: check the fqdn array is not empty
 	firstFqdn := response.([]interface{})[0].(string)
 	return "http://" + firstFqdn + "/rpc/api", nil
-}
-
-func isHubSessionValid(hubSessionKey string, client *client.Client) bool {
-	isValid, err := client.ExecuteXMLRPCCallToHub("auth.isSessionKeyValid", []interface{}{hubSessionKey})
-	if err != nil {
-		log.Printf("Login error: %v", err)
-		apiSession.RemoveHubSessionKey(hubSessionKey)
-		return false
-	}
-	return isValid.(bool)
 }
 
 func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {

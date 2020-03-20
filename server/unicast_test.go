@@ -8,6 +8,7 @@ import (
 
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 func TestRemoveUnicastNamespace(t *testing.T) {
@@ -59,9 +60,9 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			   </params>
 			</methodCall>`
 			xmlBody := fmt.Sprintf(xmlInput, tc.name)
-			client := &client.Client{Conf: config.InitializeConfig()}
-			hub := &Hub{Client: client}
-			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
+			conf := config.InitializeConfig()
+			hub := NewHubService(client.NewClient(conf), session.NewApiSession())
+			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -80,7 +81,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			unicastArgs := UnicastArgs{HubSessionKey: reply.Data, ServerID: firstServerIDs, ServerArgs: tc.parameters}
 			unicastReply := struct{ Data interface{} }{}
 
-			unicastService := &Unicast{Client: client}
+			unicastService := NewUnicastService(hub.client, hub.apiSession)
 			err = unicastService.DefaultMethod(req, &unicastArgs, &unicastReply)
 			if err != nil {
 				if tc.output != err.Error() {
