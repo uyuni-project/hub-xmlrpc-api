@@ -100,7 +100,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struc
 		loginIntoSystems(args.HubSessionKey, args.ServerIDs, usernames, passwords)
 	} else {
 		log.Println("Provided session key is invalid.")
-		return errors.New("Provided session key is invalid.")
+		return errors.New("provided session key is invalid")
 	}
 	return nil
 }
