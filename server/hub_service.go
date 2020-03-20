@@ -9,16 +9,16 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
-type Hub struct {
+type HubService struct {
 	client     *client.Client
 	apiSession *session.ApiSession
 }
 
-func NewHubService(client *client.Client, apiSession *session.ApiSession) *Hub {
-	return &Hub{client: client, apiSession: apiSession}
+func NewHubService(client *client.Client, apiSession *session.ApiSession) *HubService {
+	return &HubService{client: client, apiSession: apiSession}
 }
 
-func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
+func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
 	hubSessionKey := args.HubSessionKey
 
 	if h.apiSession.IsHubSessionValid(hubSessionKey, h.client) {
@@ -41,7 +41,7 @@ func (h *Hub) ListServerIds(r *http.Request, args *struct{ HubSessionKey string 
 	return nil
 }
 
-func (h *Hub) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_MANUAL_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -51,7 +51,7 @@ func (h *Hub) Login(r *http.Request, args *struct{ Username, Password string }, 
 	return nil
 }
 
-func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_AUTOCONNECT_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -61,7 +61,7 @@ func (h *Hub) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, 
 	return nil
 }
 
-func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, session.LOGIN_RELAY_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -71,7 +71,7 @@ func (h *Hub) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Pa
 	return nil
 }
 
-func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
+func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
 	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
 		usernames := make([]interface{}, len(args.ServerIDs))
 		passwords := make([]interface{}, len(args.ServerIDs))
@@ -95,7 +95,7 @@ func (h *Hub) AttachToServers(r *http.Request, args *MulticastArgs, reply *struc
 	return nil
 }
 
-func (h *Hub) loginToHub(username, password string, loginMode int) (string, error) {
+func (h *HubService) loginToHub(username, password string, loginMode int) (string, error) {
 	response, err := h.client.ExecuteXMLRPCCallToHub("auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -113,7 +113,7 @@ func (h *Hub) loginToHub(username, password string, loginMode int) (string, erro
 	return hubSessionKey, nil
 }
 
-func (h *Hub) loginIntoUserSystems(hubSessionKey, username, password string) error {
+func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password string) error {
 	userSystems, err := h.client.ExecuteXMLRPCCallToHub("system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -135,7 +135,7 @@ func (h *Hub) loginIntoUserSystems(hubSessionKey, username, password string) err
 	return nil
 }
 
-func (h *Hub) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (MulticastResponse, error) {
+func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (MulticastResponse, error) {
 	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
 	responses := multicastCall("auth.login", loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successfull
@@ -147,7 +147,7 @@ func (h *Hub) loginIntoSystems(hubSessionKey string, serverIDs []int64, username
 	return responses, nil
 }
 
-func (h *Hub) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]MulticastServerArgs, map[int64]string, error) {
+func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]MulticastServerArgs, map[int64]string, error) {
 	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
 	serverURLByServerID := make(map[int64]string)
 
@@ -164,7 +164,7 @@ func (h *Hub) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int6
 	return multicastServerArgs, serverURLByServerID, nil
 }
 
-func (h *Hub) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
+func (h *HubService) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
 	response, err := h.client.ExecuteXMLRPCCallToHub("system.listFqdns", []interface{}{hubSessionKey, serverID})
 	if err != nil {
