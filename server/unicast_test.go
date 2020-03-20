@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/config"
 )
 
 func TestRemoveUnicastNamespace(t *testing.T) {
@@ -56,7 +59,9 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			   </params>
 			</methodCall>`
 			xmlBody := fmt.Sprintf(xmlInput, tc.name)
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
+			client := &client.Client{Conf: config.InitializeConfig()}
+			hub := &Hub{Client: client}
+			req, err := http.NewRequest("GET", hub.Client.Conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
@@ -66,15 +71,17 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			}{"admin", "admin"}
 			reply := struct{ Data string }{""}
 			//login
-			new(Hub).LoginWithAutoconnectMode(req, &credentials, &reply)
+			hub.LoginWithAutoconnectMode(req, &credentials, &reply)
 			sessionKey := struct{ HubSessionKey string }{reply.Data}
 			//Get the server Ids
 			serverIdsreply := struct{ Data []int64 }{}
-			new(Hub).ListServerIds(req, &sessionKey, &serverIdsreply)
+			hub.ListServerIds(req, &sessionKey, &serverIdsreply)
 			firstServerIDs := serverIdsreply.Data[0]
 			unicastArgs := UnicastArgs{HubSessionKey: reply.Data, ServerID: firstServerIDs, ServerArgs: tc.parameters}
 			unicastReply := struct{ Data interface{} }{}
-			err = new(Unicast).DefaultMethod(req, &unicastArgs, &unicastReply)
+
+			unicastService := &Unicast{Client: client}
+			err = unicastService.DefaultMethod(req, &unicastArgs, &unicastReply)
 			if err != nil {
 				if tc.output != err.Error() {
 					t.Fatalf("Error during executing request: %v", err)

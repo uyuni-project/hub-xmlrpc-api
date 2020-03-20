@@ -10,17 +10,17 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
-var conf config.Config
-
 var apiSession = session.New()
 
 type ListArgs struct{ Args []interface{} }
 
-type DefaultService struct{}
+type DefaultService struct {
+	Client *client.Client
+}
 
 func (h *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
 	method, _ := NewCodec().NewRequest(r).Method()
-	response, err := executeXMLRPCCall(conf.Hub.SUMA_API_URL, method, args.Args)
+	response, err := h.Client.ExecuteXMLRPCCallToHub(method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 	}
@@ -28,31 +28,19 @@ func (h *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *s
 	return nil
 }
 
-func executeXMLRPCCall(url string, method string, args []interface{}) (reply interface{}, err error) {
-	client, err := client.GetClientWithTimeout(url, conf.ConnectTimeout, conf.ReadWriteTimeout)
-	if err != nil {
-		return
-	}
-	defer client.Close()
-	err = client.Call(method, args, &reply)
-	return reply, err
-}
-
-func InitConfig() {
-	conf = config.InitializeConfig()
-}
-
 func InitServer() {
-	RPC := rpc.NewServer()
+	rpcServer := rpc.NewServer()
+
+	client := &client.Client{Conf: config.InitializeConfig()}
 
 	xmlrpcCodec := initXMLRPCCodec()
-	RPC.RegisterCodec(xmlrpcCodec, "text/xml")
-	RPC.RegisterService(new(Hub), "hub")
-	RPC.RegisterService(new(DefaultService), "")
-	RPC.RegisterService(new(MulticastService), "")
-	RPC.RegisterService(new(Unicast), "")
+	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
+	rpcServer.RegisterService(&Hub{Client: client}, "hub")
+	rpcServer.RegisterService(&DefaultService{Client: client}, "")
+	rpcServer.RegisterService(&MulticastService{Client: client}, "")
+	rpcServer.RegisterService(&Unicast{Client: client}, "")
 
-	http.Handle("/hub/rpc/api", RPC)
+	http.Handle("/hub/rpc/api", rpcServer)
 
 	log.Println("Starting XML-RPC server on localhost:8888/hub/rpc/api")
 	log.Fatal(http.ListenAndServe(":8888", nil))

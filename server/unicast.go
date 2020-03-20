@@ -4,6 +4,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
 type UnicastArgs struct {
@@ -12,10 +14,12 @@ type UnicastArgs struct {
 	ServerArgs    []interface{}
 }
 
-type Unicast struct{}
+type Unicast struct {
+	Client *client.Client
+}
 
 func (h *Unicast) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
-	if isHubSessionValid(args.HubSessionKey) {
+	if isHubSessionValid(args.HubSessionKey, h.Client) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeUnicastNamespace(method)
@@ -27,7 +31,7 @@ func (h *Unicast) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struc
 		argumentsForCall = append(argumentsForCall, sessionKey)
 		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
 
-		response, err := executeXMLRPCCall(url, method, argumentsForCall)
+		response, err := h.Client.ExecuteXMLRPCCallWithURL(url, method, argumentsForCall)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 			return err

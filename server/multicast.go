@@ -5,9 +5,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
-type MulticastService struct{}
+type MulticastService struct {
+	Client *client.Client
+}
 
 type MulticastArgs struct {
 	HubSessionKey string
@@ -19,7 +23,7 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 	if !areAllArgumentsOfSameLength(args.ServerArgs) {
 		return FaultInvalidParams
 	}
-	if isHubSessionValid(args.HubSessionKey) {
+	if isHubSessionValid(args.HubSessionKey, h.Client) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
@@ -27,7 +31,7 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 			log.Printf("Call error: %v", err)
 		}
 		serverArgsByURL := resolveMulticastServerArgs(args)
-		reply.Data = multicastCall(method, serverArgsByURL)
+		reply.Data = multicastCall(method, serverArgsByURL, h.Client)
 	} else {
 		log.Println("Hub session invalid error")
 	}
@@ -71,7 +75,7 @@ type MulticastStateResponse struct {
 	ServerIds []int64
 }
 
-func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastResponse {
+func multicastCall(method string, serverArgs []MulticastServerArgs, client *client.Client) MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
@@ -84,7 +88,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastRes
 	for _, args := range serverArgs {
 		go func(url string, args []interface{}, serverId int64) {
 			defer wg.Done()
-			response, err := executeXMLRPCCall(url, method, args)
+			response, err := client.ExecuteXMLRPCCallWithURL(url, method, args)
 			if err != nil {
 				log.Printf("Call error: %v", err)
 				mutexForFailedResponses.Lock()
