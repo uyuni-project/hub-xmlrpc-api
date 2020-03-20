@@ -5,9 +5,20 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/session"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
-type MulticastService struct{}
+type MulticastService struct {
+	client     *client.Client
+	apiSession *session.ApiSession
+}
+
+func NewMulticastService(client *client.Client, apiSession *session.ApiSession) *MulticastService {
+	return &MulticastService{client: client, apiSession: apiSession}
+}
 
 type MulticastArgs struct {
 	HubSessionKey string
@@ -19,15 +30,15 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 	if !areAllArgumentsOfSameLength(args.ServerArgs) {
 		return FaultInvalidParams
 	}
-	if isHubSessionValid(args.HubSessionKey) {
+	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 		}
-		serverArgsByURL := resolveMulticastServerArgs(args)
-		reply.Data = multicastCall(method, serverArgsByURL)
+		serverArgsByURL := h.resolveMulticastServerArgs(args)
+		reply.Data = multicastCall(method, serverArgsByURL, h.client)
 	} else {
 		log.Println("Hub session invalid error")
 	}
@@ -40,12 +51,12 @@ type MulticastServerArgs struct {
 	args     []interface{}
 }
 
-func resolveMulticastServerArgs(multicastArgs *MulticastArgs) []MulticastServerArgs {
+func (h *MulticastService) resolveMulticastServerArgs(multicastArgs *MulticastArgs) []MulticastServerArgs {
 	multicastServerArgs := make([]MulticastServerArgs, len(multicastArgs.ServerIDs))
 	for i, serverID := range multicastArgs.ServerIDs {
 		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
 
-		url, sessionKey := apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
+		url, sessionKey := h.apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
 		args = append(args, sessionKey)
 
 		for _, serverArgs := range multicastArgs.ServerArgs {
@@ -71,7 +82,7 @@ type MulticastStateResponse struct {
 	ServerIds []int64
 }
 
-func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastResponse {
+func multicastCall(method string, serverArgs []MulticastServerArgs, client *client.Client) MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
@@ -84,7 +95,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs) MulticastRes
 	for _, args := range serverArgs {
 		go func(url string, args []interface{}, serverId int64) {
 			defer wg.Done()
-			response, err := executeXMLRPCCall(url, method, args)
+			response, err := client.ExecuteXMLRPCCallWithURL(url, method, args)
 			if err != nil {
 				log.Printf("Call error: %v", err)
 				mutexForFailedResponses.Lock()

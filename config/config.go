@@ -32,13 +32,13 @@ type Config struct {
 }
 
 // InitializeConfig returns a new Config struct
-func InitializeConfig() Config {
+func InitializeConfig() *Config {
 	//os.Setenv("HUB_CONFIG_FILE", "/root/xmlrpc_conf.conf")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
 		}
-		return Config{
+		return &Config{
 			Hub: HubConfig{
 				SUMA_API_URL: k.String("hub.manager_api_url"),
 			},
