@@ -19,7 +19,7 @@ func initServer() {
 	rpcServer := rpc.NewServer()
 
 	apiSession := session.NewApiSession()
-	client := &client.Client{Conf: config.InitializeConfig()}
+	client := client.NewClient(config.InitializeConfig())
 
 	xmlrpcCodec := initXMLRPCCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
