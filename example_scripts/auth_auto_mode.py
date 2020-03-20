@@ -8,13 +8,10 @@ HUB_PASSWORD = "admin"
 
 client = xmlrpclib.Server(HUB_URL, verbose=0)
 
-hubKey = client.hub.loginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
+hubKey = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
 
 #Get the server Ids
 serverIds = client.hub.listServerIds(hubKey)
-
-#authenticate those servers(same credentials will be used as of hub to authenticate)
-client.hub.attachToServers(hubKey, serverIds)
 
 # perform the needed operation 
 systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
