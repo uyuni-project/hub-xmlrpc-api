@@ -35,7 +35,7 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 	if args.Username == "admin" && args.Password == "admin" {
 		reply.Data = sessionkey
 	} else {
-		return server.FaultInvalidCredntials
+		return server.FaultInvalidCredentials
 	}
 	return nil
 }
@@ -84,7 +84,7 @@ func (h *System) ListFqdns(r *http.Request, args *struct {
 func main() {
 	RPC := rpc.NewServer()
 	var codec = server.NewCodec()
-	codec.RegisterDefaultParser(new(server.StructParser))
+	codec.RegisterDefaultParser(server.StructParser)
 
 	codec.RegisterMethod("auth.isSessionKeyValid")
 	codec.RegisterMethod("auth.login")

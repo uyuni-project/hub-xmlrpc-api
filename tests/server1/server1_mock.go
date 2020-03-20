@@ -53,7 +53,7 @@ func (h *System) ListUserSystems(r *http.Request, args *struct{ SessionK, UserLo
 func main() {
 	RPC := rpc.NewServer()
 	var codec = server.NewCodec()
-	codec.RegisterDefaultParser(new(server.StructParser))
+	codec.RegisterDefaultParser(server.StructParser)
 
 	codec.RegisterMethod("auth.login")
 	codec.RegisterMethod("system.listSystems")
