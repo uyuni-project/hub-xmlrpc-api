@@ -4,18 +4,15 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
-	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
 type UnicastService struct {
-	client     *client.Client
-	apiSession *session.ApiSession
+	client  Client
+	session Session
 }
 
-func NewUnicastService(client *client.Client, apiSession *session.ApiSession) *UnicastService {
-	return &UnicastService{client: client, apiSession: apiSession}
+func NewUnicastService(client Client, session Session) *UnicastService {
+	return &UnicastService{client: client, session: session}
 }
 
 type UnicastArgs struct {
@@ -25,7 +22,7 @@ type UnicastArgs struct {
 }
 
 func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
-	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
+	if h.session.IsHubSessionValid(args.HubSessionKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeUnicastNamespace(method)
@@ -33,11 +30,11 @@ func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply
 			log.Printf("Call error: %v", err)
 		}
 		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
-		url, sessionKey := h.apiSession.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
+		url, sessionKey := h.session.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
 		argumentsForCall = append(argumentsForCall, sessionKey)
 		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
 
-		response, err := h.client.ExecuteXMLRPCCallWithURL(url, method, argumentsForCall)
+		response, err := h.client.ExecuteCallWithURL(url, method, argumentsForCall)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 			return err

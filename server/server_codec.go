@@ -71,7 +71,6 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 		return &CodecRequest{err: err}
 	}
 	request.rawxml = rawxml
-
 	request.Method = c.resolveMethod(request.Method)
 
 	parser := c.resolveParser(request.Method)

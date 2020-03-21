@@ -5,19 +5,15 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-
-	"github.com/uyuni-project/hub-xmlrpc-api/session"
-
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
 type MulticastService struct {
-	client     *client.Client
-	apiSession *session.ApiSession
+	client  Client
+	session Session
 }
 
-func NewMulticastService(client *client.Client, apiSession *session.ApiSession) *MulticastService {
-	return &MulticastService{client: client, apiSession: apiSession}
+func NewMulticastService(client Client, session Session) *MulticastService {
+	return &MulticastService{client: client, session: session}
 }
 
 type MulticastArgs struct {
@@ -30,7 +26,7 @@ func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, r
 	if !areAllArgumentsOfSameLength(args.ServerArgs) {
 		return FaultInvalidParams
 	}
-	if h.apiSession.IsHubSessionValid(args.HubSessionKey, h.client) {
+	if h.session.IsHubSessionValid(args.HubSessionKey) {
 		method, err := NewCodec().NewRequest(r).Method()
 		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
 		method = removeMulticastNamespace(method)
@@ -56,7 +52,7 @@ func (h *MulticastService) resolveMulticastServerArgs(multicastArgs *MulticastAr
 	for i, serverID := range multicastArgs.ServerIDs {
 		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
 
-		url, sessionKey := h.apiSession.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
+		url, sessionKey := h.session.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
 		args = append(args, sessionKey)
 
 		for _, serverArgs := range multicastArgs.ServerArgs {
@@ -82,7 +78,7 @@ type MulticastStateResponse struct {
 	ServerIds []int64
 }
 
-func multicastCall(method string, serverArgs []MulticastServerArgs, client *client.Client) MulticastResponse {
+func multicastCall(method string, serverArgs []MulticastServerArgs, client Client) MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
@@ -95,7 +91,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs, client *clie
 	for _, args := range serverArgs {
 		go func(url string, args []interface{}, serverId int64) {
 			defer wg.Done()
-			response, err := client.ExecuteXMLRPCCallWithURL(url, method, args)
+			response, err := client.ExecuteCallWithURL(url, method, args)
 			if err != nil {
 				log.Printf("Call error: %v", err)
 				mutexForFailedResponses.Lock()
@@ -126,4 +122,17 @@ func getKeysAndValuesFromMap(in map[int64]interface{}) ([]int64, []interface{}) 
 		values = append(values, value)
 	}
 	return keys, values
+}
+
+func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
+	if len(allArrays) <= 1 {
+		return true
+	}
+	lengthToCompare := len(allArrays[0])
+	for _, array := range allArrays {
+		if lengthToCompare != len(array) {
+			return false
+		}
+	}
+	return true
 }

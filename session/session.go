@@ -4,18 +4,13 @@ import (
 	"log"
 	"sync"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/server"
 )
 
-type ApiSession struct {
+type Session struct {
 	sessions *sync.Map
+	client   server.Client
 }
-
-const (
-	LOGIN_MANUAL_MODE      = iota // 0
-	LOGIN_RELAY_MODE              // 1
-	LOGIN_AUTOCONNECT_MODE        // 2
-)
 
 type HubSessionInfo struct {
 	username, password string
@@ -27,31 +22,31 @@ type ServerSessionInfo struct {
 	URL, sessionKey string
 }
 
-func (s *ApiSession) SetHubSessionKey(hubSessionKey string, username, password string, loginMode int) {
+func (s *Session) SetHubSessionKey(hubSessionKey string, username, password string, loginMode int) {
 	s.sessions.Store(hubSessionKey, newHubSessionInfo(username, password, loginMode))
 }
 
-func (s *ApiSession) GetLoginMode(hubSessionKey string) int {
+func (s *Session) GetLoginMode(hubSessionKey string) int {
 	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
 		return hubSessionInfo.(*HubSessionInfo).loginMode
 	}
 	return 0
 }
 
-func (s *ApiSession) GetUsernameAndPassword(hubSessionKey string) (string, string) {
+func (s *Session) GetUsernameAndPassword(hubSessionKey string) (string, string) {
 	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
 		return hubSessionInfo.(*HubSessionInfo).username, hubSessionInfo.(*HubSessionInfo).password
 	}
 	return "", ""
 }
 
-func (s *ApiSession) SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string) {
+func (s *Session) SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string) {
 	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
 		hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Store(serverID, &ServerSessionInfo{serverURL, serverSessionKey})
 	}
 }
 
-func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string) {
+func (s *Session) GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string) {
 	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
 		if serverSessionInfo, ok := hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Load(serverID); ok {
 			return serverSessionInfo.(*ServerSessionInfo).URL, serverSessionInfo.(*ServerSessionInfo).sessionKey
@@ -60,7 +55,7 @@ func (s *ApiSession) GetServerSessionInfoByServerID(hubSessionKey string, server
 	return "", ""
 }
 
-func (s *ApiSession) removeHubSessionKey(hubSessionKey string) {
+func (s *Session) removeHubSessionKey(hubSessionKey string) {
 	if _, ok := s.sessions.Load(hubSessionKey); ok {
 		s.sessions.Delete(hubSessionKey)
 	}
@@ -77,8 +72,8 @@ func newHubSessionInfo(username, password string, loginMode int) *HubSessionInfo
 	}
 }
 
-func (s *ApiSession) IsHubSessionValid(hubSessionKey string, client *client.Client) bool {
-	isValid, err := client.ExecuteXMLRPCCallToHub("auth.isSessionKeyValid", []interface{}{hubSessionKey})
+func (s *Session) IsHubSessionValid(hubSessionKey string) bool {
+	isValid, err := s.client.ExecuteCallToHub("auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		s.removeHubSessionKey(hubSessionKey)
@@ -87,8 +82,8 @@ func (s *ApiSession) IsHubSessionValid(hubSessionKey string, client *client.Clie
 	return isValid.(bool)
 }
 
-// New returns a new ApiSession struct
-func NewApiSession() *ApiSession {
+// New returns a new Session struct
+func NewSession(client server.Client) *Session {
 	var syncMap sync.Map
-	return &ApiSession{sessions: &syncMap}
+	return &Session{sessions: &syncMap, client: client}
 }
