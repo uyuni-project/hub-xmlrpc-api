@@ -159,20 +159,20 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}, methodErr error) error {
 	var xmlstr string
 	if c.err != nil {
-		//TODO:
-		/*	var fault Fault
-			switch c.err.(type) {
-			case Fault:
-				fault = c.err.(Fault)
-			default:
-				fault = FaultApplicationError
-				fault.String += fmt.Sprintf(": %v", c.err)
-			}
-			xmlstr = fault2XML(fault)*/
+		var fault Fault
+
+		switch c.err.(type) {
+		case Fault:
+			fault = c.err.(Fault)
+		default:
+			fault = FaultApplicationError
+			fault.String += fmt.Sprintf(": %v", c.err)
+		}
+		xmlstr = fault2XML(fault)
 		return c.err
 	} else if methodErr != nil {
-
 		var fault Fault
+
 		switch methodErr.(type) {
 		case Fault:
 			fault = methodErr.(Fault)

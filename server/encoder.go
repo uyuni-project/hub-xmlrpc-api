@@ -30,3 +30,11 @@ func encodeResponseParametersToXML(response interface{}) (string, error) {
 	buffer += "</params>"
 	return buffer, err
 }
+
+func fault2XML(fault Fault) string {
+	buffer := "<methodResponse><fault>"
+	xmlByte, _ := xmlrpc.Marshal(fault)
+	buffer += string(xmlByte)
+	buffer += "</fault></methodResponse>"
+	return buffer
+}

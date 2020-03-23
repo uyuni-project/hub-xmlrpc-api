@@ -2,8 +2,6 @@ package server
 
 import (
 	"fmt"
-
-	"github.com/kolo/xmlrpc"
 )
 
 var (
@@ -23,12 +21,4 @@ type Fault struct {
 
 func (f Fault) Error() string {
 	return fmt.Sprintf("%d: %s", f.Code, f.String)
-}
-
-func fault2XML(fault Fault) string {
-	buffer := "<methodResponse><fault>"
-	xmlByte, _ := xmlrpc.Marshal(fault)
-	buffer += string(xmlByte)
-	buffer += "</fault></methodResponse>"
-	return buffer
 }
