@@ -33,9 +33,9 @@ func TestLogin(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
@@ -88,9 +88,10 @@ func TestLoginAutoconnect(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
+
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
@@ -149,9 +150,10 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
+
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
@@ -196,9 +198,9 @@ func TestAttachToServers(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
@@ -250,9 +252,9 @@ func TestIsHubSessionValid(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
@@ -294,8 +296,10 @@ func TestListServerIds(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(config.InitializeConfig())
-			hub := server.NewHubService(client, session.NewSession(client))
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
+
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)

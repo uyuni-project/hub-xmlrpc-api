@@ -91,7 +91,7 @@ func multicastCall(method string, serverArgs []MulticastServerArgs, client Clien
 	for _, args := range serverArgs {
 		go func(url string, args []interface{}, serverId int64) {
 			defer wg.Done()
-			response, err := client.ExecuteCallWithURL(url, method, args)
+			response, err := client.ExecuteCall(url, method, args)
 			if err != nil {
 				log.Printf("Call error: %v", err)
 				mutexForFailedResponses.Lock()

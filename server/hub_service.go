@@ -7,19 +7,20 @@ import (
 )
 
 type HubService struct {
-	client  Client
-	session Session
+	client        Client
+	session       Session
+	hubSumaAPIURL string
 }
 
-func NewHubService(client Client, session Session) *HubService {
-	return &HubService{client: client, session: session}
+func NewHubService(client Client, session Session, hubSumaAPIURL string) *HubService {
+	return &HubService{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}
 }
 
 func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
 	hubSessionKey := args.HubSessionKey
 
 	if h.session.IsHubSessionValid(hubSessionKey) {
-		systemList, err := h.client.ExecuteCallToHub("system.listSystems", []interface{}{hubSessionKey})
+		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{hubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			return err
@@ -93,7 +94,7 @@ func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply
 }
 
 func (h *HubService) loginToHub(username, password string, loginMode int) (string, error) {
-	response, err := h.client.ExecuteCallToHub("auth.login", []interface{}{username, password})
+	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return "", errors.New(err.Error())
@@ -111,7 +112,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 }
 
 func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password string) error {
-	userSystems, err := h.client.ExecuteCallToHub("system.listUserSystems", []interface{}{hubSessionKey, username})
+	userSystems, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
@@ -163,7 +164,7 @@ func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs
 
 func (h *HubService) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
-	response, err := h.client.ExecuteCallToHub("system.listFqdns", []interface{}{hubSessionKey, serverID})
+	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listFqdns", []interface{}{hubSessionKey, serverID})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return "", err

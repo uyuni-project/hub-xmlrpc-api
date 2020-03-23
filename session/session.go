@@ -8,8 +8,15 @@ import (
 )
 
 type Session struct {
-	sessions *sync.Map
-	client   server.Client
+	sessions      *sync.Map
+	client        server.Client
+	hubSumaAPIURL string
+}
+
+// NewSession returns a new Session struct
+func NewSession(client server.Client, hubSumaAPIURL string) *Session {
+	var syncMap sync.Map
+	return &Session{sessions: &syncMap, client: client, hubSumaAPIURL: hubSumaAPIURL}
 }
 
 type HubSessionInfo struct {
@@ -55,25 +62,8 @@ func (s *Session) GetServerSessionInfoByServerID(hubSessionKey string, serverID 
 	return "", ""
 }
 
-func (s *Session) removeHubSessionKey(hubSessionKey string) {
-	if _, ok := s.sessions.Load(hubSessionKey); ok {
-		s.sessions.Delete(hubSessionKey)
-	}
-}
-
-// New returns a new HubSession struct
-func newHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
-	var syncMap sync.Map
-	return &HubSessionInfo{
-		username:          username,
-		password:          password,
-		loginMode:         loginMode,
-		serverSessionKeys: &syncMap,
-	}
-}
-
 func (s *Session) IsHubSessionValid(hubSessionKey string) bool {
-	isValid, err := s.client.ExecuteCallToHub("auth.isSessionKeyValid", []interface{}{hubSessionKey})
+	isValid, err := s.client.ExecuteCall(s.hubSumaAPIURL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		s.removeHubSessionKey(hubSessionKey)
@@ -82,8 +72,18 @@ func (s *Session) IsHubSessionValid(hubSessionKey string) bool {
 	return isValid.(bool)
 }
 
-// New returns a new Session struct
-func NewSession(client server.Client) *Session {
+func (s *Session) removeHubSessionKey(hubSessionKey string) {
+	if _, ok := s.sessions.Load(hubSessionKey); ok {
+		s.sessions.Delete(hubSessionKey)
+	}
+}
+
+func newHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
 	var syncMap sync.Map
-	return &Session{sessions: &syncMap, client: client}
+	return &HubSessionInfo{
+		username:          username,
+		password:          password,
+		loginMode:         loginMode,
+		serverSessionKeys: &syncMap,
+	}
 }

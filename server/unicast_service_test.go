@@ -37,9 +37,9 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			xmlBody := fmt.Sprintf(xmlInput, tc.name)
 
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf)
-			session := session.NewSession(client)
-			hub := server.NewHubService(client, session)
+			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
 			if err != nil {

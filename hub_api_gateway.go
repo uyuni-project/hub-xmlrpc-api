@@ -18,13 +18,14 @@ func main() {
 func initServer() {
 	rpcServer := rpc.NewServer()
 
-	client := client.NewClient(config.InitializeConfig())
-	apiSession := session.NewSession(client)
+	conf := config.InitializeConfig()
+	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+	apiSession := session.NewSession(client, conf.Hub.SUMA_API_URL)
 
 	xmlrpcCodec := initXMLRPCCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
-	rpcServer.RegisterService(server.NewHubService(client, apiSession), "hub")
-	rpcServer.RegisterService(server.NewDefaultService(client), "")
+	rpcServer.RegisterService(server.NewHubService(client, apiSession, conf.Hub.SUMA_API_URL), "hub")
+	rpcServer.RegisterService(server.NewDefaultService(client, conf.Hub.SUMA_API_URL), "")
 	rpcServer.RegisterService(server.NewMulticastService(client, apiSession), "")
 	rpcServer.RegisterService(server.NewUnicastService(client, apiSession), "")
 

@@ -72,7 +72,6 @@ func parseToUnicastArgs(args []interface{}, output interface{}) error {
 	return nil
 }
 
-//TODO: Temporary exposed for testing
 var StructParser = parseToStruct
 var UnicastParser = parseToUnicastArgs
 var ListParser = parseToList

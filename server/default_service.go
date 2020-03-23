@@ -8,16 +8,17 @@ import (
 type ListArgs struct{ Args []interface{} }
 
 type DefaultService struct {
-	client Client
+	client        Client
+	hubSumaAPIURL string
 }
 
-func NewDefaultService(client Client) *DefaultService {
-	return &DefaultService{client: client}
+func NewDefaultService(client Client, hubSumaAPIURL string) *DefaultService {
+	return &DefaultService{client: client, hubSumaAPIURL: hubSumaAPIURL}
 }
 
-func (h *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
+func (d *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
 	method, _ := NewCodec().NewRequest(r).Method()
-	response, err := h.client.ExecuteCallToHub(method, args.Args)
+	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 	}

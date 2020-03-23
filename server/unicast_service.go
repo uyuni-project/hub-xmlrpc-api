@@ -34,7 +34,7 @@ func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply
 		argumentsForCall = append(argumentsForCall, sessionKey)
 		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
 
-		response, err := h.client.ExecuteCallWithURL(url, method, argumentsForCall)
+		response, err := h.client.ExecuteCall(url, method, argumentsForCall)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 			return err
