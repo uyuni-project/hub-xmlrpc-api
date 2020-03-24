@@ -5,18 +5,29 @@ import (
 	"reflect"
 )
 
+var (
+	StructParser    = parseToStruct
+	UnicastParser   = parseToUnicastArgs
+	ListParser      = parseToList
+	MulitcastParser = parseToMulitcastArgs
+)
+
 type parser func(args []interface{}, output interface{}) error
 
 func parseToStruct(args []interface{}, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
-	if val.Kind() != reflect.Struct || val.NumField() < len(args) {
+	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
 		return FaultInvalidParams
+	}
+	if val.NumField() < len(args) {
+		log.Printf("Error ocurred when parsing arguments")
+		return FaultWrongArgumentsNumber
 	}
 
 	for i, arg := range args {
 		field := val.Field(i)
-		if reflect.TypeOf(field) != reflect.TypeOf(reflect.ValueOf(arg)) {
+		if field.Type() != reflect.ValueOf(arg).Type() {
 			log.Printf("Error ocurred when parsing arguments")
 			return FaultInvalidParams
 		}
@@ -27,9 +38,13 @@ func parseToStruct(args []interface{}, output interface{}) error {
 
 func parseToUnicastArgs(args []interface{}, output interface{}) error {
 	parsedArgs, ok := output.(*UnicastArgs)
-	if !ok || len(args) < 2 {
+	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return FaultInvalidParams
+	}
+	if len(args) < 2 {
+		log.Printf("Error ocurred when parsing arguments")
+		return FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
@@ -46,7 +61,6 @@ func parseToUnicastArgs(args []interface{}, output interface{}) error {
 
 	rest := args[2:len(args)]
 	serverArgs := make([]interface{}, len(rest))
-
 	for i, list := range rest {
 		serverArgs[i] = list.(interface{})
 	}
@@ -57,9 +71,13 @@ func parseToUnicastArgs(args []interface{}, output interface{}) error {
 
 func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 	parsedArgs, ok := output.(*MulticastArgs)
-	if !ok || len(args) < 2 {
+	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return FaultInvalidParams
+	}
+	if len(args) < 2 {
+		log.Printf("Error ocurred when parsing arguments")
+		return FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
@@ -79,7 +97,6 @@ func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 
 	rest := args[2:len(args)]
 	serverArgs := make([][]interface{}, len(rest))
-
 	for i, list := range rest {
 		serverArgs[i] = list.([]interface{})
 	}
@@ -90,22 +107,21 @@ func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 
 func parseToList(args []interface{}, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
-	if val.Kind() != reflect.Struct || val.NumField() < 1 {
+	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
 		return FaultInvalidParams
 	}
+	if val.NumField() < 1 {
+		log.Printf("Error ocurred when parsing arguments")
+		return FaultWrongArgumentsNumber
+	}
 
 	field := val.Field(0)
-
 	if field.Kind() != reflect.Slice {
 		log.Printf("Error ocurred when parsing arguments")
 		return FaultInvalidParams
 	}
+
 	field.Set(reflect.ValueOf(args))
 	return nil
 }
-
-var StructParser = parseToStruct
-var UnicastParser = parseToUnicastArgs
-var ListParser = parseToList
-var MulitcastParser = parseToMulitcastArgs
