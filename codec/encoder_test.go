@@ -1,4 +1,4 @@
-package server
+package codec
 
 import (
 	"fmt"
@@ -9,6 +9,26 @@ import (
 func TestFault2XML(t *testing.T) {
 	const faultXMLPayload = `
 	<methodResponse><fault><value><struct><member><name>faultCode</name><value><int>%d</int></value></member><member><name>faultString</name><value><string>%s</string></value></member></struct></value></fault></methodResponse>`
+
+	//Formatted:
+	//
+	//<methodResponse>
+	//	<fault>
+	//		<value>
+	//			<struct>
+	//				<member>
+	//					<name>faultCode</name>
+	//					<value><int>%d</int></value>
+	//				</member>
+	//				<member>
+	//					<name>faultString</name>
+	//					<value><string>%s</string></value>
+	//				</member>
+	//			</struct>
+	//		</value>
+	//	</fault>
+	//</methodResponse>
+
 	tt := []struct {
 		name Fault
 	}{
@@ -18,14 +38,16 @@ func TestFault2XML(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		t.Run(tc.name.String, func(t *testing.T) {
+		t.Run(tc.name.Message, func(t *testing.T) {
+			expected := fmt.Sprintf(faultXMLPayload, tc.name.Code, tc.name.Message)
+			actual, err := encodeFaultToXML(tc.name)
+			if err != nil {
+				t.Fatalf("Error ocurred when parsing fault to XML:%v", err)
+			}
 
-			expected := fmt.Sprintf(faultXMLPayload, tc.name.Code, tc.name.String)
-			actual := fault2XML(tc.name)
 			if strings.TrimSpace(expected) != actual {
 				t.Fatalf("Unexpected Result. Expected: %s, Got:%s", expected, actual)
 			}
-
 		})
 	}
 }

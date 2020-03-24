@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
@@ -20,7 +21,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 	}{
 		{name: "unicast.system.listSystems"},
 		{name: "unicast.system.listUserSystems", parameters: []interface{}{"admin"}},
-		{name: "unicast.system.unknownmethod", parameters: []interface{}{"admin"}, output: "request error: bad status code - 400"},
+		{name: "unicast.system.unknownmethod", parameters: []interface{}{"admin"}, output: "Could not find method: unknownmethod"},
 	}
 
 	for _, tc := range tt {
@@ -45,27 +46,23 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
-			credentials := struct {
-				Username string
-				Password string
-			}{"admin", "admin"}
+
 			reply := struct{ Data string }{""}
 			//login
-			hub.LoginWithAutoconnectMode(req, &credentials, &reply)
+			hub.LoginWithAutoconnectMode(req, &server.LoginArgs{"admin", "admin"}, &reply)
 			sessionKey := struct{ HubSessionKey string }{reply.Data}
-			//Get the server Ids
+			//get the server Ids
 			serverIdsreply := struct{ Data []int64 }{}
 			hub.ListServerIds(req, &sessionKey, &serverIdsreply)
 			firstServerIDs := serverIdsreply.Data[0]
-			unicastArgs := server.UnicastArgs{HubSessionKey: reply.Data, ServerID: firstServerIDs, ServerArgs: tc.parameters}
+			unicastArgs := server.UnicastArgs{tc.name, reply.Data, firstServerIDs, tc.parameters}
 			unicastReply := struct{ Data interface{} }{}
 
 			unicastService := server.NewUnicastService(client, session)
+
 			err = unicastService.DefaultMethod(req, &unicastArgs, &unicastReply)
-			if err != nil {
-				if tc.output != err.Error() {
-					t.Fatalf("Error during executing request: %v", err)
-				}
+			if err != nil && !strings.Contains(err.Error(), tc.output) {
+				t.Fatalf("Error during executing request: %v", err)
 			}
 		})
 	}

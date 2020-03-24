@@ -48,13 +48,9 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 				t.Fatalf("could not create request: %v", err)
 			}
 
-			credentials := struct {
-				Username string
-				Password string
-			}{"admin", "admin"}
 			loginReply := struct{ Data string }{""}
 
-			err = hub.LoginWithAutoconnectMode(req, &credentials, &loginReply)
+			err = hub.LoginWithAutoconnectMode(req, &server.LoginArgs{"admin", "admin"}, &loginReply)
 			if err != nil {
 				t.Fatalf("could not login to hub: %v", err)
 			}
@@ -68,15 +64,13 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			}
 
 			//execute multicast call
-			multicastArgs := server.MulticastArgs{HubSessionKey: hubsessionKey.HubSessionKey, ServerIDs: serverIDs.Data, ServerArgs: tc.parameters}
+			multicastArgs := server.MulticastArgs{tc.name, hubsessionKey.HubSessionKey, serverIDs.Data, tc.parameters}
 			multicastReply := struct{ Data server.MulticastResponse }{}
 
 			multicastService := server.NewMulticastService(client, session)
 			err = multicastService.DefaultMethod(req, &multicastArgs, &multicastReply)
-			if err != nil {
-				if tc.output != err.Error() {
-					t.Fatalf("Error during executing request: %v", err)
-				}
+			if err != nil && tc.output != err.Error() {
+				t.Fatalf("Error during executing request: %v", err)
 			}
 		})
 	}

@@ -6,7 +6,9 @@ import (
 
 	"github.com/gorilla/rpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
+	"github.com/uyuni-project/hub-xmlrpc-api/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/server"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
@@ -35,18 +37,18 @@ func initServer() {
 	log.Fatal(http.ListenAndServe(":8888", nil))
 }
 
-func initXMLRPCCodec() *server.Codec {
-	var codec = server.NewCodec()
+func initXMLRPCCodec() *codec.Codec {
+	var codec = codec.NewCodec()
 
-	codec.RegisterDefaultParser(server.StructParser)
+	codec.RegisterDefaultParser(parser.StructParser)
 	codec.RegisterMethod("hub.login")
 	codec.RegisterMethod("hub.loginWithAutoconnectMode")
 	codec.RegisterMethod("hub.loginWithAuthRelayMode")
-	codec.RegisterMethodWithParser("hub.attachToServers", server.MulitcastParser)
+	codec.RegisterMethodWithParser("hub.attachToServers", parser.MulticastParser)
 	codec.RegisterMethod("hub.listServerIds")
-	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", server.MulitcastParser)
-	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", server.UnicastParser)
-	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", server.ListParser)
+	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", parser.MulticastParser)
+	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", parser.UnicastParser)
+	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", parser.ListParser)
 
 	return codec
 }

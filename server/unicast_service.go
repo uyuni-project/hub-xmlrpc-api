@@ -15,20 +15,9 @@ func NewUnicastService(client Client, session Session) *UnicastService {
 	return &UnicastService{client: client, session: session}
 }
 
-type UnicastArgs struct {
-	HubSessionKey string
-	ServerID      int64
-	ServerArgs    []interface{}
-}
-
 func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
 	if h.session.IsHubSessionValid(args.HubSessionKey) {
-		method, err := NewCodec().NewRequest(r).Method()
-		//TODO: removing multicast namespace. We should reuse the same codec we use for the server
-		method = removeUnicastNamespace(method)
-		if err != nil {
-			log.Printf("Call error: %v", err)
-		}
+		method := removeUnicastNamespace(args.Method)
 		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
 		url, sessionKey := h.session.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
 		argumentsForCall = append(argumentsForCall, sessionKey)

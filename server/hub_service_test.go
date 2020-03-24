@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/server"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
@@ -26,7 +27,7 @@ func TestLogin(t *testing.T) {
 		password string
 		err      string
 	}{
-		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: server.FaultInvalidCredentials.String},
+		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: codec.FaultInvalidCredentials.Message},
 		{name: "Valid credentials", username: "admin", password: "admin"},
 	}
 
@@ -42,7 +43,7 @@ func TestLogin(t *testing.T) {
 				t.Fatalf("could not create request: %v", err)
 			}
 			reply := struct{ Data string }{""}
-			err = hub.Login(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.Login(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				if !strings.Contains(err.Error(), tc.err) {
 					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
@@ -82,7 +83,7 @@ func TestLoginAutoconnect(t *testing.T) {
 		err      string
 	}{
 		{name: "Valid credentials", username: "admin", password: "admin"},
-		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: server.FaultInvalidCredentials.String},
+		{name: "Invalid credentials", username: "unknown-user", password: "unknown-user", err: codec.FaultInvalidCredentials.Message},
 	}
 
 	for _, tc := range tt {
@@ -98,7 +99,7 @@ func TestLoginAutoconnect(t *testing.T) {
 			}
 			reply := struct{ Data string }{""}
 
-			err = hub.LoginWithAutoconnectMode(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.LoginWithAutoconnectMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				if !strings.Contains(err.Error(), tc.err) {
 					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
@@ -159,7 +160,7 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 				t.Fatalf("could not create request: %v", err)
 			}
 			reply := struct{ Data string }{""}
-			err = hub.LoginWithAuthRelayMode(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.LoginWithAuthRelayMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				if !strings.Contains(err.Error(), tc.err) {
 					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
@@ -208,7 +209,7 @@ func TestAttachToServers(t *testing.T) {
 			}
 			reply := struct{ Data string }{""}
 			//login
-			err = hub.LoginWithAuthRelayMode(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.LoginWithAuthRelayMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				t.Fatalf("Login faied with error : %v", err)
 			}
@@ -219,7 +220,7 @@ func TestAttachToServers(t *testing.T) {
 			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
 			serverIds := serverIdsreply.Data
 
-			srvArgs := server.MulticastArgs{sessionKey.HubSessionKey, serverIds, nil}
+			srvArgs := server.MulticastArgs{"method", sessionKey.HubSessionKey, serverIds, nil}
 			err = hub.AttachToServers(req, &srvArgs, &struct{ Data []error }{})
 			if err != nil && err.Error() != tc.err {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.err, err.Error())
@@ -262,7 +263,7 @@ func TestIsHubSessionValid(t *testing.T) {
 			}
 			reply := struct{ Data string }{""}
 
-			err = hub.Login(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.Login(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				t.Fatalf("Couldn't login with provided credentials")
 				return
@@ -290,7 +291,7 @@ func TestListServerIds(t *testing.T) {
 		err      string
 	}{
 		{name: "Valid credentials", username: "admin", password: "admin"},
-		{name: "With invalid  credentials", username: "unknownadmin", password: "unknownadmin", err: server.FaultInvalidCredentials.String},
+		{name: "With invalid  credentials", username: "unknownadmin", password: "unknownadmin", err: codec.FaultInvalidCredentials.Message},
 	}
 
 	for _, tc := range tt {
@@ -305,7 +306,7 @@ func TestListServerIds(t *testing.T) {
 				t.Fatalf("could not create request: %v", err)
 			}
 			reply := struct{ Data string }{""}
-			err = hub.Login(req, &struct{ Username, Password string }{tc.username, tc.password}, &reply)
+			err = hub.Login(req, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				if !strings.Contains(err.Error(), tc.err) {
 					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())

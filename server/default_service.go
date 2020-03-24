@@ -5,8 +5,6 @@ import (
 	"net/http"
 )
 
-type ListArgs struct{ Args []interface{} }
-
 type DefaultService struct {
 	client        Client
 	hubSumaAPIURL string
@@ -17,8 +15,7 @@ func NewDefaultService(client Client, hubSumaAPIURL string) *DefaultService {
 }
 
 func (d *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
-	method, _ := NewCodec().NewRequest(r).Method()
-	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, method, args.Args)
+	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, args.Method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 	}

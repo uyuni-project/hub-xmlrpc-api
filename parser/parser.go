@@ -1,62 +1,65 @@
-package server
+package parser
 
 import (
 	"log"
 	"reflect"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/server"
 )
 
 var (
 	StructParser    = parseToStruct
 	UnicastParser   = parseToUnicastArgs
 	ListParser      = parseToList
-	MulitcastParser = parseToMulitcastArgs
+	MulticastParser = parseToMulitcastArgs
 )
 
-type parser func(args []interface{}, output interface{}) error
+type parser func(method string, args []interface{}, output interface{}) error
 
-func parseToStruct(args []interface{}, output interface{}) error {
+func parseToStruct(method string, args []interface{}, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
 	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 	if val.NumField() < len(args) {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultWrongArgumentsNumber
+		return codec.FaultWrongArgumentsNumber
 	}
 
 	for i, arg := range args {
 		field := val.Field(i)
 		if field.Type() != reflect.ValueOf(arg).Type() {
 			log.Printf("Error ocurred when parsing arguments")
-			return FaultInvalidParams
+			return codec.FaultInvalidParams
 		}
 		field.Set(reflect.ValueOf(arg))
 	}
 	return nil
 }
 
-func parseToUnicastArgs(args []interface{}, output interface{}) error {
-	parsedArgs, ok := output.(*UnicastArgs)
+func parseToUnicastArgs(method string, args []interface{}, output interface{}) error {
+	parsedArgs, ok := output.(*server.UnicastArgs)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultWrongArgumentsNumber
+		return codec.FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
 	if !ok {
 		log.Printf("Error ocurred when parsing hubSessionKey argument")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 
 	serverID, ok := args[1].(int64)
 	if !ok {
 		log.Printf("Error ocurred when parsing serverID argument")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 
 	rest := args[2:len(args)]
@@ -65,25 +68,25 @@ func parseToUnicastArgs(args []interface{}, output interface{}) error {
 		serverArgs[i] = list.(interface{})
 	}
 
-	*parsedArgs = UnicastArgs{hubSessionKey, serverID, serverArgs}
+	*parsedArgs = server.UnicastArgs{method, hubSessionKey, serverID, serverArgs}
 	return nil
 }
 
-func parseToMulitcastArgs(args []interface{}, output interface{}) error {
-	parsedArgs, ok := output.(*MulticastArgs)
+func parseToMulitcastArgs(method string, args []interface{}, output interface{}) error {
+	parsedArgs, ok := output.(*server.MulticastArgs)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultWrongArgumentsNumber
+		return codec.FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
 	if !ok {
 		log.Printf("Error ocurred when parsing hubSessionKey argument")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
 
 	serverIDs := make([]int64, len(args[1].([]interface{})))
@@ -91,7 +94,7 @@ func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 		serverIDs[i], ok = elem.(int64)
 		if !ok {
 			log.Printf("Error ocurred when parsing serverIDs argument")
-			return FaultInvalidParams
+			return codec.FaultInvalidParams
 		}
 	}
 
@@ -101,27 +104,32 @@ func parseToMulitcastArgs(args []interface{}, output interface{}) error {
 		serverArgs[i] = list.([]interface{})
 	}
 
-	*parsedArgs = MulticastArgs{hubSessionKey, serverIDs, serverArgs}
+	*parsedArgs = server.MulticastArgs{method, hubSessionKey, serverIDs, serverArgs}
 	return nil
 }
 
-func parseToList(args []interface{}, output interface{}) error {
-	val := reflect.ValueOf(output).Elem()
-	if val.Kind() != reflect.Struct {
+func parseToList(method string, args []interface{}, output interface{}) error {
+	parsedArgs, ok := output.(*server.ListArgs)
+	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return FaultInvalidParams
+		return codec.FaultInvalidParams
 	}
-	if val.NumField() < 1 {
-		log.Printf("Error ocurred when parsing arguments")
-		return FaultWrongArgumentsNumber
-	}
-
-	field := val.Field(0)
-	if field.Kind() != reflect.Slice {
-		log.Printf("Error ocurred when parsing arguments")
-		return FaultInvalidParams
-	}
-
-	field.Set(reflect.ValueOf(args))
+	*parsedArgs = server.ListArgs{method, args}
 	return nil
+}
+
+func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
+	//if !areAllArgumentsOfSameLength(serverArgs) {
+	//	return FaultInvalidParams
+	//}
+	if len(allArrays) <= 1 {
+		return true
+	}
+	lengthToCompare := len(allArrays[0])
+	for _, array := range allArrays {
+		if lengthToCompare != len(array) {
+			return false
+		}
+	}
+	return true
 }

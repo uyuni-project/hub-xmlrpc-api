@@ -1,4 +1,4 @@
-package server
+package codec
 
 import (
 	"bytes"
@@ -20,8 +20,8 @@ type Codec struct {
 	methods                  map[string]string
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
-	parsers                  map[string]parser
-	defaultParser            parser
+	parsers                  map[string]Parser
+	defaultParser            Parser
 }
 
 func NewCodec() *Codec {
@@ -29,12 +29,12 @@ func NewCodec() *Codec {
 		methods:                  make(map[string]string),
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
-		parsers:                  make(map[string]parser),
+		parsers:                  make(map[string]Parser),
 		defaultParser:            nil,
 	}
 }
 
-func (c *Codec) RegisterDefaultParser(parser parser) {
+func (c *Codec) RegisterDefaultParser(parser Parser) {
 	c.defaultParser = parser
 }
 
@@ -42,17 +42,17 @@ func (c *Codec) RegisterMethod(method string) {
 	c.methods[method] = method
 }
 
-func (c *Codec) RegisterMethodWithParser(method string, parser parser) {
+func (c *Codec) RegisterMethodWithParser(method string, parser Parser) {
 	c.methods[method] = method
 	c.parsers[c.resolveMethod(method)] = parser
 }
 
-func (c *Codec) RegisterDefaultMethod(method string, parser parser) {
+func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
 	c.parsers[c.resolveMethod(method)] = parser
 }
 
-func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser parser) {
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
 	c.defaultMethodByNamespace[namespace] = method
 	c.parsers[c.resolveMethod(method)] = parser
 }
@@ -78,7 +78,7 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	return &CodecRequest{request: &request, parser: parser}
 }
 
-func (c *Codec) resolveParser(requestMethod string) parser {
+func (c *Codec) resolveParser(requestMethod string) Parser {
 	if parser, ok := c.parsers[requestMethod]; ok {
 		return parser
 	}
@@ -127,7 +127,7 @@ type ServerRequest struct {
 type CodecRequest struct {
 	request *ServerRequest
 	err     error
-	parser  parser
+	parser  Parser
 }
 
 func (c *CodecRequest) Method() (string, error) {
@@ -149,7 +149,7 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 		return c.err
 	}
 
-	err := c.parser(argsList, args)
+	err := c.parser(c.request.Method, argsList, args)
 	if err != nil {
 		return err
 	}
@@ -158,7 +158,11 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 
 func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}, methodErr error) error {
 	var xmlstr string
-	if c.err != nil {
+	err := c.err
+	if err == nil {
+		err = methodErr
+	}
+	if err != nil {
 		var fault Fault
 
 		switch c.err.(type) {
@@ -166,25 +170,18 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}
 			fault = c.err.(Fault)
 		default:
 			fault = FaultApplicationError
-			fault.String += fmt.Sprintf(": %v", c.err)
+			fault.Message += fmt.Sprintf(": %v", err)
 		}
-		xmlstr = fault2XML(fault)
-		return c.err
-	} else if methodErr != nil {
-		var fault Fault
-
-		switch methodErr.(type) {
-		case Fault:
-			fault = methodErr.(Fault)
-		default:
-			fault = FaultApplicationError
-			fault.String += fmt.Sprintf(": %v", methodErr)
+		xmlstr, err = encodeFaultToXML(fault)
+		if err != nil {
+			return err
 		}
-		xmlstr = fault2XML(fault)
 	} else {
-		xmlstr, _ = encodeResponseToXML(response)
+		xmlstr, err = encodeResponseToXML(response)
+		if err != nil {
+			return err
+		}
 	}
-
 	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
 	w.Write([]byte(xmlstr))
 	return nil

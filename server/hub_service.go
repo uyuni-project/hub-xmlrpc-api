@@ -16,30 +16,7 @@ func NewHubService(client Client, session Session, hubSumaAPIURL string) *HubSer
 	return &HubService{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}
 }
 
-func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
-	hubSessionKey := args.HubSessionKey
-
-	if h.session.IsHubSessionValid(hubSessionKey) {
-		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{hubSessionKey})
-		if err != nil {
-			log.Printf("Login error: %v", err)
-			return err
-		}
-		systemsSlice := systemList.([]interface{})
-
-		systemIDs := make([]int64, len(systemsSlice))
-		for i, system := range systemsSlice {
-			systemIDs[i] = system.(map[string]interface{})["id"].(int64)
-		}
-		reply.Data = systemIDs
-	} else {
-		log.Println("Provided session key is invalid.")
-		return errors.New("Provided session key is invalid.")
-	}
-	return nil
-}
-
-func (h *HubService) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) Login(r *http.Request, args *LoginArgs, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, LOGIN_MANUAL_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -49,7 +26,7 @@ func (h *HubService) Login(r *http.Request, args *struct{ Username, Password str
 	return nil
 }
 
-func (h *HubService) LoginWithAutoconnectMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) LoginWithAutoconnectMode(r *http.Request, args *LoginArgs, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, LOGIN_AUTOCONNECT_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -59,7 +36,7 @@ func (h *HubService) LoginWithAutoconnectMode(r *http.Request, args *struct{ Use
 	return nil
 }
 
-func (h *HubService) LoginWithAuthRelayMode(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
+func (h *HubService) LoginWithAuthRelayMode(r *http.Request, args *LoginArgs, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, LOGIN_RELAY_MODE)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -89,6 +66,29 @@ func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply
 	} else {
 		log.Println("Provided session key is invalid.")
 		return errors.New("provided session key is invalid")
+	}
+	return nil
+}
+
+func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
+	hubSessionKey := args.HubSessionKey
+
+	if h.session.IsHubSessionValid(hubSessionKey) {
+		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{hubSessionKey})
+		if err != nil {
+			log.Printf("Login error: %v", err)
+			return err
+		}
+		systemsSlice := systemList.([]interface{})
+
+		systemIDs := make([]int64, len(systemsSlice))
+		for i, system := range systemsSlice {
+			systemIDs[i] = system.(map[string]interface{})["id"].(int64)
+		}
+		reply.Data = systemIDs
+	} else {
+		log.Println("Provided session key is invalid.")
+		return errors.New("Provided session key is invalid")
 	}
 	return nil
 }
@@ -145,8 +145,8 @@ func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, u
 	return responses, nil
 }
 
-func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]MulticastServerArgs, map[int64]string, error) {
-	multicastServerArgs := make([]MulticastServerArgs, len(serverIDs))
+func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]multicastServerArgs, map[int64]string, error) {
+	multicastArgs := make([]multicastServerArgs, len(serverIDs))
 	serverURLByServerID := make(map[int64]string)
 
 	for i, serverID := range serverIDs {
@@ -156,10 +156,10 @@ func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs
 			//TODO: what to do with failing servers?
 		} else {
 			serverURLByServerID[serverID] = url
-			multicastServerArgs[i] = MulticastServerArgs{url, serverID, []interface{}{usernames[i], passwords[i]}}
+			multicastArgs[i] = multicastServerArgs{url, serverID, []interface{}{usernames[i], passwords[i]}}
 		}
 	}
-	return multicastServerArgs, serverURLByServerID, nil
+	return multicastArgs, serverURLByServerID, nil
 }
 
 func (h *HubService) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {

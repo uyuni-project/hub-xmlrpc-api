@@ -33,7 +33,7 @@ type Config struct {
 
 // InitializeConfig returns a new Config struct
 func InitializeConfig() *Config {
-	//os.Setenv("HUB_CONFIG_FILE", "/root/xmlrpc_conf.conf")
+	//os.Setenv("HUB_CONFIG_FILE", "./config/config.json")
 	if hubConfigFile, exists := os.LookupEnv("HUB_CONFIG_FILE"); exists {
 		if err := k.Load(file.Provider(hubConfigFile), json.Parser()); err != nil {
 			log.Fatalf("error loading config: %v", err)
