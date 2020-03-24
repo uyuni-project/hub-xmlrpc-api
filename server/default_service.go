@@ -14,6 +14,11 @@ func NewDefaultService(client Client, hubSumaAPIURL string) *DefaultService {
 	return &DefaultService{client: client, hubSumaAPIURL: hubSumaAPIURL}
 }
 
+type ListArgs struct {
+	Method string
+	Args   []interface{}
+}
+
 func (d *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *struct{ Data interface{} }) error {
 	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, args.Method, args.Args)
 	if err != nil {

@@ -15,6 +15,13 @@ func NewUnicastService(client Client, session Session) *UnicastService {
 	return &UnicastService{client: client, session: session}
 }
 
+type UnicastArgs struct {
+	Method        string
+	HubSessionKey string
+	ServerID      int64
+	ServerArgs    []interface{}
+}
+
 func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
 	if h.session.IsHubSessionValid(args.HubSessionKey) {
 		method := removeUnicastNamespace(args.Method)

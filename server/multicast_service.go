@@ -16,6 +16,13 @@ func NewMulticastService(client Client, session Session) *MulticastService {
 	return &MulticastService{client: client, session: session}
 }
 
+type MulticastArgs struct {
+	Method        string
+	HubSessionKey string
+	ServerIDs     []int64
+	ServerArgs    [][]interface{}
+}
+
 func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data MulticastResponse }) error {
 	if h.session.IsHubSessionValid(args.HubSessionKey) {
 		method := removeMulticastNamespace(args.Method)

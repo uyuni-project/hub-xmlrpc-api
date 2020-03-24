@@ -21,7 +21,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 	}{
 		{name: "unicast.system.listSystems"},
 		{name: "unicast.system.listUserSystems", parameters: []interface{}{"admin"}},
-		{name: "unicast.system.unknownmethod", parameters: []interface{}{"admin"}, output: "Could not find method: unknownmethod"},
+		{name: "unicast.system.unknownmethod", parameters: []interface{}{"admin"}, output: "request error: bad status code - 400"},
 	}
 
 	for _, tc := range tt {

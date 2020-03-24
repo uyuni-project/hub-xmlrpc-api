@@ -16,6 +16,11 @@ func NewHubService(client Client, session Session, hubSumaAPIURL string) *HubSer
 	return &HubService{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}
 }
 
+type LoginArgs struct {
+	Username string
+	Password string
+}
+
 func (h *HubService) Login(r *http.Request, args *LoginArgs, reply *struct{ Data string }) error {
 	hubSessionKey, err := h.loginToHub(args.Username, args.Password, LOGIN_MANUAL_MODE)
 	if err != nil {
