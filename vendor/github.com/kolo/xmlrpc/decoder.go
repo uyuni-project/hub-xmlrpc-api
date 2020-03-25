@@ -36,34 +36,33 @@ type decoder struct {
 	*xml.Decoder
 }
 
-func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
+func UnmarshalClientRequest(data []byte, output interface{}) (err error) {
 	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
 	if CharsetReader != nil {
 		dec.CharsetReader = CharsetReader
 	}
 
-	//xmlrpc protocol defines a max of 10000 arguments
-	argsList = make([]interface{}, 10000)
-	items := reflect.ValueOf(argsList)
+	slice := reflect.ValueOf([]interface{}{})
 
-	i := 0
-	var tok xml.Token
+	var token xml.Token
 	for {
-		if tok, err = dec.Token(); err != nil {
-			return nil, err
+		if token, err = dec.Token(); err != nil {
+			return err
 		}
 
-		if t, ok := tok.(xml.StartElement); ok {
+		if t, ok := token.(xml.StartElement); ok {
 			if t.Name.Local == "value" {
-				item := items.Index(i)
-				i++
-				if err = dec.decodeValue(item); err != nil {
-					return nil, err
+				v := reflect.New(slice.Type().Elem())
+				if err = dec.decodeValue(v); err != nil {
+					return err
 				}
+				slice = reflect.Append(slice, v.Elem())
 			}
-		} else if t, ok := tok.(xml.EndElement); ok {
+		} else if t, ok := token.(xml.EndElement); ok {
 			if t.Name.Local == "methodCall" {
+				val := reflect.ValueOf(output).Elem()
+				val.Set(slice)
 				break
 			}
 		}
@@ -71,9 +70,9 @@ func UnmarshalToList(data []byte) (argsList []interface{}, err error) {
 	// read until end of document
 	err = dec.Skip()
 	if err != nil && err != io.EOF {
-		return nil, err
+		return err
 	}
-	return argsList[0:i], nil
+	return nil
 }
 
 func unmarshal(data []byte, v interface{}) (err error) {

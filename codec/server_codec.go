@@ -44,17 +44,17 @@ func (c *Codec) RegisterMethod(method string) {
 
 func (c *Codec) RegisterMethodWithParser(method string, parser Parser) {
 	c.methods[method] = method
-	c.parsers[c.resolveMethod(method)] = parser
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
 func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
-	c.parsers[c.resolveMethod(method)] = parser
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
 func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
 	c.defaultMethodByNamespace[namespace] = method
-	c.parsers[c.resolveMethod(method)] = parser
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
@@ -70,10 +70,11 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	if err := xml.Unmarshal(rawxml, &request); err != nil {
 		return &CodecRequest{err: err}
 	}
+	//Note: request.UserMethod is set when Unmarshalling the raw xml
+	request.serviceMethod = c.resolveServiceMethod(request.UserMethod)
 	request.rawxml = rawxml
-	request.Method = c.resolveMethod(request.Method)
 
-	parser := c.resolveParser(request.Method)
+	parser := c.resolveParser(request.serviceMethod)
 
 	return &CodecRequest{request: &request, parser: parser}
 }
@@ -85,7 +86,7 @@ func (c *Codec) resolveParser(requestMethod string) Parser {
 	return c.defaultParser
 }
 
-func (c *Codec) resolveMethod(requestMethod string) string {
+func (c *Codec) resolveServiceMethod(requestMethod string) string {
 	namespace, methodStr := c.getNamespaceAndMethod(requestMethod)
 	if _, ok := c.methods[requestMethod]; ok {
 		return c.toLowerCase(namespace, methodStr)
@@ -119,9 +120,10 @@ func (c *Codec) toLowerCase(namespace, method string) string {
 }
 
 type ServerRequest struct {
-	Name   xml.Name `xml:"methodCall"`
-	Method string   `xml:"methodName"`
-	rawxml []byte
+	Name          xml.Name `xml:"methodCall"`
+	UserMethod    string   `xml:"methodName"`
+	serviceMethod string
+	rawxml        []byte
 }
 
 type CodecRequest struct {
@@ -132,7 +134,7 @@ type CodecRequest struct {
 
 func (c *CodecRequest) Method() (string, error) {
 	if c.err == nil {
-		return c.request.Method, nil
+		return c.request.serviceMethod, nil
 	}
 	return "", c.err
 }
@@ -143,13 +145,12 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 		return errors.New("non-pointer value passed")
 	}
 
-	var argsList []interface{}
-	argsList, c.err = xmlrpc.UnmarshalToList(c.request.rawxml)
+	var argsList interface{}
+	c.err = xmlrpc.UnmarshalClientRequest(c.request.rawxml, &argsList)
 	if c.err != nil {
 		return c.err
 	}
-
-	err := c.parser(c.request.Method, argsList, args)
+	err := c.parser(c.request.UserMethod, argsList.([]interface{}), args)
 	if err != nil {
 		return err
 	}
