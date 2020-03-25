@@ -91,7 +91,6 @@ func multicastCall(method string, serverArgs []multicastServerArgs, client Clien
 				failedResponses[serverId] = err.Error()
 				mutexForFailedResponses.Unlock()
 			} else {
-				log.Printf("Response: %s\n", response)
 				mutexForSuccesfulResponses.Lock()
 				successfulResponses[serverId] = response
 				mutexForSuccesfulResponses.Unlock()
