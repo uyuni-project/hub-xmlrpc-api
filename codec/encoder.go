@@ -1,47 +1,35 @@
 package codec
 
 import (
+	"bytes"
+	"fmt"
 	"reflect"
 
 	"github.com/kolo/xmlrpc"
 )
 
-func encodeResponseToXML(response interface{}) (string, error) {
-	result := "<methodResponse>"
-	params, err := encodeResponseParametersToXML(response)
-	if err != nil {
-		return "", err
-	}
-	result += params
-	result += "</methodResponse>"
-	return result, nil
-}
+func encodeResponseToXML(response interface{}) ([]byte, error) {
+	var b bytes.Buffer
+	b.WriteString("<methodResponse><params>")
 
-func encodeResponseParametersToXML(response interface{}) (string, error) {
-	result := "<params>"
 	val := reflect.ValueOf(response).Elem()
-
 	for i := 0; i < val.NumField(); i++ {
-		result += "<param>"
-
 		xmlByte, err := xmlrpc.Marshal(val.Field(i).Interface())
 		if err != nil {
-			return "", err
+			return nil, err
 		}
-		result += string(xmlByte)
-		result += "</param>"
+		b.WriteString(fmt.Sprintf("<param>%s</param>", string(xmlByte)))
 	}
-	result += "</params>"
-	return result, nil
+	b.WriteString("</params></methodResponse>")
+	return b.Bytes(), nil
 }
 
-func encodeFaultToXML(fault Fault) (string, error) {
-	result := "<methodResponse><fault>"
+func encodeFaultErrorToXML(fault Fault) ([]byte, error) {
+	var b bytes.Buffer
 	xmlByte, err := xmlrpc.Marshal(fault)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	result += string(xmlByte)
-	result += "</fault></methodResponse>"
-	return result, nil
+	b.WriteString(fmt.Sprintf("<methodResponse><fault>%s</fault></methodResponse>", string(xmlByte)))
+	return b.Bytes(), nil
 }

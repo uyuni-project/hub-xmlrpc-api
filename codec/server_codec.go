@@ -158,7 +158,7 @@ func (c *CodecRequest) ReadRequest(args interface{}) error {
 }
 
 func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}, methodErr error) error {
-	var xmlstr string
+	var encodedResponse []byte
 	err := c.err
 	if err == nil {
 		err = methodErr
@@ -173,17 +173,17 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}
 			fault = FaultApplicationError
 			fault.Message += fmt.Sprintf(": %v", err)
 		}
-		xmlstr, err = encodeFaultToXML(fault)
+		encodedResponse, err = encodeFaultErrorToXML(fault)
 		if err != nil {
 			return err
 		}
 	} else {
-		xmlstr, err = encodeResponseToXML(response)
+		encodedResponse, err = encodeResponseToXML(response)
 		if err != nil {
 			return err
 		}
 	}
 	w.Header().Set("Content-Type", "text/xml; charset=utf-8")
-	w.Write([]byte(xmlstr))
+	w.Write(encodedResponse)
 	return nil
 }
