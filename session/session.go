@@ -48,9 +48,7 @@ func (s *Session) RetrieveServerSessionByServerID(hubSessionKey string, serverID
 }
 
 func (s *Session) RemoveHubSession(hubSessionKey string) {
-	if _, ok := s.sessions.Load(hubSessionKey); ok {
-		s.sessions.Delete(hubSessionKey)
-	}
+	s.sessions.Delete(hubSessionKey)
 }
 
 func newStoredHubSession(hubSession *server.HubSession) *storedHubSession {

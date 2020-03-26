@@ -10,9 +10,17 @@ type ServerSession struct {
 	url, sessionKey string
 }
 
+func NewServerSession(url, sessionKey string) *ServerSession {
+	return &ServerSession{url, sessionKey}
+}
+
 type HubSession struct {
 	username, password string
 	loginMode          int
+}
+
+func NewHubSession(username, password string, loginMode int) *HubSession {
+	return &HubSession{username, password, loginMode}
 }
 
 type Session interface {
