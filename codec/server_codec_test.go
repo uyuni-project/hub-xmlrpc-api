@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/codec"	
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/server"
 )

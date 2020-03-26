@@ -15,14 +15,14 @@ var (
 	MulticastParser = parseToMulitcastArgs
 )
 
-type parser func(method string, args []interface{}, output interface{}) error
-
-func parseToStruct(method string, args []interface{}, output interface{}) error {
+func parseToStruct(request map[string]interface{}, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
 	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
 	}
+
+	args := request["params"].([]interface{})
 	if val.NumField() < len(args) {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultWrongArgumentsNumber
@@ -39,12 +39,14 @@ func parseToStruct(method string, args []interface{}, output interface{}) error 
 	return nil
 }
 
-func parseToUnicastArgs(method string, args []interface{}, output interface{}) error {
+func parseToUnicastArgs(request map[string]interface{}, output interface{}) error {
 	parsedArgs, ok := output.(*server.UnicastArgs)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
 	}
+
+	args := request["params"].([]interface{})
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultWrongArgumentsNumber
@@ -68,16 +70,18 @@ func parseToUnicastArgs(method string, args []interface{}, output interface{}) e
 		serverArgs[i] = list.(interface{})
 	}
 
-	*parsedArgs = server.UnicastArgs{method, hubSessionKey, serverID, serverArgs}
+	*parsedArgs = server.UnicastArgs{request["methodName"].(string), hubSessionKey, serverID, serverArgs}
 	return nil
 }
 
-func parseToMulitcastArgs(method string, args []interface{}, output interface{}) error {
+func parseToMulitcastArgs(request map[string]interface{}, output interface{}) error {
 	parsedArgs, ok := output.(*server.MulticastArgs)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
 	}
+
+	args := request["params"].([]interface{})
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultWrongArgumentsNumber
@@ -104,17 +108,17 @@ func parseToMulitcastArgs(method string, args []interface{}, output interface{})
 		serverArgs[i] = list.([]interface{})
 	}
 
-	*parsedArgs = server.MulticastArgs{method, hubSessionKey, serverIDs, serverArgs}
+	*parsedArgs = server.MulticastArgs{request["methodName"].(string), hubSessionKey, serverIDs, serverArgs}
 	return nil
 }
 
-func parseToList(method string, args []interface{}, output interface{}) error {
+func parseToList(request map[string]interface{}, output interface{}) error {
 	parsedArgs, ok := output.(*server.ListArgs)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
 	}
-	*parsedArgs = server.ListArgs{method, args}
+	*parsedArgs = server.ListArgs{request["methodName"].(string), request["params"].([]interface{})}
 	return nil
 }
 

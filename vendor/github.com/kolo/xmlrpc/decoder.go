@@ -36,13 +36,68 @@ type decoder struct {
 	*xml.Decoder
 }
 
-func UnmarshalClientParameters(data []byte, output interface{}) (err error) {
+func UnmarshalServerRequest(data []byte, output interface{}) (err error) {
 	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
 	if CharsetReader != nil {
 		dec.CharsetReader = CharsetReader
 	}
 
+	//init struct
+	val := reflect.ValueOf(output).Elem()
+
+	pmap := val
+	valType := val.Type()
+
+	var dummy map[string]interface{}
+	valType = reflect.TypeOf(dummy)
+	pmap = reflect.New(valType).Elem()
+
+	// Create initial empty map
+	pmap.Set(reflect.MakeMap(valType))
+
+	//process tokens
+	var token xml.Token
+	for {
+		if token, err = dec.Token(); err != nil {
+			return err
+		}
+
+		if t, ok := token.(xml.StartElement); ok {
+			if t.Name.Local == "methodName" {
+				if token, err = dec.Token(); err != nil {
+					return err
+				}
+
+				methodName := string([]byte(token.(xml.CharData)))
+				pmap.SetMapIndex(reflect.ValueOf("methodName"), reflect.Indirect(reflect.ValueOf(methodName)))
+
+				var params interface{}
+				err = dec.unmarshalClientParameters(&params)
+				if err != nil {
+					return err
+				}
+				pmap.SetMapIndex(reflect.ValueOf("params"), reflect.Indirect(reflect.ValueOf(params)))
+				val.Set(pmap)
+
+				break
+			}
+		} else if t, ok := token.(xml.EndElement); ok {
+			if t.Name.Local == "methodCall" {
+				break
+			}
+		}
+	}
+
+	// read until end of document
+	err = dec.Skip()
+	if err != nil && err != io.EOF {
+		return err
+	}
+	return nil
+}
+
+func (dec *decoder) unmarshalClientParameters(output interface{}) (err error) {
 	slice := reflect.ValueOf([]interface{}{})
 
 	var token xml.Token

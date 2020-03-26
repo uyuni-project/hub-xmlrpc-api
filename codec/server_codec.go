@@ -2,7 +2,6 @@ package codec
 
 import (
 	"bytes"
-	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -64,17 +63,17 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawxml))
 
-	var request ServerRequest
-	if err := xml.Unmarshal(rawxml, &request); err != nil {
+	var request interface{}
+	if err := xmlrpc.UnmarshalServerRequest(rawxml, &request); err != nil {
 		return &CodecRequest{err: err}
 	}
-	//Note: request.UserMethod is set when Unmarshalling the raw xml
-	request.serviceMethod = c.resolveServiceMethod(request.UserMethod)
-	request.rawxml = rawxml
+	xmlRequest := request.(map[string]interface{})
+	userMethod := xmlRequest["methodName"].(string)
+	serviceMethod := c.resolveServiceMethod(userMethod)
 
-	parser := c.resolveParser(request.serviceMethod)
+	parser := c.resolveParser(serviceMethod)
 
-	return &CodecRequest{request: &request, parser: parser}
+	return &CodecRequest{request: &serverRequest{xmlRequest, serviceMethod}, parser: parser}
 }
 
 func (c *Codec) resolveParser(requestMethod string) Parser {
@@ -117,15 +116,13 @@ func (c *Codec) toLowerCase(namespace, method string) string {
 	return namespace + "." + method
 }
 
-type ServerRequest struct {
-	Name          xml.Name `xml:"methodCall"`
-	UserMethod    string   `xml:"methodName"`
+type serverRequest struct {
+	request       map[string]interface{}
 	serviceMethod string
-	rawxml        []byte
 }
 
 type CodecRequest struct {
-	request *ServerRequest
+	request *serverRequest
 	err     error
 	parser  Parser
 }
@@ -138,12 +135,7 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	var argsList interface{}
-	c.err = xmlrpc.UnmarshalClientParameters(c.request.rawxml, &argsList)
-	if c.err != nil {
-		return c.err
-	}
-	c.err = c.parser(c.request.UserMethod, argsList.([]interface{}), args)
+	c.err = c.parser(c.request.request, args)
 	if c.err != nil {
 		return c.err
 	}
