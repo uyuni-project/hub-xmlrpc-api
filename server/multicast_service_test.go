@@ -28,7 +28,7 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			//setup env
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			const xmlInput = `
@@ -67,7 +67,7 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			multicastArgs := server.MulticastArgs{tc.name, hubsessionKey.HubSessionKey, serverIDs.Data, tc.parameters}
 			multicastReply := struct{ Data server.MulticastResponse }{}
 
-			multicastService := server.NewMulticastService(client, session)
+			multicastService := server.NewMulticastService(client, session, conf.Hub.SUMA_API_URL)
 			err = multicastService.DefaultMethod(req, &multicastArgs, &multicastReply)
 			if err != nil && tc.output != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

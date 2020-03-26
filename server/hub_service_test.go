@@ -35,7 +35,7 @@ func TestLogin(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
@@ -64,12 +64,12 @@ func TestLogin(t *testing.T) {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
-			username, password := session.GetUsernameAndPassword(hubsessionkey)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
+			hubSession := session.RetrieveHubSession(hubsessionkey)
+			if hubSession.username != tc.username {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, hubSession.username)
 			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			if hubSession.password != tc.password {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, hubSession.password)
 			}
 		})
 	}
@@ -90,7 +90,7 @@ func TestLoginAutoconnect(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
@@ -113,25 +113,25 @@ func TestLoginAutoconnect(t *testing.T) {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
-			username, password := session.GetUsernameAndPassword(hubsessionkey)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
+			hubSession := session.RetrieveHubSession(hubsessionkey)
+			if hubSession.username != tc.username {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, hubSession.username)
 			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			if hubSession.password != tc.password {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, hubSession.password)
 			}
 			//test if servers attached to hub have also been authenticated automatically
 			sessionKey := struct{ HubSessionKey string }{reply.Data}
-			serverIdsreply := struct{ Data []int64 }{}
-			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
-			serverIds := serverIdsreply.Data
-			for _, s := range serverIds {
-				url, severSessionkey := session.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
-				if len(url) == 0 {
-					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", s, url)
+			serverIDsReply := struct{ Data []int64 }{}
+			err = hub.ListServerIds(req, &sessionKey, &serverIDsReply)
+			serverIDs := serverIDsReply.Data
+			for _, serverID := range serverIDs {
+				serverSession := session.RetrieveServerSessionByServerID(sessionKey.HubSessionKey, serverID)
+				if len(serverSession.url) == 0 {
+					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", serverID, serverSession.url)
 				}
-				if len(severSessionkey) <= 0 {
-					t.Fatalf("Expected valid SessionKey for server with severId: %v, Got %v", s, severSessionkey)
+				if len(serverSession.sessionkey) <= 0 {
+					t.Fatalf("Expected valid SessionKey for server with severId: %v, Got %v", serverID, serverSession.sessionkey)
 				}
 			}
 
@@ -152,7 +152,7 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
@@ -174,12 +174,13 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
-			username, password := session.GetUsernameAndPassword(hubsessionkey)
-			if username != tc.username {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, username)
+
+			hubSession := session.RetrieveHubSession(hubsessionkey)
+			if hubSession.username != tc.username {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, hubSession.username)
 			}
-			if password != tc.password {
-				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, password)
+			if hubSession.password != tc.password {
+				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, hubSession.password)
 			}
 		})
 	}
@@ -200,7 +201,7 @@ func TestAttachToServers(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
@@ -216,23 +217,23 @@ func TestAttachToServers(t *testing.T) {
 			sessionKey := struct{ HubSessionKey string }{reply.Data}
 
 			// List server Ids
-			serverIdsreply := struct{ Data []int64 }{}
-			err = hub.ListServerIds(req, &sessionKey, &serverIdsreply)
-			serverIds := serverIdsreply.Data
+			serverIDsReply := struct{ Data []int64 }{}
+			err = hub.ListServerIds(req, &sessionKey, &serverIDsReply)
+			serverIDs := serverIDsReply.Data
 
-			srvArgs := server.MulticastArgs{"method", sessionKey.HubSessionKey, serverIds, nil}
+			srvArgs := server.MulticastArgs{"method", sessionKey.HubSessionKey, serverIDs, nil}
 			err = hub.AttachToServers(req, &srvArgs, &struct{ Data []error }{})
 			if err != nil && err.Error() != tc.err {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.err, err.Error())
 				return
 			}
-			for _, s := range serverIds {
-				url, severSessionkey := session.GetServerSessionInfoByServerID(sessionKey.HubSessionKey, s)
-				if len(url) == 0 {
-					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", s, url)
+			for _, s := range serverIDs {
+				serverSession := session.RetrieveServerSessionByServerID(sessionKey.HubSessionKey, s)
+				if len(serverSession.url) == 0 {
+					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", s, serverSession.url)
 				}
-				if len(severSessionkey) <= 0 {
-					t.Fatalf("Expected valid SessionKey for server with severId: %v, Got %v", s, severSessionkey)
+				if len(serverSession.sessionKey) <= 0 {
+					t.Fatalf("Expected valid SessionKey for server with severId: %v, Got %v", s, serverSession.sessionKey)
 				}
 			}
 		})
@@ -254,7 +255,7 @@ func TestIsHubSessionValid(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
@@ -269,12 +270,12 @@ func TestIsHubSessionValid(t *testing.T) {
 				return
 			}
 			//Test if key is valid
-			isvalid := session.IsHubSessionValid(reply.Data)
+			isvalid := hub.isHubSessionValid(reply.Data)
 			if isvalid != tc.result {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.result, isvalid)
 			}
 			//Append the key with some random string and test if it's invalid now
-			isvalid = session.IsHubSessionValid(reply.Data + "invalid-part")
+			isvalid = hub.isHubSessionValid(reply.Data + "invalid-part")
 			if isvalid != false {
 				t.Fatalf("Unexpected Result: Exepected %v, Got %v", tc.result, isvalid)
 			}
@@ -298,7 +299,7 @@ func TestListServerIds(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)

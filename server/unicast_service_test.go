@@ -39,7 +39,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 
 			conf := config.InitializeConfig()
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession(client, conf.Hub.SUMA_API_URL)
+			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
@@ -58,7 +58,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			unicastArgs := server.UnicastArgs{tc.name, reply.Data, firstServerIDs, tc.parameters}
 			unicastReply := struct{ Data interface{} }{}
 
-			unicastService := server.NewUnicastService(client, session)
+			unicastService := server.NewUnicastService(client, session, conf.Hub.SUMA_API_URL)
 
 			err = unicastService.DefaultMethod(req, &unicastArgs, &unicastReply)
 			if err != nil && !strings.Contains(err.Error(), tc.output) {
