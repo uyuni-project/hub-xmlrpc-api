@@ -36,7 +36,7 @@ type decoder struct {
 	*xml.Decoder
 }
 
-func UnmarshalClientRequest(data []byte, output interface{}) (err error) {
+func UnmarshalClientParameters(data []byte, output interface{}) (err error) {
 	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
 	if CharsetReader != nil {

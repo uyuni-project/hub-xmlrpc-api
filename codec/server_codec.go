@@ -3,11 +3,9 @@ package codec
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -140,19 +138,14 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	val := reflect.ValueOf(args)
-	if val.Kind() != reflect.Ptr {
-		return errors.New("non-pointer value passed")
-	}
-
 	var argsList interface{}
-	c.err = xmlrpc.UnmarshalClientRequest(c.request.rawxml, &argsList)
+	c.err = xmlrpc.UnmarshalClientParameters(c.request.rawxml, &argsList)
 	if c.err != nil {
 		return c.err
 	}
-	err := c.parser(c.request.UserMethod, argsList.([]interface{}), args)
-	if err != nil {
-		return err
+	c.err = c.parser(c.request.UserMethod, argsList.([]interface{}), args)
+	if c.err != nil {
+		return c.err
 	}
 	return nil
 }

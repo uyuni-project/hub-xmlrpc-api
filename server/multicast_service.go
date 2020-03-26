@@ -8,12 +8,11 @@ import (
 )
 
 type MulticastService struct {
-	client  Client
-	session Session
+	*service
 }
 
-func NewMulticastService(client Client, session Session) *MulticastService {
-	return &MulticastService{client: client, session: session}
+func NewMulticastService(client Client, session Session, hubSumaAPIURL string) *MulticastService {
+	return &MulticastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
 type MulticastArgs struct {
@@ -24,7 +23,7 @@ type MulticastArgs struct {
 }
 
 func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data MulticastResponse }) error {
-	if h.session.IsHubSessionValid(args.HubSessionKey) {
+	if h.isHubSessionValid(args.HubSessionKey) {
 		method := removeMulticastNamespace(args.Method)
 		serverArgsByURL := h.resolveMulticastServerArgs(args)
 		reply.Data = multicastCall(method, serverArgsByURL, h.client)
@@ -45,13 +44,13 @@ func (h *MulticastService) resolveMulticastServerArgs(multicastArgs *MulticastAr
 	for i, serverID := range multicastArgs.ServerIDs {
 		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
 
-		url, sessionKey := h.session.GetServerSessionInfoByServerID(multicastArgs.HubSessionKey, serverID)
-		args = append(args, sessionKey)
+		serverSession := h.session.RetrieveServerSessionByServerID(multicastArgs.HubSessionKey, serverID)
+		args = append(args, serverSession.sessionKey)
 
 		for _, serverArgs := range multicastArgs.ServerArgs {
 			args = append(args, serverArgs[i])
 		}
-		result[i] = multicastServerArgs{url, serverID, args}
+		result[i] = multicastServerArgs{serverSession.url, serverID, args}
 	}
 	return result
 }

@@ -7,13 +7,11 @@ import (
 )
 
 type HubService struct {
-	client        Client
-	session       Session
-	hubSumaAPIURL string
+	*service
 }
 
 func NewHubService(client Client, session Session, hubSumaAPIURL string) *HubService {
-	return &HubService{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}
+	return &HubService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
 type LoginArgs struct {
@@ -52,16 +50,15 @@ func (h *HubService) LoginWithAuthRelayMode(r *http.Request, args *LoginArgs, re
 }
 
 func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply *struct{ Data []error }) error {
-	if h.session.IsHubSessionValid(args.HubSessionKey) {
+	if h.isHubSessionValid(args.HubSessionKey) {
 		usernames := make([]interface{}, len(args.ServerIDs))
 		passwords := make([]interface{}, len(args.ServerIDs))
 
-		if h.session.GetLoginMode(args.HubSessionKey) == LOGIN_RELAY_MODE {
-			serverUsername, serverPassword := h.session.GetUsernameAndPassword(args.HubSessionKey)
-
+		hubSession := h.session.RetrieveHubSession(args.HubSessionKey)
+		if hubSession.loginMode == LOGIN_RELAY_MODE {
 			for i := range args.ServerIDs {
-				usernames[i] = serverUsername
-				passwords[i] = serverPassword
+				usernames[i] = hubSession.username
+				passwords[i] = hubSession.password
 			}
 		} else {
 			usernames = args.ServerArgs[0]
@@ -76,10 +73,8 @@ func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply
 }
 
 func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
-	hubSessionKey := args.HubSessionKey
-
-	if h.session.IsHubSessionValid(hubSessionKey) {
-		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{hubSessionKey})
+	if h.isHubSessionValid(args.HubSessionKey) {
+		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{args.HubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			return err
@@ -105,7 +100,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 		return "", errors.New(err.Error())
 	}
 	hubSessionKey := response.(string)
-	h.session.SetHubSessionKey(hubSessionKey, username, password, loginMode)
+	h.session.SaveHubSession(hubSessionKey, &HubSession{username, password, loginMode})
 
 	if loginMode == LOGIN_AUTOCONNECT_MODE {
 		err := h.loginIntoUserSystems(hubSessionKey, username, password)
@@ -145,7 +140,7 @@ func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, u
 
 	//save in session
 	for i, serverID := range successfulResponses.ServerIds {
-		h.session.SetServerSessionInfo(hubSessionKey, serverID, serverURLByServerID[serverID], successfulResponses.Responses[i].(string))
+		h.session.SaveServerSession(hubSessionKey, serverID, &ServerSession{serverURLByServerID[serverID], successfulResponses.Responses[i].(string)})
 	}
 	return responses, nil
 }

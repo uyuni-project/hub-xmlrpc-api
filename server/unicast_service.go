@@ -7,12 +7,11 @@ import (
 )
 
 type UnicastService struct {
-	client  Client
-	session Session
+	*service
 }
 
-func NewUnicastService(client Client, session Session) *UnicastService {
-	return &UnicastService{client: client, session: session}
+func NewUnicastService(client Client, session Session, hubSumaAPIURL string) *UnicastService {
+	return &UnicastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
 type UnicastArgs struct {
@@ -23,14 +22,15 @@ type UnicastArgs struct {
 }
 
 func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
-	if h.session.IsHubSessionValid(args.HubSessionKey) {
+	if h.isHubSessionValid(args.HubSessionKey) {
 		method := removeUnicastNamespace(args.Method)
+		serverSession := h.session.RetrieveServerSessionByServerID(args.HubSessionKey, args.ServerID)
+
 		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
-		url, sessionKey := h.session.GetServerSessionInfoByServerID(args.HubSessionKey, args.ServerID)
-		argumentsForCall = append(argumentsForCall, sessionKey)
+		argumentsForCall = append(argumentsForCall, serverSession.sessionKey)
 		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
 
-		response, err := h.client.ExecuteCall(url, method, argumentsForCall)
+		response, err := h.client.ExecuteCall(serverSession.url, method, argumentsForCall)
 		if err != nil {
 			log.Printf("Call error: %v", err)
 			return err

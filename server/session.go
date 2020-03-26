@@ -6,11 +6,19 @@ const (
 	LOGIN_AUTOCONNECT_MODE        // 2
 )
 
+type ServerSession struct {
+	url, sessionKey string
+}
+
+type HubSession struct {
+	username, password string
+	loginMode          int
+}
+
 type Session interface {
-	SetHubSessionKey(hubSessionKey string, username, password string, loginMode int)
-	GetLoginMode(hubSessionKey string) int
-	GetUsernameAndPassword(hubSessionKey string) (string, string)
-	SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string)
-	GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string)
-	IsHubSessionValid(hubSessionKey string) bool
+	SaveHubSession(hubSessionKey string, hubSession *HubSession)
+	RetrieveHubSession(hubSessionKey string) *HubSession
+	SaveServerSession(hubSessionKey string, serverID int64, serverSessionInfo *ServerSession)
+	RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *ServerSession
+	RemoveHubSession(hubSessionKey string)
 }

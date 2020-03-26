@@ -10,7 +10,7 @@ import (
 
 func encodeResponseToXML(response interface{}) ([]byte, error) {
 	var b bytes.Buffer
-	b.WriteString("<methodResponse><params>")
+	b.WriteString("<methodResponse><params><param>")
 
 	val := reflect.ValueOf(response).Elem()
 	for i := 0; i < val.NumField(); i++ {
@@ -18,9 +18,9 @@ func encodeResponseToXML(response interface{}) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		b.WriteString(fmt.Sprintf("<param>%s</param>", string(xmlByte)))
+		b.WriteString(string(xmlByte))
 	}
-	b.WriteString("</params></methodResponse>")
+	b.WriteString("</param></params></methodResponse>")
 	return b.Bytes(), nil
 }
 

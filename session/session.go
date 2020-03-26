@@ -1,89 +1,62 @@
 package session
 
 import (
-	"log"
 	"sync"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/server"
 )
 
 type Session struct {
-	sessions      *sync.Map
-	client        server.Client
-	hubSumaAPIURL string
+	sessions *sync.Map
 }
 
 // NewSession returns a new Session struct
-func NewSession(client server.Client, hubSumaAPIURL string) *Session {
+func NewSession() *Session {
 	var syncMap sync.Map
-	return &Session{sessions: &syncMap, client: client, hubSumaAPIURL: hubSumaAPIURL}
+	return &Session{sessions: &syncMap}
 }
 
-type HubSessionInfo struct {
-	username, password string
-	loginMode          int
-	serverSessionKeys  *sync.Map
+type storedHubSession struct {
+	hubSession        *server.HubSession
+	serverSessionKeys *sync.Map
 }
 
-type ServerSessionInfo struct {
-	URL, sessionKey string
+func (s *Session) SaveHubSession(hubSessionKey string, hubSession *server.HubSession) {
+	s.sessions.Store(hubSessionKey, newStoredHubSession(hubSession))
 }
 
-func (s *Session) SetHubSessionKey(hubSessionKey string, username, password string, loginMode int) {
-	s.sessions.Store(hubSessionKey, newHubSessionInfo(username, password, loginMode))
-}
-
-func (s *Session) GetLoginMode(hubSessionKey string) int {
-	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
-		return hubSessionInfo.(*HubSessionInfo).loginMode
+func (s *Session) RetrieveHubSession(hubSessionKey string) *server.HubSession {
+	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
+		return hubSession.(*storedHubSession).hubSession
 	}
-	return 0
+	return nil
 }
 
-func (s *Session) GetUsernameAndPassword(hubSessionKey string) (string, string) {
-	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
-		return hubSessionInfo.(*HubSessionInfo).username, hubSessionInfo.(*HubSessionInfo).password
-	}
-	return "", ""
-}
-
-func (s *Session) SetServerSessionInfo(hubSessionKey string, serverID int64, serverURL, serverSessionKey string) {
-	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
-		hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Store(serverID, &ServerSessionInfo{serverURL, serverSessionKey})
+func (s *Session) SaveServerSession(hubSessionKey string, serverID int64, serverSession *server.ServerSession) {
+	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
+		hubSession.(*storedHubSession).serverSessionKeys.Store(serverID, serverSession)
 	}
 }
 
-func (s *Session) GetServerSessionInfoByServerID(hubSessionKey string, serverID int64) (string, string) {
-	if hubSessionInfo, ok := s.sessions.Load(hubSessionKey); ok {
-		if serverSessionInfo, ok := hubSessionInfo.(*HubSessionInfo).serverSessionKeys.Load(serverID); ok {
-			return serverSessionInfo.(*ServerSessionInfo).URL, serverSessionInfo.(*ServerSessionInfo).sessionKey
+func (s *Session) RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *server.ServerSession {
+	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
+		if serverSession, ok := hubSession.(*storedHubSession).serverSessionKeys.Load(serverID); ok {
+			return serverSession.(*server.ServerSession)
 		}
 	}
-	return "", ""
+	return nil
 }
 
-func (s *Session) IsHubSessionValid(hubSessionKey string) bool {
-	isValid, err := s.client.ExecuteCall(s.hubSumaAPIURL, "auth.isSessionKeyValid", []interface{}{hubSessionKey})
-	if err != nil {
-		log.Printf("Login error: %v", err)
-		s.removeHubSessionKey(hubSessionKey)
-		return false
-	}
-	return isValid.(bool)
-}
-
-func (s *Session) removeHubSessionKey(hubSessionKey string) {
+func (s *Session) RemoveHubSession(hubSessionKey string) {
 	if _, ok := s.sessions.Load(hubSessionKey); ok {
 		s.sessions.Delete(hubSessionKey)
 	}
 }
 
-func newHubSessionInfo(username, password string, loginMode int) *HubSessionInfo {
+func newStoredHubSession(hubSession *server.HubSession) *storedHubSession {
 	var syncMap sync.Map
-	return &HubSessionInfo{
-		username:          username,
-		password:          password,
-		loginMode:         loginMode,
+	return &storedHubSession{
+		hubSession:        hubSession,
 		serverSessionKeys: &syncMap,
 	}
 }
