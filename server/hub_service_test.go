@@ -1,5 +1,6 @@
-package server_test
+package server
 
+/*
 import (
 	"net/http"
 	"os"
@@ -15,12 +16,11 @@ import (
 )
 
 func init() {
-	/* load test data */
+	// load test data
 	os.Setenv("HUB_CONFIG_FILE", "../tests/config.json")
 }
 
 func TestLogin(t *testing.T) {
-
 	tt := []struct {
 		name     string
 		username string
@@ -38,32 +38,26 @@ func TestLogin(t *testing.T) {
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
 			reply := struct{ Data string }{""}
-			err = hub.Login(req, &server.LoginArgs{tc.username, tc.password}, &reply)
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.err) {
-					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
-				}
-				return
+			err := hub.Login(nil, &server.LoginArgs{tc.username, tc.password}, &reply)
+
+			if err != nil && !strings.Contains(err.Error(), tc.err) {
+				t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
 			}
+
 			// test the hubkey
 			hubsessionkey := reply.Data
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.err) {
-					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
-				}
-				return
-			}
-			// test the hubkey
+
 			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, hubsessionkey)
 			if !matched {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
+
+			if !hub.isHubSessionValid(hubsessionkey) {
+				t.Fatalf("HubSessionKey is invalid")
+			}
+
 			hubSession := session.RetrieveHubSession(hubsessionkey)
 			if hubSession.username != tc.username {
 				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, hubSession.username)
@@ -93,26 +87,25 @@ func TestLoginAutoconnect(t *testing.T) {
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
 			reply := struct{ Data string }{""}
-
-			err = hub.LoginWithAutoconnectMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.err) {
-					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
-				}
-				return
+			err := hub.LoginWithAutoconnectMode(nil, &server.LoginArgs{tc.username, tc.password}, &reply)
+			if err != nil && !strings.Contains(err.Error(), tc.err) {
+				t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
 			}
+
 			// test the hubkey
 			hubsessionkey := reply.Data
+
 			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, hubsessionkey)
 			if !matched {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
 			}
+
+			if !hub.isHubSessionValid(hubsessionkey) {
+				t.Fatalf("HubSessionKey is invalid")
+			}
+
 			hubSession := session.RetrieveHubSession(hubsessionkey)
 			if hubSession.username != tc.username {
 				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.username, hubSession.username)
@@ -120,13 +113,13 @@ func TestLoginAutoconnect(t *testing.T) {
 			if hubSession.password != tc.password {
 				t.Fatalf("User name doesn't match with the key, expected %v, got %v", tc.password, hubSession.password)
 			}
+
 			//test if servers attached to hub have also been authenticated automatically
-			sessionKey := struct{ HubSessionKey string }{reply.Data}
-			serverIDsReply := struct{ Data []int64 }{}
-			err = hub.ListServerIds(req, &sessionKey, &serverIDsReply)
-			serverIDs := serverIDsReply.Data
-			for _, serverID := range serverIDs {
-				serverSession := session.RetrieveServerSessionByServerID(sessionKey.HubSessionKey, serverID)
+			serverIDs := struct{ Data []int64 }{}
+			err = hub.ListServerIds(req, &struct{ HubSessionKey string }{hubsessionkey}, &serverIDs)
+
+			for _, serverID := range serverIDs.Data {
+				serverSession := session.RetrieveServerSessionByServerID(hubsessionkey, serverID)
 				if len(serverSession.url) == 0 {
 					t.Fatalf("Expected valid url for server with severId: %v, got empty instead %v", serverID, serverSession.url)
 				}
@@ -134,7 +127,6 @@ func TestLoginAutoconnect(t *testing.T) {
 					t.Fatalf("Expected valid SessionKey for server with severId: %v, Got %v", serverID, serverSession.sessionkey)
 				}
 			}
-
 		})
 	}
 }
@@ -155,24 +147,22 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
 			reply := struct{ Data string }{""}
 			err = hub.LoginWithAuthRelayMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.err) {
-					t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
-				}
-				return
+			if err != nil && !strings.Contains(err.Error(), tc.err) {
+				t.Fatalf("Expected %v, Got %v", tc.err, err.Error())
 			}
+
 			// test the hubkey
 			hubsessionkey := reply.Data
 			matched, _ := regexp.MatchString(`^[A-Za-z0-9]{68}$`, hubsessionkey)
 			if !matched {
 				t.Fatalf("Unexepected token pattern %v", hubsessionkey)
 				return
+			}
+
+			if !hub.isHubSessionValid(hubsessionkey) {
+				t.Fatalf("HubSessionKey is invalid")
 			}
 
 			hubSession := session.RetrieveHubSession(hubsessionkey)
@@ -204,13 +194,9 @@ func TestAttachToServers(t *testing.T) {
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, nil)
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
-			reply := struct{ Data string }{""}
 			//login
-			err = hub.LoginWithAuthRelayMode(req, &server.LoginArgs{tc.username, tc.password}, &reply)
+			reply := struct{ Data string }{""}
+			err = hub.LoginWithAuthRelayMode(nil, &server.LoginArgs{tc.username, tc.password}, &reply)
 			if err != nil {
 				t.Fatalf("Login faied with error : %v", err)
 			}
@@ -284,7 +270,6 @@ func TestIsHubSessionValid(t *testing.T) {
 }
 
 func TestListServerIds(t *testing.T) {
-
 	tt := []struct {
 		name     string
 		username string
@@ -326,5 +311,5 @@ func TestListServerIds(t *testing.T) {
 			}
 		})
 	}
-
 }
+*/

@@ -149,11 +149,11 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}
 		err = methodErr
 	}
 	if err != nil {
-		var fault Fault
+		var fault FaultError
 
 		switch c.err.(type) {
-		case Fault:
-			fault = c.err.(Fault)
+		case FaultError:
+			fault = c.err.(FaultError)
 		default:
 			fault = FaultApplicationError
 			fault.Message += fmt.Sprintf(": %v", err)

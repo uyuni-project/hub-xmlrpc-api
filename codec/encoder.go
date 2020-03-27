@@ -24,7 +24,7 @@ func encodeResponseToXML(response interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func encodeFaultErrorToXML(fault Fault) ([]byte, error) {
+func encodeFaultErrorToXML(fault FaultError) ([]byte, error) {
 	var b bytes.Buffer
 	xmlByte, err := xmlrpc.Marshal(fault)
 	if err != nil {

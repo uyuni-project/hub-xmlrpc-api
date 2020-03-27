@@ -49,7 +49,7 @@ func Test_parseToStruct(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := parseToStruct(tc.expectedMethod, tc.args, tc.structToHydrate)
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
+				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedError)
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {

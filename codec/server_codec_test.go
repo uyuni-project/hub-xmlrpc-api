@@ -1,5 +1,6 @@
-package codec
+package codec_test
 
+/*
 import (
 	"encoding/xml"
 	"net/http"
@@ -346,3 +347,4 @@ var brokenRequestBodyForMulticastArgs = `
 		</param>
 	</params>
 </methodCall>`
+*/

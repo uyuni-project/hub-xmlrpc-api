@@ -1,5 +1,5 @@
 package server
 
 type Client interface {
-	ExecuteCall(url string, method string, args []interface{}) (reply interface{}, err error)
+	ExecuteCall(url string, methodName string, args []interface{}) (response interface{}, err error)
 }
