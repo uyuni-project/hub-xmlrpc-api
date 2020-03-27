@@ -1,3 +1,3 @@
 package codec
 
-type Parser func(request map[string]interface{}, output interface{}) error
+type Parser func(request *ServerRequest, output interface{}) error

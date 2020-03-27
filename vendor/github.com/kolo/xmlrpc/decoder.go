@@ -43,18 +43,15 @@ func UnmarshalServerRequest(data []byte, output interface{}) (err error) {
 		dec.CharsetReader = CharsetReader
 	}
 
-	//init struct
 	val := reflect.ValueOf(output).Elem()
 
-	pmap := val
-	valType := val.Type()
+	//init struct
+	pmap, fields, err := initStruct(val)
+	if err != nil {
+		return err
+	}
 
-	var dummy map[string]interface{}
-	valType = reflect.TypeOf(dummy)
-	pmap = reflect.New(valType).Elem()
-
-	// Create initial empty map
-	pmap.Set(reflect.MakeMap(valType))
+	ismap := (fields == nil)
 
 	//process tokens
 	var token xml.Token
@@ -70,20 +67,32 @@ func UnmarshalServerRequest(data []byte, output interface{}) (err error) {
 				}
 
 				methodName := string([]byte(token.(xml.CharData)))
-				pmap.SetMapIndex(reflect.ValueOf("methodName"), reflect.Indirect(reflect.ValueOf(methodName)))
+				if !ismap {
+					fields["methodName"].Set(reflect.ValueOf(methodName))
+				} else {
+					pmap.SetMapIndex(reflect.ValueOf("methodName"), reflect.Indirect(reflect.ValueOf(methodName)))
+				}
 
 				var params interface{}
-				err = dec.unmarshalClientParameters(&params)
+				if !ismap {
+					params = fields["params"]
+				}
+
+				err = dec.unmarshalParameters(&params)
 				if err != nil {
 					return err
 				}
-				pmap.SetMapIndex(reflect.ValueOf("params"), reflect.Indirect(reflect.ValueOf(params)))
-				val.Set(pmap)
-
-				break
+				if !ismap {
+					fields["params"].Set(reflect.ValueOf(params))
+				} else {
+					pmap.SetMapIndex(reflect.ValueOf("params"), reflect.Indirect(reflect.ValueOf(params)))
+				}
 			}
 		} else if t, ok := token.(xml.EndElement); ok {
 			if t.Name.Local == "methodCall" {
+				if ismap {
+					val.Set(pmap)
+				}
 				break
 			}
 		}
@@ -97,7 +106,50 @@ func UnmarshalServerRequest(data []byte, output interface{}) (err error) {
 	return nil
 }
 
-func (dec *decoder) unmarshalClientParameters(output interface{}) (err error) {
+func initStruct(val reflect.Value) (pmap reflect.Value, fields map[string]reflect.Value, err error) {
+	ismap := false
+	valType := val.Type()
+
+	if err = checkType(val, reflect.Struct); err != nil {
+		if checkType(val, reflect.Map) == nil {
+			if valType.Key().Kind() != reflect.String {
+				return pmap, fields, fmt.Errorf("only maps with string key type can be unmarshalled")
+			}
+			ismap = true
+		} else if checkType(val, reflect.Interface) == nil && val.IsNil() {
+			var dummy map[string]interface{}
+			valType = reflect.TypeOf(dummy)
+			pmap = reflect.New(valType).Elem()
+			val.Set(pmap)
+			ismap = true
+		} else {
+			return pmap, fields, err
+		}
+	}
+
+	if !ismap {
+		fields = make(map[string]reflect.Value)
+
+		for i := 0; i < valType.NumField(); i++ {
+			field := valType.Field(i)
+			fieldVal := val.FieldByName(field.Name)
+
+			if fieldVal.CanSet() {
+				if fn := field.Tag.Get("xmlrpc"); fn != "" {
+					fields[fn] = fieldVal
+				} else {
+					fields[field.Name] = fieldVal
+				}
+			}
+		}
+	} else {
+		// Create initial empty map
+		pmap.Set(reflect.MakeMap(valType))
+	}
+	return pmap, fields, nil
+}
+
+func (dec *decoder) unmarshalParameters(output interface{}) (err error) {
 	slice := reflect.ValueOf([]interface{}{})
 
 	var token xml.Token
@@ -115,17 +167,12 @@ func (dec *decoder) unmarshalClientParameters(output interface{}) (err error) {
 				slice = reflect.Append(slice, v.Elem())
 			}
 		} else if t, ok := token.(xml.EndElement); ok {
-			if t.Name.Local == "methodCall" {
+			if t.Name.Local == "params" {
 				val := reflect.ValueOf(output).Elem()
 				val.Set(slice)
 				break
 			}
 		}
-	}
-	// read until end of document
-	err = dec.Skip()
-	if err != nil && err != io.EOF {
-		return err
 	}
 	return nil
 }

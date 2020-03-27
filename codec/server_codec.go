@@ -6,15 +6,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/gorilla/rpc"
 	"github.com/kolo/xmlrpc"
 )
 
 type Codec struct {
-	methods                  map[string]string
+	mappings                 map[string]string
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
 	parsers                  map[string]Parser
@@ -23,7 +21,7 @@ type Codec struct {
 
 func NewCodec() *Codec {
 	return &Codec{
-		methods:                  make(map[string]string),
+		mappings:                 make(map[string]string),
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
 		parsers:                  make(map[string]Parser),
@@ -35,12 +33,12 @@ func (c *Codec) RegisterDefaultParser(parser Parser) {
 	c.defaultParser = parser
 }
 
-func (c *Codec) RegisterMethod(method string) {
-	c.methods[method] = method
+func (c *Codec) RegisterMapping(mapping string, method string) {
+	c.mappings[mapping] = method
 }
 
-func (c *Codec) RegisterMethodWithParser(method string, parser Parser) {
-	c.methods[method] = method
+func (c *Codec) RegisterMappingWithParser(mapping string, method string, parser Parser) {
+	c.mappings[mapping] = method
 	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
@@ -63,17 +61,16 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawxml))
 
-	var request interface{}
-	if err := xmlrpc.UnmarshalServerRequest(rawxml, &request); err != nil {
+	var serverRequest ServerRequest
+	if err := xmlrpc.UnmarshalServerRequest(rawxml, &serverRequest); err != nil {
 		return &CodecRequest{err: err}
 	}
-	xmlRequest := request.(map[string]interface{})
-	userMethod := xmlRequest["methodName"].(string)
-	serviceMethod := c.resolveServiceMethod(userMethod)
 
+	userMethod := serverRequest.MethodName
+	serviceMethod := c.resolveServiceMethod(userMethod)
 	parser := c.resolveParser(serviceMethod)
 
-	return &CodecRequest{request: &serverRequest{xmlRequest, serviceMethod}, parser: parser}
+	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, parser: parser}
 }
 
 func (c *Codec) resolveParser(requestMethod string) Parser {
@@ -84,9 +81,9 @@ func (c *Codec) resolveParser(requestMethod string) Parser {
 }
 
 func (c *Codec) resolveServiceMethod(requestMethod string) string {
-	namespace, methodStr := c.getNamespaceAndMethod(requestMethod)
-	if _, ok := c.methods[requestMethod]; ok {
-		return c.toLowerCase(namespace, methodStr)
+	namespace := c.getNamespace(requestMethod)
+	if method, ok := c.mappings[requestMethod]; ok {
+		return method
 	} else if method, ok := c.defaultMethodByNamespace[namespace]; ok {
 		return method
 	} else if c.defaultMethod != "" {
@@ -95,47 +92,35 @@ func (c *Codec) resolveServiceMethod(requestMethod string) string {
 	return requestMethod
 }
 
-func (c *Codec) getNamespaceAndMethod(requestMethod string) (string, string) {
-	//TODO:
+func (c *Codec) getNamespace(requestMethod string) string {
 	if len(requestMethod) > 1 {
 		parts := strings.Split(requestMethod, ".")
-		slice := parts[1:len(parts)]
-		return parts[0], strings.Join(slice, ".")
+		return parts[0]
 	}
-	return "", ""
+	return ""
 }
 
-func (c *Codec) toLowerCase(namespace, method string) string {
-	//TODO:
-	if namespace != "" && method != "" {
-		r, n := utf8.DecodeRuneInString(method)
-		if unicode.IsLower(r) {
-			return namespace + "." + string(unicode.ToUpper(r)) + method[n:]
-		}
-	}
-	return namespace + "." + method
-}
-
-type serverRequest struct {
-	request       map[string]interface{}
-	serviceMethod string
+type ServerRequest struct {
+	MethodName string        `xmlrpc:"methodName"`
+	Params     []interface{} `xmlrpc:"params"`
 }
 
 type CodecRequest struct {
-	request *serverRequest
-	err     error
-	parser  Parser
+	serviceMethod string
+	request       *ServerRequest
+	parser        Parser
+	err           error
 }
 
 func (c *CodecRequest) Method() (string, error) {
 	if c.err == nil {
-		return c.request.serviceMethod, nil
+		return c.serviceMethod, nil
 	}
 	return "", c.err
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	c.err = c.parser(c.request.request, args)
+	c.err = c.parser(c.request, args)
 	if c.err != nil {
 		return c.err
 	}

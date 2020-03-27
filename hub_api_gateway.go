@@ -24,9 +24,9 @@ func initServer() {
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
 	session := session.NewSession()
 
-	xmlrpcCodec := initXMLRPCCodec()
+	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
-	rpcServer.RegisterService(server.NewHubService(client, session, conf.Hub.SUMA_API_URL), "hub")
+	rpcServer.RegisterService(server.NewHubService(client, session, conf.Hub.SUMA_API_URL), "")
 	rpcServer.RegisterService(server.NewDefaultService(client, conf.Hub.SUMA_API_URL), "")
 	rpcServer.RegisterService(server.NewMulticastService(client, session, conf.Hub.SUMA_API_URL), "")
 	rpcServer.RegisterService(server.NewUnicastService(client, session, conf.Hub.SUMA_API_URL), "")
@@ -37,15 +37,17 @@ func initServer() {
 	log.Fatal(http.ListenAndServe(":8888", nil))
 }
 
-func initXMLRPCCodec() *codec.Codec {
+func initCodec() *codec.Codec {
 	var codec = codec.NewCodec()
 
 	codec.RegisterDefaultParser(parser.StructParser)
-	codec.RegisterMethod("hub.login")
-	codec.RegisterMethod("hub.loginWithAutoconnectMode")
-	codec.RegisterMethod("hub.loginWithAuthRelayMode")
-	codec.RegisterMethodWithParser("hub.attachToServers", parser.MulticastParser)
-	codec.RegisterMethod("hub.listServerIds")
+
+	codec.RegisterMapping("hub.login", "HubService.Login")
+	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubService.LoginWithAutoconnectMode")
+	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubService.LoginWithAuthRelayMode")
+	codec.RegisterMapping("hub.listServerIds", "HubService.ListServerIds")
+	codec.RegisterMappingWithParser("hub.attachToServers", "HubService.AttachToServers", parser.MulticastParser)
+
 	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastService.DefaultMethod", parser.MulticastParser)
 	codec.RegisterDefaultMethodForNamespace("unicast", "Unicast.DefaultMethod", parser.UnicastParser)
 	codec.RegisterDefaultMethod("DefaultService.DefaultMethod", parser.ListParser)
