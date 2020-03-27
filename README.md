@@ -46,21 +46,21 @@ Once running, you can connect to the `hub-xmlrpc-api` at port 8888 via any XMLRP
 
 ### Namespaces
 
-Hub supports 3 different namespaces.
+The Hub API supports 3 different namespaces.
 
 1. `hub` &#8594; to target the Hub itself:
-     - example: `hubKey = client.hub.login(login, password)`
+     - example: `hubSessionKey = client.hub.login(username, password)`
 2. `unicast` &#8594; to target a single Server registered in the Hub:
-     - example: `systems = client.unicast.system.list_systems(hubKey, serverId)`
+     - example: `systems = client.unicast.system.list_systems(hubSessionKey, serverID)`
 3. `multicast` &#8594; to target multiple Servers
-     - example: `systems_per_server = client.multicast.system.list_systems(hubKey, [serverId1, serverId2], [], [])`
+     - example: `systemsPerServer = client.multicast.system.listUserSystems(hubSessionKey, [serverID_1, serverID_2], [], [])`
 
 Note that:
  - all XMLRPC API methods available in a single Server are exposed by the namespaces above. Generally speaking, they accept the same parameters and return the same values with the exceptions described below
- - the `hubKey` can be obtained via the `client.hub.login(login, password)` method
- - individual Server IDs can be obtained via `client.hub.listServerIds(hubKey)` (see example below)
- - the `unicast` namespace assumes all methods receive `hubKey` and `serverId` as their first two parameters, then any other parameter as specified by the regular Server API
- - the `multicast` namespace assumes all methods receive `hubKey`, a list of Server IDs, then lists of per-Server parameters as specified by the regular Server API. Return value will be an array, indexed per Server, of the results of individual Server calls
+ - the `hubSessionKey` can be obtained via the `client.hub.login(username, password)` method
+ - individual Server IDs can be obtained via `client.hub.listServerIds(hubSessionKey)` (see example below)
+ - the `unicast` namespace assumes all methods receive `hubSessionKey` and `serverID` as their first two parameters, then any other parameter as specified by the regular Server API
+ - the `multicast` namespace assumes all methods receive `hubSessionKey`, a list of Server IDs, then lists of per-Server parameters as specified by the regular Server API. Return value will be an array, indexed per Server, of the results of individual Server calls
 
 ### Authentication modes
 
@@ -84,32 +84,32 @@ HUB_PASSWORD = "admin"
  
 client = xmlrpclib.Server(HUB_URL, verbose=0)
 
-# Login (uncomment one line)
-#hubKey = client.hub.login(HUB_LOGIN, HUB_PASSWORD)
-#hubKey = client.hub.LoginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
-#hubKey = client.hub.LoginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
+# Login (uncomment only one line)
+#hubSessionKey = client.hub.login(HUB_LOGIN, HUB_PASSWORD)
+#hubSessionKey = client.hub.loginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
+#hubSessionKey = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
 
-# get list of Server ids registerd to the Hub
-serverIds = client.hub.listServerIds(hubKey)
+# get list of Server IDs registered to the Hub
+serverIDs = client.hub.listServerIds(hubSessionKey)
 
-# Manual authentication mode example. Uncomment if `login` was uncommented above
-#usernames = ["admin" for s in serverIds]
-#passwords = ["admin" for s in serverIds]
-#client.hub.attachToServers(hubKey, serverIds, usernames, passwords)
+# Manual authentication mode example. Uncomment if `client.hub.login` was uncommented above
+#usernames = ["admin" for s in serverIDs]
+#passwords = ["admin" for s in serverIDs]
+#client.hub.attachToServers(hubSessionKey, serverIDs, usernames, passwords)
 
-# Relay authentication mode example. Uncomment if `LoginWithAuthRelayMode` was uncommented above
-#client.hub.attachToServers(hubKey, serverIds)
+# Relay authentication mode example. Uncomment if `client.hub.loginWithAuthRelayMode` was uncommented above
+#client.hub.attachToServers(hubSessionKey, serverIDs)
 
-# Nothing has to be done if `LoginWithAutoconnectMode` was uncommented above
+# Nothing has to be done if `client.hub.loginWithAutoconnectMode` was uncommented above
 
-# Run call
-systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
+# Execute call
+systemsPerServer = client.multicast.system.listSystems(hubSessionKey, serverIDs)
 
 for system in itertools.chain.from_iterable(systemsPerServer):
   print system.get('name')
 
 #logout
-client.auth.logout(hubKey)
+client.auth.logout(hubSessionKey)
 ```
 
 
