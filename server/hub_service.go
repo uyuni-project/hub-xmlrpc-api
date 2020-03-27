@@ -55,6 +55,12 @@ func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply
 		passwords := make([]interface{}, len(args.ServerIDs))
 
 		hubSession := h.session.RetrieveHubSession(args.HubSessionKey)
+		if hubSession == nil {
+			log.Printf("HubSessionKey was not found: %v", args.HubSessionKey)
+			//TODO: what error should we return here?
+			return errors.New("provided session key is invalid")
+		}
+
 		if hubSession.loginMode == LOGIN_RELAY_MODE {
 			for i := range args.ServerIDs {
 				usernames[i] = hubSession.username
@@ -66,8 +72,8 @@ func (h *HubService) AttachToServers(r *http.Request, args *MulticastArgs, reply
 		}
 		h.loginIntoSystems(args.HubSessionKey, args.ServerIDs, usernames, passwords)
 	} else {
-		log.Println("Provided session key is invalid.")
-		return errors.New("provided session key is invalid")
+		log.Printf("Provided session key is invalid: %v", args.HubSessionKey)
+		//TODO: should we return an error here?
 	}
 	return nil
 }
@@ -87,8 +93,8 @@ func (h *HubService) ListServerIds(r *http.Request, args *struct{ HubSessionKey 
 		}
 		reply.Data = systemIDs
 	} else {
-		log.Println("Provided session key is invalid.")
-		return errors.New("Provided session key is invalid")
+		log.Printf("Provided session key is invalid: %v", args.HubSessionKey)
+		//TODO: should we return an error here?
 	}
 	return nil
 }
@@ -97,7 +103,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "auth.login", []interface{}{username, password})
 	if err != nil {
 		log.Printf("Login error: %v", err)
-		return "", errors.New(err.Error())
+		return "", err
 	}
 	hubSessionKey := response.(string)
 	h.session.SaveHubSession(hubSessionKey, &HubSession{username, password, loginMode})
@@ -105,6 +111,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 	if loginMode == LOGIN_AUTOCONNECT_MODE {
 		err := h.loginIntoUserSystems(hubSessionKey, username, password)
 		if err != nil {
+			//TODO: should we return an error? retry the login or what?
 			log.Printf("Call error: %v", err)
 		}
 	}
@@ -114,7 +121,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password string) error {
 	userSystems, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listUserSystems", []interface{}{hubSessionKey, username})
 	if err != nil {
-		log.Printf("Login error: %v", err)
+		log.Printf("Error ocurred while trying to logiin into the user systems: %v", err)
 		return err
 	}
 	userSystemsSlice := userSystems.([]interface{})
@@ -129,11 +136,13 @@ func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password stri
 		passwords[i] = password
 	}
 
-	h.loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
-	return nil
+	//TODO: what to do with the response here?
+	_, err = h.loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
+	return err
 }
 
 func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (MulticastResponse, error) {
+	//TODO: what to do with the error here?
 	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
 	responses := multicastCall("auth.login", loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successfull
@@ -150,7 +159,7 @@ func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs
 	serverURLByServerID := make(map[int64]string)
 
 	for i, serverID := range serverIDs {
-		url, err := h.retrieveServerXMLRPCApiURL(hubSessionKey, serverID)
+		url, err := h.retrieveServerAPIURL(hubSessionKey, serverID)
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			//TODO: what to do with failing servers?
@@ -162,11 +171,11 @@ func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs
 	return multicastArgs, serverURLByServerID, nil
 }
 
-func (h *HubService) retrieveServerXMLRPCApiURL(hubSessionKey string, serverID int64) (string, error) {
+func (h *HubService) retrieveServerAPIURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
 	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listFqdns", []interface{}{hubSessionKey, serverID})
 	if err != nil {
-		log.Printf("Login error: %v", err)
+		log.Printf("Error ocurred when retrieving the system Fqdns for serverID: %v, error:%v", serverID, err)
 		return "", err
 	}
 	//TODO: check for casting errors.

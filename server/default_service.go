@@ -23,6 +23,7 @@ func (d *DefaultService) DefaultMethod(r *http.Request, args *ListArgs, reply *s
 	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, args.Method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
+		return err
 	}
 	reply.Data = response
 	return nil

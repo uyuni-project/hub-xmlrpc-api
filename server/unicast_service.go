@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -23,12 +24,17 @@ type UnicastArgs struct {
 
 func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply *struct{ Data interface{} }) error {
 	if h.isHubSessionValid(args.HubSessionKey) {
-		method := removeUnicastNamespace(args.Method)
 		serverSession := h.session.RetrieveServerSessionByServerID(args.HubSessionKey, args.ServerID)
+		if serverSession == nil {
+			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", args.HubSessionKey, args.ServerID)
+			return errors.New("provided session key is invalid")
+		}
 
 		argumentsForCall := make([]interface{}, 0, len(args.ServerArgs)+1)
 		argumentsForCall = append(argumentsForCall, serverSession.sessionKey)
 		argumentsForCall = append(argumentsForCall, args.ServerArgs...)
+
+		method := removeUnicastNamespace(args.Method)
 
 		response, err := h.client.ExecuteCall(serverSession.url, method, argumentsForCall)
 		if err != nil {
@@ -37,7 +43,8 @@ func (h *UnicastService) DefaultMethod(r *http.Request, args *UnicastArgs, reply
 		}
 		reply.Data = response
 	} else {
-		log.Println("Hub session invalid error")
+		log.Printf("Provided session key is invalid: %v", args.HubSessionKey)
+		//TODO: should we return an error here?
 	}
 	return nil
 }

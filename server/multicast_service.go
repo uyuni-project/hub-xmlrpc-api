@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strings"
@@ -24,11 +25,16 @@ type MulticastArgs struct {
 
 func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data MulticastResponse }) error {
 	if h.isHubSessionValid(args.HubSessionKey) {
+		serverArgsByURL, err := h.resolveMulticastServerArgs(args)
+		if err != nil {
+			return err
+		}
+
 		method := removeMulticastNamespace(args.Method)
-		serverArgsByURL := h.resolveMulticastServerArgs(args)
 		reply.Data = multicastCall(method, serverArgsByURL, h.client)
 	} else {
-		log.Println("Hub session invalid error")
+		log.Printf("Provided session key is invalid: %v", args.HubSessionKey)
+		//TODO: should we return an error here?
 	}
 	return nil
 }
@@ -39,20 +45,24 @@ type multicastServerArgs struct {
 	args     []interface{}
 }
 
-func (h *MulticastService) resolveMulticastServerArgs(multicastArgs *MulticastArgs) []multicastServerArgs {
-	result := make([]multicastServerArgs, len(multicastArgs.ServerIDs))
-	for i, serverID := range multicastArgs.ServerIDs {
-		args := make([]interface{}, 0, len(multicastArgs.ServerArgs)+1)
+func (h *MulticastService) resolveMulticastServerArgs(args *MulticastArgs) ([]multicastServerArgs, error) {
+	result := make([]multicastServerArgs, len(args.ServerIDs))
+	for i, serverID := range args.ServerIDs {
+		serverArgs := make([]interface{}, 0, len(args.ServerArgs)+1)
 
-		serverSession := h.session.RetrieveServerSessionByServerID(multicastArgs.HubSessionKey, serverID)
-		args = append(args, serverSession.sessionKey)
-
-		for _, serverArgs := range multicastArgs.ServerArgs {
-			args = append(args, serverArgs[i])
+		serverSession := h.session.RetrieveServerSessionByServerID(args.HubSessionKey, serverID)
+		if serverSession == nil {
+			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", args.HubSessionKey, serverID)
+			return nil, errors.New("provided session key is invalid")
 		}
-		result[i] = multicastServerArgs{serverSession.url, serverID, args}
+
+		serverArgs = append(serverArgs, serverSession.sessionKey)
+		for _, serverArgs := range args.ServerArgs {
+			serverArgs = append(serverArgs, serverArgs[i])
+		}
+		result[i] = multicastServerArgs{serverSession.url, serverID, serverArgs}
 	}
-	return result
+	return result, nil
 }
 
 func removeMulticastNamespace(method string) string {
@@ -61,16 +71,16 @@ func removeMulticastNamespace(method string) string {
 	return strings.Join(slice, ".")
 }
 
+type MulticastStateResponse struct {
+	ServerIds []int64
+	Responses []interface{}
+}
+
 type MulticastResponse struct {
 	Successfull, Failed MulticastStateResponse
 }
 
-type MulticastStateResponse struct {
-	Responses []interface{}
-	ServerIds []int64
-}
-
-func multicastCall(method string, serverArgs []multicastServerArgs, client Client) MulticastResponse {
+func multicastCall(method string, args []multicastServerArgs, client Client) MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
@@ -78,39 +88,39 @@ func multicastCall(method string, serverArgs []multicastServerArgs, client Clien
 	failedResponses := make(map[int64]interface{})
 
 	var wg sync.WaitGroup
-	wg.Add(len(serverArgs))
+	wg.Add(len(args))
 
-	for _, args := range serverArgs {
-		go func(url string, args []interface{}, serverId int64) {
+	for _, serverArgs := range args {
+		go func(url string, serverArgs []interface{}, serverID int64) {
 			defer wg.Done()
-			response, err := client.ExecuteCall(url, method, args)
+			response, err := client.ExecuteCall(url, method, serverArgs)
 			if err != nil {
-				log.Printf("Call error: %v", err)
+				log.Printf("Error ocurred in multicast call, serverID: %v, call:%v, error: %v", serverID, method, err)
 				mutexForFailedResponses.Lock()
-				failedResponses[serverId] = err.Error()
+				failedResponses[serverID] = err.Error()
 				mutexForFailedResponses.Unlock()
 			} else {
 				mutexForSuccesfulResponses.Lock()
-				successfulResponses[serverId] = response
+				successfulResponses[serverID] = response
 				mutexForSuccesfulResponses.Unlock()
 			}
-		}(args.url, args.args, args.serverID)
+		}(serverArgs.url, serverArgs.args, serverArgs.serverID)
 	}
 	wg.Wait()
 
-	successfulKeys, successfulValues := getKeysAndValuesFromMap(successfulResponses)
-	failedKeys, failedValues := getKeysAndValuesFromMap(failedResponses)
+	successfulKeys, successfulValues := getServerIDsAndResponses(successfulResponses)
+	failedKeys, failedValues := getServerIDsAndResponses(failedResponses)
 
-	return MulticastResponse{MulticastStateResponse{successfulValues, successfulKeys}, MulticastStateResponse{failedValues, failedKeys}}
+	return MulticastResponse{MulticastStateResponse{successfulKeys, successfulValues}, MulticastStateResponse{failedKeys, failedValues}}
 }
 
-func getKeysAndValuesFromMap(in map[int64]interface{}) ([]int64, []interface{}) {
-	keys := make([]int64, 0, len(in))
-	values := make([]interface{}, 0, len(in))
+func getServerIDsAndResponses(in map[int64]interface{}) ([]int64, []interface{}) {
+	serverIDs := make([]int64, 0, len(in))
+	responses := make([]interface{}, 0, len(in))
 
-	for key, value := range in {
-		keys = append(keys, key)
-		values = append(values, value)
+	for serverID, response := range in {
+		serverIDs = append(serverIDs, serverID)
+		responses = append(responses, response)
 	}
-	return keys, values
+	return serverIDs, responses
 }
