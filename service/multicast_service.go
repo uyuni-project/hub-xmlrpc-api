@@ -1,10 +1,8 @@
-package server
+package service
 
 import (
 	"errors"
 	"log"
-	"net/http"
-	"strings"
 	"sync"
 )
 
@@ -16,27 +14,24 @@ func NewMulticastService(client Client, session Session, hubSumaAPIURL string) *
 	return &MulticastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
-type MulticastArgs struct {
+type MulticastRequest struct {
 	Method        string
 	HubSessionKey string
 	ServerIDs     []int64
 	ServerArgs    [][]interface{}
 }
 
-func (h *MulticastService) DefaultMethod(r *http.Request, args *MulticastArgs, reply *struct{ Data MulticastResponse }) error {
-	if h.isHubSessionValid(args.HubSessionKey) {
-		serverArgsByURL, err := h.resolveMulticastServerArgs(args)
+func (h *MulticastService) ExecuteMulticastCall(hubSessionKey, path string, serverIDs []int64, serverArgs [][]interface{}) (*MulticastResponse, error) {
+	if h.isHubSessionValid(hubSessionKey) {
+		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, serverIDs, serverArgs)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		method := removeMulticastNamespace(args.Method)
-		reply.Data = multicastCall(method, serverArgsByURL, h.client)
-	} else {
-		log.Printf("Provided session key is invalid: %v", args.HubSessionKey)
-		//TODO: should we return an error here?
+		return multicastCall(path, serverArgsByURL, h.client), nil
 	}
-	return nil
+	log.Printf("Provided session key is invalid: %v", hubSessionKey)
+	//TODO: should we return an error here?
+	return nil, nil
 }
 
 type multicastServerArgs struct {
@@ -45,30 +40,24 @@ type multicastServerArgs struct {
 	args     []interface{}
 }
 
-func (h *MulticastService) resolveMulticastServerArgs(args *MulticastArgs) ([]multicastServerArgs, error) {
-	result := make([]multicastServerArgs, len(args.ServerIDs))
-	for i, serverID := range args.ServerIDs {
-		serverArgs := make([]interface{}, 0, len(args.ServerArgs)+1)
+func (h *MulticastService) resolveMulticastServerArgs(hubSessionKey string, serverIDs []int64, allServerArgs [][]interface{}) ([]multicastServerArgs, error) {
+	result := make([]multicastServerArgs, len(serverIDs))
+	for i, serverID := range serverIDs {
+		serverArgs := make([]interface{}, 0, len(allServerArgs)+1)
 
-		serverSession := h.session.RetrieveServerSessionByServerID(args.HubSessionKey, serverID)
+		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
-			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", args.HubSessionKey, serverID)
+			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
 			return nil, errors.New("provided session key is invalid")
 		}
 
 		serverArgs = append(serverArgs, serverSession.sessionKey)
-		for _, serverArgs := range args.ServerArgs {
+		for _, serverArgs := range allServerArgs {
 			serverArgs = append(serverArgs, serverArgs[i])
 		}
 		result[i] = multicastServerArgs{serverSession.url, serverID, serverArgs}
 	}
 	return result, nil
-}
-
-func removeMulticastNamespace(method string) string {
-	parts := strings.Split(method, ".")
-	slice := parts[1:len(parts)]
-	return strings.Join(slice, ".")
 }
 
 type MulticastStateResponse struct {
@@ -80,7 +69,7 @@ type MulticastResponse struct {
 	Successfull, Failed MulticastStateResponse
 }
 
-func multicastCall(method string, args []multicastServerArgs, client Client) MulticastResponse {
+func multicastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
@@ -111,7 +100,7 @@ func multicastCall(method string, args []multicastServerArgs, client Client) Mul
 	successfulKeys, successfulValues := getServerIDsAndResponses(successfulResponses)
 	failedKeys, failedValues := getServerIDsAndResponses(failedResponses)
 
-	return MulticastResponse{MulticastStateResponse{successfulKeys, successfulValues}, MulticastStateResponse{failedKeys, failedValues}}
+	return &MulticastResponse{MulticastStateResponse{successfulKeys, successfulValues}, MulticastStateResponse{failedKeys, failedValues}}
 }
 
 func getServerIDsAndResponses(in map[int64]interface{}) ([]int64, []interface{}) {

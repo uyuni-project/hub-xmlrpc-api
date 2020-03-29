@@ -5,7 +5,7 @@ import (
 	"reflect"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/codec"
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
 var (
@@ -16,12 +16,12 @@ var (
 )
 
 func parseToList(request *codec.ServerRequest, output interface{}) error {
-	parsedArgs, ok := output.(*server.ListArgs)
+	parsedArgs, ok := output.(*controller.ListRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
 	}
-	*parsedArgs = server.ListArgs{request.MethodName, request.Params}
+	*parsedArgs = controller.ListRequest{request.MethodName, request.Params}
 	return nil
 }
 
@@ -50,7 +50,7 @@ func parseToStruct(request *codec.ServerRequest, output interface{}) error {
 }
 
 func parseToUnicastArgs(request *codec.ServerRequest, output interface{}) error {
-	parsedArgs, ok := output.(*server.UnicastArgs)
+	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
@@ -80,12 +80,12 @@ func parseToUnicastArgs(request *codec.ServerRequest, output interface{}) error 
 		serverArgs[i] = list.(interface{})
 	}
 
-	*parsedArgs = server.UnicastArgs{request.MethodName, hubSessionKey, serverID, serverArgs}
+	*parsedArgs = controller.UnicastRequest{request.MethodName, hubSessionKey, serverID, serverArgs}
 	return nil
 }
 
 func parseToMulitcastArgs(request *codec.ServerRequest, output interface{}) error {
-	parsedArgs, ok := output.(*server.MulticastArgs)
+	parsedArgs, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
@@ -118,7 +118,7 @@ func parseToMulitcastArgs(request *codec.ServerRequest, output interface{}) erro
 		serverArgs[i] = list.([]interface{})
 	}
 
-	*parsedArgs = server.MulticastArgs{request.MethodName, hubSessionKey, serverIDs, serverArgs}
+	*parsedArgs = controller.MulticastRequest{request.MethodName, hubSessionKey, serverIDs, serverArgs}
 	return nil
 }
 

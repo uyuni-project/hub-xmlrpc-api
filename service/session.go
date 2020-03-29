@@ -1,10 +1,4 @@
-package server
-
-const (
-	LOGIN_MANUAL_MODE      = iota // 0
-	LOGIN_RELAY_MODE              // 1
-	LOGIN_AUTOCONNECT_MODE        // 2
-)
+package service
 
 type ServerSession struct {
 	url, sessionKey string
