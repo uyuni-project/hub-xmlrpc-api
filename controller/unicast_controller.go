@@ -35,7 +35,6 @@ func (h *UnicastController) DefaultMethod(r *http.Request, args *UnicastRequest,
 }
 
 func removeUnicastNamespace(method string) string {
-	//TODO: removing multicast namespace
 	parts := strings.Split(method, ".")
 	slice := parts[1:len(parts)]
 	return strings.Join(slice, ".")

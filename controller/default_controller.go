@@ -21,7 +21,7 @@ type ListRequest struct {
 }
 
 func (d *DefaultController) DefaultMethod(r *http.Request, args *ListRequest, reply *struct{ Data interface{} }) error {
-	response, err := d.service.ProcessDefaultCall(args.Method, args.Args)
+	response, err := d.service.ExecuteDefaultCall(args.Method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 		return err

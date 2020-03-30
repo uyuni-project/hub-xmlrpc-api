@@ -5,6 +5,17 @@ import (
 	"log"
 )
 
+const (
+	LOGIN_PATH             = "auth.login"
+	LIST_SYSTEMS_PATH      = "system.listSystems"
+	LIST_USER_SYSTEMS_PATH = "system.listUserSystems"
+	LIST_SYSTEM_FQDNS_PATH = "system.listFqdns"
+
+	LOGIN_MANUAL_MODE      = iota // 0
+	LOGIN_RELAY_MODE              // 1
+	LOGIN_AUTOCONNECT_MODE        // 2
+)
+
 type HubService struct {
 	*service
 }
@@ -12,12 +23,6 @@ type HubService struct {
 func NewHubService(client Client, session Session, hubSumaAPIURL string) *HubService {
 	return &HubService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
-
-const (
-	LOGIN_MANUAL_MODE      = iota // 0
-	LOGIN_RELAY_MODE              // 1
-	LOGIN_AUTOCONNECT_MODE        // 2
-)
 
 func (h *HubService) Login(username, password string) (string, error) {
 	hubSessionKey, err := h.loginToHub(username, password, LOGIN_MANUAL_MODE)
@@ -76,7 +81,7 @@ func (h *HubService) AttachToServers(hubSessionKey string, serverIDs []int64, se
 
 func (h *HubService) ListServerIds(hubSessionKey string) ([]int64, error) {
 	if h.isHubSessionValid(hubSessionKey) {
-		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listSystems", []interface{}{hubSessionKey})
+		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, LIST_SYSTEMS_PATH, []interface{}{hubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			return nil, err
@@ -95,7 +100,7 @@ func (h *HubService) ListServerIds(hubSessionKey string) ([]int64, error) {
 }
 
 func (h *HubService) loginToHub(username, password string, loginMode int) (string, error) {
-	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "auth.login", []interface{}{username, password})
+	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, LOGIN_PATH, []interface{}{username, password})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return "", err
@@ -114,7 +119,7 @@ func (h *HubService) loginToHub(username, password string, loginMode int) (strin
 }
 
 func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password string) error {
-	userSystems, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listUserSystems", []interface{}{hubSessionKey, username})
+	userSystems, err := h.client.ExecuteCall(h.hubSumaAPIURL, LIST_USER_SYSTEMS_PATH, []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Error ocurred while trying to logiin into the user systems: %v", err)
 		return err
@@ -139,7 +144,7 @@ func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password stri
 func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (*MulticastResponse, error) {
 	//TODO: what to do with the error here?
 	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
-	responses := multicastCall("auth.login", loginIntoSystemsArgs, h.client)
+	responses := performMulticastCall(LOGIN_PATH, loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successfull
 
 	//save in session
@@ -168,7 +173,7 @@ func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs
 
 func (h *HubService) retrieveServerAPIURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
-	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, "system.listFqdns", []interface{}{hubSessionKey, serverID})
+	response, err := h.client.ExecuteCall(h.hubSumaAPIURL, LIST_SYSTEM_FQDNS_PATH, []interface{}{hubSessionKey, serverID})
 	if err != nil {
 		log.Printf("Error ocurred when retrieving the system Fqdns for serverID: %v, error:%v", serverID, err)
 		return "", err

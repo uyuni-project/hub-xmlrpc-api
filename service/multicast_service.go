@@ -14,20 +14,13 @@ func NewMulticastService(client Client, session Session, hubSumaAPIURL string) *
 	return &MulticastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
-type MulticastRequest struct {
-	Method        string
-	HubSessionKey string
-	ServerIDs     []int64
-	ServerArgs    [][]interface{}
-}
-
 func (h *MulticastService) ExecuteMulticastCall(hubSessionKey, path string, serverIDs []int64, serverArgs [][]interface{}) (*MulticastResponse, error) {
 	if h.isHubSessionValid(hubSessionKey) {
 		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, serverIDs, serverArgs)
 		if err != nil {
 			return nil, err
 		}
-		return multicastCall(path, serverArgsByURL, h.client), nil
+		return performMulticastCall(path, serverArgsByURL, h.client), nil
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
 	//TODO: should we return an error here?
@@ -69,7 +62,7 @@ type MulticastResponse struct {
 	Successfull, Failed MulticastStateResponse
 }
 
-func multicastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
+func performMulticastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 

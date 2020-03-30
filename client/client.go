@@ -16,13 +16,13 @@ func NewClient(connectTimeout, readWriteTimeout int) *Client {
 	return &Client{connectTimeout: connectTimeout, readWriteTimeout: readWriteTimeout}
 }
 
-func (c *Client) ExecuteCall(url string, methodName string, args []interface{}) (response interface{}, err error) {
+func (c *Client) ExecuteCall(url string, path string, args []interface{}) (response interface{}, err error) {
 	client, err := getClientWithTimeout(url, c.connectTimeout, c.readWriteTimeout)
 	if err != nil {
 		return nil, err
 	}
 	defer client.Close()
-	err = client.Call(methodName, args, &response)
+	err = client.Call(path, args, &response)
 	return response, err
 }
 
