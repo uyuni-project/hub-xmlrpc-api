@@ -25,12 +25,12 @@
 
 
 Name:           %{project}
-Version:        0.1.3
+Version:        0.1.4
 Release:        1
 Summary:        Xmlrpc API to manage Hub
 License:        Apache-2.0
 Group:          Applications/Internet
-Url:            https://%{provider_prefix}
+URL:            https://%{provider_prefix}
 Source0:        %{name}-%{version}.tar.gz
 Source1:        hub-xmlrpc-api.service
 Source2:        hub.conf
