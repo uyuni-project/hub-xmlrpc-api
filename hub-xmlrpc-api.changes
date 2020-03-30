@@ -1,4 +1,13 @@
 -------------------------------------------------------------------
+Thu Mar 30 2020 - Abid Mehmood <amehmood@suse.de>
+
+- version 0.1.4
+- Added systemd unit file for the api
+- Refactoring to make code more rebust
+- Better error handling in case of problems
+- Unit & Integration tests have been added
+
+-------------------------------------------------------------------
 Thu Feb 07 2020 - Abid Mehmood <amehmood@suse.de>
 
 - Initial commit 0.1.3

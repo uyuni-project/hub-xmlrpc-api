@@ -25,21 +25,19 @@
 
 
 Name:           %{project}
-Version:        0.1.3
-Release:        1
+Version:        0.1.4
+Release:        0
 Summary:        Xmlrpc API to manage Hub
 License:        Apache-2.0
 Group:          Applications/Internet
-Url:            https://%{provider_prefix}
+URL:            https://%{provider_prefix}
 Source0:        %{name}-%{version}.tar.gz
-Source1:        hub-xmlrpc-api.service
-Source2:        hub.conf
-Source3:        hub-xmlrpc-api-config.json
-Source4:        hub-logs.conf
 
 BuildRequires:  go >= 1.9
 BuildRequires:  golang-packaging
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+
+Requires:       systemd
 
 %description
 Hub-xmlrpc-api package provide an API which allows access to Uyuni server functionality in a Server of Serves architecture (Hub)
@@ -56,21 +54,21 @@ Hub-xmlrpc-api package provide an API which allows access to Uyuni server functi
 
 %gofilelist
 
-
+%define _release_dir  %{_builddir}/%{project}-%{version}/release
 
 # Service file for hub xmlrpc api
-install -D -m 0644 %{SOURCE1} %{buildroot}%{_unitdir}/hub-xmlrpc-api.service
+install -D -m 0644 %{_release_dir}/hub-xmlrpc-api.service %{buildroot}%{_unitdir}/hub-xmlrpc-api.service
 
 # Add config files for hub
 install -d -m 0750 %{buildroot}%{_sysconfdir}/hub
-install -D -m 0644 %{SOURCE2} %{buildroot}%{_sysconfdir}/hub
-install -D -m 0644 %{SOURCE3} %{buildroot}%{_sysconfdir}/hub
+install -D -m 0644 %{_release_dir}/hub.conf %{buildroot}%{_sysconfdir}/hub
+install -D -m 0644 %{_release_dir}/hub-xmlrpc-api-config.json  %{buildroot}%{_sysconfdir}/hub
 install -d -m 0750 %{buildroot}%{_var}/log/hub
 
 
 #add syslog config to redirect logs to /var/log/hub/hub-xmlrpc-api.log
 install -d -m 755 %{buildroot}%{_sysconfdir}/rsyslog.d
-install -D -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/rsyslog.d
+install -D -m 0644 %{_release_dir}/hub-logs.conf %{buildroot}%{_sysconfdir}/rsyslog.d
 
 
 %pre
@@ -78,15 +76,21 @@ install -D -m 0644 %{SOURCE4} %{buildroot}%{_sysconfdir}/rsyslog.d
 
 %post
 %service_add_post hub-xmlrpc-api.service
-if [ -x /bin/systemctl ] ; then
-    echo "### NOT starting on installation, please execute the following statements to configure hub-xmlrpc-api to start automatically using systemd"
-    echo " sudo systemctl daemon-reload"
-    echo " sudo systemctl enable hub-xmlrpc-api.service"
-    echo "### You can start Hub XMLRPC API by executing"
-    echo " sudo systemctl start hub-xmlrpc-api.service"
-fi
-systemctl restart rsyslog.service > /dev/null 2>&1 || :
+if [ $1 == 1 ];then
+   echo "-----------------------"
+   echo "### hub-xmlrpc-api does NOT start on installation. You can set it up to start automatically with systemd, by executing the following commands"
+   echo " sudo systemctl enable hub-xmlrpc-api.service"
+   echo ""
+   echo "### You can start Hub XMLRPC API by executing the following command"
+   echo " sudo systemctl start hub-xmlrpc-api.service"
+   echo ""
+   echo " Make sure 'etc/hub/hub-xmlrpc-api-config.json' is pointing to correct hub instance"
+   echo " Logs can be viewed at /var/log/hub/hub-xmlrpc-api.log"
+   echo ""
+   echo "For more information go to %{provider_prefix}"
 
+   systemctl restart rsyslog.service > /dev/null 2>&1 || :
+fi
 
 %preun
 %service_del_preun hub-xmlrpc-api.service
