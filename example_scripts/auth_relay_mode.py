@@ -1,20 +1,28 @@
 #!/usr/bin/python
-import sys
-import xmlrpclib
-import datetime    
+import xmlrpclib  
+import itertools
 
-api_url = "http://localhost:8000/hub/rpc/api"
-client = xmlrpclib.Server(api_url, verbose=0)
+HUB_URL = "http://localhost:8888/hub/rpc/api"
+HUB_LOGIN = "admin"
+HUB_PASSWORD = "admin"
 
-hubKey = client.hub.login("admin", "admin" )
-print hubKey
+client = xmlrpclib.Server(HUB_URL, verbose=0)
 
+hubKey = client.hub.loginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
+
+#Get the server Ids
 serverIds = client.hub.listServerIds(hubKey)
-print serverIds
 
+#authenticate those servers(same credentials will be used as of hub to authenticate)
 client.hub.attachToServers(hubKey, serverIds)
 
-usernames = ["admin" for s in serverIds]
+# perform the needed operation 
+systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
+successfulResponses = systemsPerServer["Successfull"]["Responses"]
+failedResponses = systemsPerServer["Failed"]["Responses"]
 
-systemsPerServer = client.multicast.system.listUserSystems(hubKey, serverIds, usernames)
-print systemsPerServer
+for system in itertools.chain.from_iterable(successfulResponses):
+  print (system)
+
+#logout
+client.auth.logout(hubKey)
