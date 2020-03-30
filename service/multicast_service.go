@@ -14,9 +14,9 @@ func NewMulticastService(client Client, session Session, hubSumaAPIURL string) *
 	return &MulticastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
 }
 
-func (h *MulticastService) ExecuteMulticastCall(hubSessionKey, path string, serverIDs []int64, serverArgs [][]interface{}) (*MulticastResponse, error) {
+func (h *MulticastService) ExecuteMulticastCall(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
 	if h.isHubSessionValid(hubSessionKey) {
-		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, serverIDs, serverArgs)
+		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, argsByServer)
 		if err != nil {
 			return nil, err
 		}
@@ -33,22 +33,18 @@ type multicastServerArgs struct {
 	args     []interface{}
 }
 
-func (h *MulticastService) resolveMulticastServerArgs(hubSessionKey string, serverIDs []int64, allServerArgs [][]interface{}) ([]multicastServerArgs, error) {
-	result := make([]multicastServerArgs, len(serverIDs))
-	for i, serverID := range serverIDs {
-		serverArgs := make([]interface{}, 0, len(allServerArgs)+1)
+func (h *MulticastService) resolveMulticastServerArgs(hubSessionKey string, argsByServer map[int64][]interface{}) ([]multicastServerArgs, error) {
+	result := make([]multicastServerArgs, 0, len(argsByServer))
 
+	for serverID, serverArgs := range argsByServer {
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
 			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
 			return nil, errors.New("provided session key is invalid")
 		}
 
-		serverArgs = append(serverArgs, serverSession.sessionKey)
-		for _, serverArgs := range allServerArgs {
-			serverArgs = append(serverArgs, serverArgs[i])
-		}
-		result[i] = multicastServerArgs{serverSession.url, serverID, serverArgs}
+		args := append([]interface{}{serverSession.sessionKey}, serverArgs...)
+		result = append(result, multicastServerArgs{serverSession.url, serverID, args})
 	}
 	return result, nil
 }

@@ -21,9 +21,7 @@ func (h *UnicastService) ExecuteUnicastCall(hubSessionKey, path string, serverID
 			return nil, errors.New("provided session key is invalid")
 		}
 
-		argumentsForCall := make([]interface{}, 0, len(serverArgs)+1)
-		argumentsForCall = append(argumentsForCall, serverSession.sessionKey)
-		argumentsForCall = append(argumentsForCall, serverArgs...)
+		argumentsForCall := append([]interface{}{serverSession.sessionKey}, serverArgs...)
 
 		return h.client.ExecuteCall(serverSession.url, path, argumentsForCall)
 	}
