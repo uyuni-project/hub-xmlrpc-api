@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/rpc"
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/parser"
 )
 
 type SystemInfo struct {
@@ -35,7 +36,7 @@ func (h *Auth) Login(r *http.Request, args *struct{ Username, Password string },
 	if args.Username == "admin" && args.Password == "admin" {
 		reply.Data = sessionkey
 	} else {
-		return server.FaultInvalidCredentials
+		return codec.FaultInvalidCredentials
 	}
 	return nil
 }
@@ -45,7 +46,7 @@ func (h *Auth) IsSessionKeyValid(r *http.Request, args *struct{ SessionKey strin
 	if args.SessionKey == sessionkey {
 		reply.Data = true
 	} else {
-		return server.Fault{Code: -1, String: "Session id:" + sessionkey + "is not valid."}
+		return codec.FaultError{Code: -1, Message: "Session id:" + sessionkey + "is not valid."}
 	}
 	return nil
 }
@@ -83,20 +84,18 @@ func (h *System) ListFqdns(r *http.Request, args *struct {
 
 func main() {
 	RPC := rpc.NewServer()
-	var codec = server.NewCodec()
-	codec.RegisterDefaultParser(server.StructParser)
+	var codec = codec.NewCodec()
+	codec.RegisterDefaultParser(parser.StructParser)
 
-	codec.RegisterMethod("auth.isSessionKeyValid")
-	codec.RegisterMethod("auth.login")
-	codec.RegisterMethod("system.listSystems")
-	codec.RegisterMethod("system.listUserSystems")
-	codec.RegisterMethod("system.listFqdns")
+	codec.RegisterMapping("auth.isSessionKeyValid", "Auth.IsSessionKeyValid")
+	codec.RegisterMapping("auth.login", "Auth.Login")
+	codec.RegisterMapping("system.listSystems", "System.ListSystems")
+	codec.RegisterMapping("system.listUserSystems", "System.ListUserSystems")
+	codec.RegisterMapping("system.listFqdns", "System.ListFqdns")
 
 	RPC.RegisterCodec(codec, "text/xml")
 	RPC.RegisterService(new(Auth), "auth")
 	RPC.RegisterService(new(System), "system")
-
-	//codec.RegisterDefaultMethod("DefaultService.DefaultMethod", new(server.ListParser))
 
 	http.Handle("/hub/rpc/api", RPC)
 	log.Println("Starting XML-RPC server on localhost:8001/hub/rpc/api")

@@ -5,7 +5,8 @@ import (
 	"net/http"
 
 	"github.com/gorilla/rpc"
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/parser"
 )
 
 type SystemInfo struct {
@@ -52,12 +53,12 @@ func (h *System) ListUserSystems(r *http.Request, args *struct{ SessionK, UserLo
 
 func main() {
 	RPC := rpc.NewServer()
-	var codec = server.NewCodec()
-	codec.RegisterDefaultParser(server.StructParser)
+	var codec = codec.NewCodec()
+	codec.RegisterDefaultParser(parser.StructParser)
 
-	codec.RegisterMethod("auth.login")
-	codec.RegisterMethod("system.listSystems")
-	codec.RegisterMethod("system.listUserSystems")
+	codec.RegisterMapping("auth.login", "Auth.Login")
+	codec.RegisterMapping("system.listSystems", "System.ListSystems")
+	codec.RegisterMapping("system.listUserSystems", "System.ListUserSystems")
 
 	RPC.RegisterCodec(codec, "text/xml")
 	RPC.RegisterService(new(Auth), "auth")
