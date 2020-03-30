@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/codec"
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
 func Test_parseToStruct(t *testing.T) {
@@ -54,28 +54,28 @@ func Test_parseToStruct(t *testing.T) {
 	}
 }
 
-func Test_parseToList(t *testing.T) {
+func Test_parseToListRequest(t *testing.T) {
 	tt := []struct {
 		name            string
 		serverRequest   *codec.ServerRequest
 		structToHydrate interface{}
-		expectedStruct  server.ListArgs
+		expectedStruct  controller.ListRequest
 		expectedError   string
 	}{
-		{name: "parseToList Success",
+		{name: "parseToListRequest Success",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"}},
-			structToHydrate: &server.ListArgs{},
-			expectedStruct:  server.ListArgs{Method: "method", Args: []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"}}},
-		{name: "parseToList no_ListArgs_passed Failed",
+			structToHydrate: &controller.ListRequest{},
+			expectedStruct:  controller.ListRequest{Method: "method", Args: []interface{}{"sessionKey", "arg1_Hub", "arg2_Hub"}}},
+		{name: "parseToListRequest no_ListRequest_passed Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.ListArgs{},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.ListRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			err := parseToList(tc.serverRequest, tc.structToHydrate)
+			err := parseToListRequest(tc.serverRequest, tc.structToHydrate)
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
 			}
@@ -87,43 +87,43 @@ func Test_parseToList(t *testing.T) {
 	}
 }
 
-func Test_parseToMulitcastArgs(t *testing.T) {
+func Test_parseToMulitcastRequest(t *testing.T) {
 	tt := []struct {
 		name            string
 		serverRequest   *codec.ServerRequest
 		structToHydrate interface{}
-		expectedStruct  server.MulticastArgs
+		expectedStruct  controller.MulticastRequest
 		expectedError   string
 	}{
-		{name: "parseToMulitcastArgs Success",
+		{name: "parseToMulitcastRequest Success",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", []interface{}{int64(1000010001), int64(1000010002)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}}},
-			structToHydrate: &server.MulticastArgs{},
-			expectedStruct:  server.MulticastArgs{Method: "method", HubSessionKey: "sessionKey", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}}},
-		{name: "parseToMulitcastArgs no_serverID_passed Failed",
+			structToHydrate: &controller.MulticastRequest{},
+			expectedStruct:  controller.MulticastRequest{Method: "method", HubSessionKey: "sessionKey", ServerIDs: []int64{1000010001, 1000010002}, ServerArgs: [][]interface{}{{"arg1_Server1", "arg1_Server2"}, {"arg2_Server1", "arg2_Server2"}}}},
+		{name: "parseToMulitcastRequest no_serverID_passed Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", []interface{}{"sessionKey"}}},
-			structToHydrate: &server.MulticastArgs{},
-			expectedStruct:  server.MulticastArgs{},
+			structToHydrate: &controller.MulticastRequest{},
+			expectedStruct:  controller.MulticastRequest{},
 			expectedError:   codec.FaultWrongArgumentsNumber.Message},
-		{name: "parseToMulitcastArgs malformed_hubSessionKey Failed",
+		{name: "parseToMulitcastRequest malformed_hubSessionKey Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{123, []interface{}{int64(1000010001)}, []interface{}{"arg1_Server1"}}},
-			structToHydrate: &server.MulticastArgs{},
-			expectedStruct:  server.MulticastArgs{},
+			structToHydrate: &controller.MulticastRequest{},
+			expectedStruct:  controller.MulticastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
-		{name: "parseToMulitcastArgs malformed_serverID Failed",
+		{name: "parseToMulitcastRequest malformed_serverID Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", []interface{}{"1000010001", "1000010002"}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}}},
-			structToHydrate: &server.MulticastArgs{},
-			expectedStruct:  server.MulticastArgs{},
+			structToHydrate: &controller.MulticastRequest{},
+			expectedStruct:  controller.MulticastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
-		{name: "parseToMulitcastArgs no_MulticastArgs_passed Failed",
+		{name: "parseToMulitcastRequest no_MulticastRequest_passed Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", []interface{}{int64(1000010001)}, "arg1_Server1", "arg2_Server1"}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.MulticastArgs{},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.MulticastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			err := parseToMulitcastArgs(tc.serverRequest, tc.structToHydrate)
+			err := parseToMulitcastRequest(tc.serverRequest, tc.structToHydrate)
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
 			}
@@ -135,43 +135,43 @@ func Test_parseToMulitcastArgs(t *testing.T) {
 	}
 }
 
-func Test_parseToUnicastArgs(t *testing.T) {
+func Test_parseToUnicastRequest(t *testing.T) {
 	tt := []struct {
 		name            string
 		serverRequest   *codec.ServerRequest
 		structToHydrate interface{}
-		expectedStruct  server.UnicastArgs
+		expectedStruct  controller.UnicastRequest
 		expectedError   string
 	}{
-		{name: "parseToUnicastArgs Success",
+		{name: "parseToUnicastRequest Success",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", int64(1000010001), "arg1_Server1", "arg2_Server1"}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.UnicastArgs{Method: "method", HubSessionKey: "sessionKey", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}}},
-		{name: "parseToUnicastArgs wrong_number_of_arguments Failed",
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.UnicastRequest{Method: "method", HubSessionKey: "sessionKey", ServerID: int64(1000010001), ServerArgs: []interface{}{"arg1_Server1", "arg2_Server1"}}},
+		{name: "parseToUnicastRequest wrong_number_of_arguments Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey"}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.UnicastArgs{},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.UnicastRequest{},
 			expectedError:   codec.FaultWrongArgumentsNumber.Message},
-		{name: "parseToUnicastArgs malformed_hubSessionKey Failed",
+		{name: "parseToUnicastRequest malformed_hubSessionKey Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{123, "1000010001", "arg1_Server1", "arg2_Server1"}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.UnicastArgs{},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.UnicastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
-		{name: "parseToUnicastArgs malformed_serverId Failed",
+		{name: "parseToUnicastRequest malformed_serverId Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", "1000010001", "arg1_Server1", "arg2_Server1"}},
-			structToHydrate: &server.UnicastArgs{},
-			expectedStruct:  server.UnicastArgs{},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.UnicastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
-		{name: "parseToUnicastArgs no_UnicastArgs_passed Failed",
+		{name: "parseToUnicastRequest no_UnicastRequest_passed Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"sessionKey", "1000010001", "arg1_Server1", "arg2_Server1"}},
-			structToHydrate: &server.MulticastArgs{},
-			expectedStruct:  server.UnicastArgs{},
+			structToHydrate: &controller.MulticastRequest{},
+			expectedStruct:  controller.UnicastRequest{},
 			expectedError:   codec.FaultInvalidParams.Message},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			err := parseToUnicastArgs(tc.serverRequest, tc.structToHydrate)
+			err := parseToUnicastRequest(tc.serverRequest, tc.structToHydrate)
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
 			}
