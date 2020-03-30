@@ -8,21 +8,21 @@ HUB_PASSWORD = "admin"
 
 client = xmlrpclib.Server(HUB_URL, verbose=0)
 
-hubKey = client.hub.loginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
+hubSessionKey = client.hub.loginWithAuthRelayMode(HUB_LOGIN, HUB_PASSWORD)
 
-#Get the server Ids
-serverIds = client.hub.listServerIds(hubKey)
+#get the server IDs
+serverIDs = client.hub.listServerIds(hubSessionKey)
 
 #authenticate those servers(same credentials will be used as of hub to authenticate)
-client.hub.attachToServers(hubKey, serverIds)
+client.hub.attachToServers(hubSessionKey, serverIDs)
 
-# perform the needed operation 
-systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
-successfulResponses = systemsPerServer["Successfull"]["Responses"]
+#perform the required operation 
+systemsPerServer = client.multicast.system.listSystems(hubSessionKey, serverIDs)
+successfulResponses = systemsPerServer["Successful"]["Responses"]
 failedResponses = systemsPerServer["Failed"]["Responses"]
 
 for system in itertools.chain.from_iterable(successfulResponses):
-  print (system)
+  print(system)
 
 #logout
-client.auth.logout(hubKey)
+client.auth.logout(hubSessionKey)

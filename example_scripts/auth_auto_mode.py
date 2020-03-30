@@ -2,24 +2,24 @@
 import xmlrpclib  
 import itertools
 
- HUB_URL = "http://localhost:8888/hub/rpc/api"
+HUB_URL = "http://localhost:8888/hub/rpc/api"
 HUB_LOGIN = "admin"
 HUB_PASSWORD = "admin"
 
- client = xmlrpclib.Server(HUB_URL, verbose=0)
+client = xmlrpclib.Server(HUB_URL, verbose=0)
 
- hubKey = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
+hubSessionKey = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
 
- #Get the server Ids
-serverIds = client.hub.listServerIds(hubKey)
+#get the server IDs
+serverIDs = client.hub.listServerIds(hubSessionKey)
 
- # perform the needed operation 
-systemsPerServer = client.multicast.system.list_systems(hubKey, serverIds)
-successfulResponses = systemsPerServer["Successfull"]["Responses"]
+#perform the required operation 
+systemsPerServer = client.multicast.system.listSystems(hubSessionKey, serverIDs)
+successfulResponses = systemsPerServer["Successful"]["Responses"]
 failedResponses = systemsPerServer["Failed"]["Responses"]
 
- for system in itertools.chain.from_iterable(successfulResponses):
-  print (system)
+for system in itertools.chain.from_iterable(successfulResponses):
+    print(system)
 
- #logout
-client.auth.logout(hubKey)
+#logout
+client.auth.logout(hubSessionKey)
