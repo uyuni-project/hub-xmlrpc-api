@@ -33,12 +33,26 @@ type MulticastStateResponse struct {
 
 func (h *MulticastController) DefaultMethod(r *http.Request, args *MulticastRequest, reply *struct{ Data *service.MulticastResponse }) error {
 	method := removeMulticastNamespace(args.Method)
-	response, err := h.service.ExecuteMulticastCall(args.HubSessionKey, method, args.ServerIDs, args.ServerArgs)
+	argsByServer, err := resolveArgsByServer(args.HubSessionKey, args.ServerIDs, args.ServerArgs)
+	response, err := h.service.ExecuteMulticastCall(args.HubSessionKey, method, argsByServer)
 	if err != nil {
 		return err
 	}
 	reply.Data = response
 	return nil
+}
+
+func resolveArgsByServer(hubSessionKey string, serverIDs []int64, allServerArgs [][]interface{}) (map[int64][]interface{}, error) {
+	result := make(map[int64][]interface{})
+	for i, serverID := range serverIDs {
+		args := make([]interface{}, 0, len(allServerArgs)+1)
+
+		for _, serverArgs := range allServerArgs {
+			args = append(args, serverArgs[i])
+		}
+		result[serverID] = args
+	}
+	return result, nil
 }
 
 func removeMulticastNamespace(method string) string {

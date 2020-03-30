@@ -51,7 +51,8 @@ func (h *HubController) LoginWithAuthRelayMode(r *http.Request, args *LoginReque
 }
 
 func (h *HubController) AttachToServers(r *http.Request, args *MulticastRequest, reply *struct{ Data []error }) error {
-	_, err := h.service.AttachToServers(args.HubSessionKey, args.ServerIDs, args.ServerArgs)
+	argsByServer, err := resolveArgsByServer(args.HubSessionKey, args.ServerIDs, args.ServerArgs)
+	_, err = h.service.AttachToServers(args.HubSessionKey, argsByServer)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err

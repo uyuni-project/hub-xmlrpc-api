@@ -51,11 +51,8 @@ func (h *HubService) LoginWithAuthRelayMode(username, password string) (string, 
 	return hubSessionKey, nil
 }
 
-func (h *HubService) AttachToServers(hubSessionKey string, serverIDs []int64, serverArgs [][]interface{}) (*MulticastResponse, error) {
+func (h *HubService) AttachToServers(hubSessionKey string, argsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
 	if h.isHubSessionValid(hubSessionKey) {
-		usernames := make([]interface{}, len(serverIDs))
-		passwords := make([]interface{}, len(serverIDs))
-
 		hubSession := h.session.RetrieveHubSession(hubSessionKey)
 		if hubSession == nil {
 			log.Printf("HubSessionKey was not found: %v", hubSessionKey)
@@ -63,16 +60,14 @@ func (h *HubService) AttachToServers(hubSessionKey string, serverIDs []int64, se
 			return nil, errors.New("provided session key is invalid")
 		}
 
+		credentialsByServerID := argsByServerID
 		if hubSession.loginMode == LOGIN_RELAY_MODE {
-			for i := range serverIDs {
-				usernames[i] = hubSession.username
-				passwords[i] = hubSession.password
+			credentialsByServerID = make(map[int64][]interface{})
+			for serverID := range argsByServerID {
+				credentialsByServerID[serverID] = []interface{}{hubSession.username, hubSession.password}
 			}
-		} else {
-			usernames = serverArgs[0]
-			passwords = serverArgs[1]
 		}
-		return h.loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
+		return h.loginIntoSystems(hubSessionKey, credentialsByServerID)
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
 	//TODO: should we return an error here?
@@ -126,24 +121,20 @@ func (h *HubService) loginIntoUserSystems(hubSessionKey, username, password stri
 	}
 	userSystemsSlice := userSystems.([]interface{})
 
-	serverIDs := make([]int64, len(userSystemsSlice))
-	usernames := make([]interface{}, len(userSystemsSlice))
-	passwords := make([]interface{}, len(userSystemsSlice))
-
-	for i, userSystem := range userSystemsSlice {
-		serverIDs[i] = userSystem.(map[string]interface{})["id"].(int64)
-		usernames[i] = username
-		passwords[i] = password
+	credentialsByServerID := make(map[int64][]interface{})
+	for _, userSystem := range userSystemsSlice {
+		serverID := userSystem.(map[string]interface{})["id"].(int64)
+		credentialsByServerID[serverID] = []interface{}{username, password}
 	}
 
 	//TODO: what to do with the response here?
-	_, err = h.loginIntoSystems(hubSessionKey, serverIDs, usernames, passwords)
+	_, err = h.loginIntoSystems(hubSessionKey, credentialsByServerID)
 	return err
 }
 
-func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) (*MulticastResponse, error) {
+func (h *HubService) loginIntoSystems(hubSessionKey string, credentialsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
 	//TODO: what to do with the error here?
-	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, serverIDs, usernames, passwords)
+	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, credentialsByServerID)
 	responses := performMulticastCall(LOGIN_PATH, loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successful
 
@@ -154,18 +145,18 @@ func (h *HubService) loginIntoSystems(hubSessionKey string, serverIDs []int64, u
 	return responses, nil
 }
 
-func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, serverIDs []int64, usernames, passwords []interface{}) ([]multicastServerArgs, map[int64]string, error) {
-	multicastArgs := make([]multicastServerArgs, len(serverIDs))
+func (h *HubService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]multicastServerArgs, map[int64]string, error) {
+	multicastArgs := make([]multicastServerArgs, 0, len(credentialsByServerID))
 	serverURLByServerID := make(map[int64]string)
 
-	for i, serverID := range serverIDs {
+	for serverID, credentials := range credentialsByServerID {
 		url, err := h.retrieveServerAPIURL(hubSessionKey, serverID)
 		if err != nil {
 			log.Printf("Login error: %v", err)
 			//TODO: what to do with failing servers?
 		} else {
 			serverURLByServerID[serverID] = url
-			multicastArgs[i] = multicastServerArgs{url, serverID, []interface{}{usernames[i], passwords[i]}}
+			multicastArgs = append(multicastArgs, multicastServerArgs{url, serverID, credentials})
 		}
 	}
 	return multicastArgs, serverURLByServerID, nil
