@@ -47,11 +47,11 @@ func initCodec() *codec.Codec {
 	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubController.LoginWithAutoconnectMode")
 	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubController.LoginWithAuthRelayMode")
 	codec.RegisterMapping("hub.listServerIds", "HubController.ListServerIds")
-	codec.RegisterMappingWithParser("hub.attachToServers", "HubController.AttachToServers", parser.MulticastParser)
+	codec.RegisterMappingWithParser("hub.attachToServers", "HubController.AttachToServers", parser.MulticastRequestParser)
 
-	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.DefaultMethod", parser.MulticastParser)
-	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.DefaultMethod", parser.UnicastParser)
-	codec.RegisterDefaultMethod("DefaultController.DefaultMethod", parser.ListParser)
+	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.DefaultMethod", parser.MulticastRequestParser)
+	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.DefaultMethod", parser.UnicastRequestParser)
+	codec.RegisterDefaultMethod("DefaultController.DefaultMethod", parser.ListRequestParser)
 
 	return codec
 }

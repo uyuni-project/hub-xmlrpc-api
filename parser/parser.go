@@ -9,13 +9,13 @@ import (
 )
 
 var (
-	ListParser      = parseToList
-	StructParser    = parseToStruct
-	UnicastParser   = parseToUnicastArgs
-	MulticastParser = parseToMulitcastArgs
+	ListRequestParser      = parseToListRequest
+	StructParser           = parseToStruct
+	UnicastRequestParser   = parseToUnicastRequest
+	MulticastRequestParser = parseToMulitcastRequest
 )
 
-func parseToList(request *codec.ServerRequest, output interface{}) error {
+func parseToListRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.ListRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
@@ -49,7 +49,7 @@ func parseToStruct(request *codec.ServerRequest, output interface{}) error {
 	return nil
 }
 
-func parseToUnicastArgs(request *codec.ServerRequest, output interface{}) error {
+func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
@@ -84,7 +84,7 @@ func parseToUnicastArgs(request *codec.ServerRequest, output interface{}) error 
 	return nil
 }
 
-func parseToMulitcastArgs(request *codec.ServerRequest, output interface{}) error {
+func parseToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
