@@ -59,7 +59,7 @@ type MulticastStateResponse struct {
 }
 
 type MulticastResponse struct {
-	Successfull, Failed MulticastStateResponse
+	Successful, Failed MulticastStateResponse
 }
 
 func performMulticastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
