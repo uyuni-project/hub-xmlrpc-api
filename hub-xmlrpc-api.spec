@@ -25,7 +25,7 @@
 
 
 Name:           %{project}
-Version:        0.1.4
+Version:        0.1.3
 Release:        1
 Summary:        Xmlrpc API to manage Hub
 License:        Apache-2.0
