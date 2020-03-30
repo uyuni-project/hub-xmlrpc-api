@@ -178,9 +178,8 @@ func (h *HubService) retrieveServerAPIURL(hubSessionKey string, serverID int64) 
 		log.Printf("Error ocurred when retrieving the system Fqdns for serverID: %v, error:%v", serverID, err)
 		return "", err
 	}
+	//TODO: check for casting errors.
+	//TODO: check the fqdn array is not empty
 	firstFqdn := response.([]interface{})[0].(string)
-	if firstFqdn == "mch-server-slave-1.tf.local" {
-		return "http://192.168.122.188/rpc/api", nil
-	}
-	return "http://192.168.122.196/rpc/api", nil
+	return "http://" + firstFqdn + "/rpc/api", nil
 }
