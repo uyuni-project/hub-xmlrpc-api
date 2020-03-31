@@ -85,7 +85,7 @@ func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) err
 }
 
 func parseToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
-	parsedArgs, ok := output.(*controller.MulticastRequest)
+	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return codec.FaultInvalidParams
@@ -103,23 +103,44 @@ func parseToMulitcastRequest(request *codec.ServerRequest, output interface{}) e
 		return codec.FaultInvalidParams
 	}
 
-	serverIDs := make([]int64, len(args[1].([]interface{})))
-	for i, elem := range args[1].([]interface{}) {
-		serverIDs[i], ok = elem.(int64)
+	serverIDs, ok := args[1].([]interface{})
+	if !ok {
+		log.Printf("Error ocurred when parsing serverIDs argument")
+		return codec.FaultInvalidParams
+	}
+
+	argsByServer, err := resolveArgsByServer(serverIDs, args[2:len(args)])
+	if err != nil {
+		return err
+	}
+
+	*parsedRequest = controller.MulticastRequest{request.MethodName, hubSessionKey, argsByServer}
+	return nil
+}
+
+func resolveArgsByServer(serverIDs []interface{}, allServerArgs []interface{}) (map[int64][]interface{}, error) {
+	result := make(map[int64][]interface{})
+	for i, serverID := range serverIDs {
+
+		parsedServerID, ok := serverID.(int64)
 		if !ok {
 			log.Printf("Error ocurred when parsing serverIDs argument")
-			return codec.FaultInvalidParams
+			return nil, codec.FaultInvalidParams
 		}
-	}
 
-	rest := args[2:len(args)]
-	serverArgs := make([][]interface{}, len(rest))
-	for i, list := range rest {
-		serverArgs[i] = list.([]interface{})
-	}
+		args := make([]interface{}, 0, len(allServerArgs)+1)
 
-	*parsedArgs = controller.MulticastRequest{request.MethodName, hubSessionKey, serverIDs, serverArgs}
-	return nil
+		for _, serverArgs := range allServerArgs {
+			parsedServerArgs, ok := serverArgs.([]interface{})
+			if !ok {
+				log.Printf("Error ocurred when parsing server arguments")
+				return nil, codec.FaultInvalidParams
+			}
+			args = append(args, parsedServerArgs[i])
+		}
+		result[parsedServerID] = args
+	}
+	return result, nil
 }
 
 func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {

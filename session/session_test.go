@@ -4,18 +4,18 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
+	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
 func TestSaveHubSession(t *testing.T) {
 	tt := []struct {
 		name          string
 		hubSessionKey string
-		hubSession    *server.HubSession
+		hubSession    *gateway.HubSession
 	}{
 		{name: "SaveHubSession Success",
 			hubSessionKey: "sessionKey",
-			hubSession:    server.NewHubSession("username", "password", 1),
+			hubSession:    gateway.NewHubSession("username", "password", 1),
 		},
 	}
 
@@ -38,12 +38,12 @@ func TestRetrieveHubSession(t *testing.T) {
 		name                   string
 		hubSessionKeyToSave    string
 		hubSessionKeyToLookfor string
-		hubSession             *server.HubSession
+		hubSession             *gateway.HubSession
 	}{
 		{name: "RetrieveHubSession Success",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSession:             server.NewHubSession("username", "password", 1),
+			hubSession:             gateway.NewHubSession("username", "password", 1),
 		},
 		{name: "RetrieveHubSession inexistent_hubSession_key",
 			hubSessionKeyToSave:    "sessionKey",
@@ -70,15 +70,15 @@ func TestSaveServerSession(t *testing.T) {
 	tt := []struct {
 		name          string
 		hubSessionKey string
-		hubSession    *server.HubSession
+		hubSession    *gateway.HubSession
 		serverID      int64
-		serverSession *server.ServerSession
+		serverSession *gateway.ServerSession
 	}{
 		{name: "SaveServerSession Success",
 			hubSessionKey: "sessionKey",
-			hubSession:    server.NewHubSession("username", "password", 1),
+			hubSession:    gateway.NewHubSession("username", "password", 1),
 			serverID:      1234,
-			serverSession: server.NewServerSession("url", "serverSessionKey"),
+			serverSession: gateway.NewServerSession("url", "serverSessionKey"),
 		},
 	}
 
@@ -110,37 +110,37 @@ func TestRetrieveServerSessionByServerID(t *testing.T) {
 		name                   string
 		hubSessionKeyToSave    string
 		hubSessionKeyToLookfor string
-		hubSessionToSave       *server.HubSession
+		hubSessionToSave       *gateway.HubSession
 		serverIDToSave         int64
 		serverIDToLookfor      int64
-		serverSessionToSave    *server.ServerSession
-		expectedServerSession  *server.ServerSession
+		serverSessionToSave    *gateway.ServerSession
+		expectedServerSession  *gateway.ServerSession
 	}{
 		{name: "RetrieveServerSessionByServerID Success",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSessionToSave:       server.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      1234,
-			serverSessionToSave:    server.NewServerSession("url", "serverSessionKey"),
-			expectedServerSession:  server.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
+			expectedServerSession:  gateway.NewServerSession("url", "serverSessionKey"),
 		},
 		{name: "RetrieveServerSessionByServerID inexistent_hubSession_key",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "inexistent_sessionKey",
-			hubSessionToSave:       server.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      1234,
-			serverSessionToSave:    server.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
 			expectedServerSession:  nil,
 		},
 		{name: "RetrieveServerSessionByServerID inexistent_serverID",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSessionToSave:       server.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      -1,
-			serverSessionToSave:    server.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
 			expectedServerSession:  nil,
 		},
 	}
@@ -166,12 +166,12 @@ func TestRemoveHubSession(t *testing.T) {
 		name                  string
 		hubSessionKeyToSave   string
 		hubSessionKeyToRemove string
-		hubSession            *server.HubSession
+		hubSession            *gateway.HubSession
 	}{
 		{name: "RemoveHubSession Success",
 			hubSessionKeyToSave:   "sessionKey",
 			hubSessionKeyToRemove: "sessionKey",
-			hubSession:            server.NewHubSession("username", "password", 1),
+			hubSession:            gateway.NewHubSession("username", "password", 1),
 		},
 	}
 

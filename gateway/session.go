@@ -1,12 +1,4 @@
-package service
-
-type ServerSession struct {
-	url, sessionKey string
-}
-
-func NewServerSession(url, sessionKey string) *ServerSession {
-	return &ServerSession{url, sessionKey}
-}
+package gateway
 
 type HubSession struct {
 	username, password string
@@ -15,6 +7,14 @@ type HubSession struct {
 
 func NewHubSession(username, password string, loginMode int) *HubSession {
 	return &HubSession{username, password, loginMode}
+}
+
+type ServerSession struct {
+	url, sessionKey string
+}
+
+func NewServerSession(url, sessionKey string) *ServerSession {
+	return &ServerSession{url, sessionKey}
 }
 
 type Session interface {

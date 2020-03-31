@@ -1,20 +1,26 @@
-package service
+package gateway
 
 import (
 	"errors"
 	"log"
 )
 
+type Unicaster interface {
+	Unicast(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error)
+}
+
 type UnicastService struct {
-	*service
+	client           Client
+	session          Session
+	sessionValidator sessionValidator
 }
 
-func NewUnicastService(client Client, session Session, hubSumaAPIURL string) *UnicastService {
-	return &UnicastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
+func NewUnicastService(client Client, session Session, sessionValidator sessionValidator) *UnicastService {
+	return &UnicastService{client, session, sessionValidator}
 }
 
-func (h *UnicastService) ExecuteUnicastCall(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error) {
-	if h.isHubSessionValid(hubSessionKey) {
+func (h *UnicastService) Unicast(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error) {
+	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
 			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)

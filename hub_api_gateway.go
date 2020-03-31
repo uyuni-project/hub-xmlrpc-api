@@ -9,8 +9,8 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
+	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 	"github.com/uyuni-project/hub-xmlrpc-api/parser"
-	"github.com/uyuni-project/hub-xmlrpc-api/service"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
@@ -24,13 +24,16 @@ func initServer() {
 	conf := config.InitializeConfig()
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
 	session := session.NewSession()
+	authorizer := gateway.NewAuthorizationService(client, session, conf.Hub.SUMA_API_URL)
 
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
-	rpcServer.RegisterService(controller.NewHubController(service.NewHubService(client, session, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewDefaultController(service.NewDefaultService(client, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewMulticastController(service.NewMulticastService(client, session, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewUnicastController(service.NewUnicastService(client, session, conf.Hub.SUMA_API_URL)), "")
+
+	rpcServer.RegisterService(controller.NewAuthorizerController(gateway.NewAuthorizationService(client, session, conf.Hub.SUMA_API_URL)), "")
+	rpcServer.RegisterService(controller.NewHubProxyController(gateway.NewHubDelegator(client, conf.Hub.SUMA_API_URL)), "")
+	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, session, conf.Hub.SUMA_API_URL, authorizer)), "")
+	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticastService(client, session, authorizer)), "")
+	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicastService(client, session, authorizer)), "")
 
 	http.Handle("/hub/rpc/api", rpcServer)
 
@@ -43,15 +46,16 @@ func initCodec() *codec.Codec {
 
 	codec.RegisterDefaultParser(parser.StructParser)
 
-	codec.RegisterMapping("hub.login", "HubController.Login")
-	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubController.LoginWithAutoconnectMode")
-	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubController.LoginWithAuthRelayMode")
-	codec.RegisterMapping("hub.listServerIds", "HubController.ListServerIds")
-	codec.RegisterMappingWithParser("hub.attachToServers", "HubController.AttachToServers", parser.MulticastRequestParser)
+	codec.RegisterMapping("hub.login", "AuthorizerController.Login")
+	codec.RegisterMapping("hub.loginWithAutoconnectMode", "AuthorizerController.LoginWithAutoconnectMode")
+	codec.RegisterMapping("hub.loginWithAuthRelayMode", "AuthorizerController.LoginWithAuthRelayMode")
+	codec.RegisterMappingWithParser("hub.attachToServers", "AuthorizerController.AttachToServers", parser.MulticastRequestParser)
 
-	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.DefaultMethod", parser.MulticastRequestParser)
-	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.DefaultMethod", parser.UnicastRequestParser)
-	codec.RegisterDefaultMethod("DefaultController.DefaultMethod", parser.ListRequestParser)
+	codec.RegisterMapping("hub.listServerIds", "HubController.ListServerIDs")
+
+	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.Multicast", parser.MulticastRequestParser)
+	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.Unicast", parser.UnicastRequestParser)
+	codec.RegisterDefaultMethod("HubProxyController.DelegateToHub", parser.ListRequestParser)
 
 	return codec
 }

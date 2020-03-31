@@ -5,15 +5,11 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/service"
+	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
 type UnicastController struct {
-	service *service.UnicastService
-}
-
-func NewUnicastController(service *service.UnicastService) *UnicastController {
-	return &UnicastController{service}
+	unicaster gateway.Unicaster
 }
 
 type UnicastRequest struct {
@@ -23,9 +19,13 @@ type UnicastRequest struct {
 	ServerArgs    []interface{}
 }
 
-func (h *UnicastController) DefaultMethod(r *http.Request, args *UnicastRequest, reply *struct{ Data interface{} }) error {
+func NewUnicastController(unicaster gateway.Unicaster) *UnicastController {
+	return &UnicastController{unicaster}
+}
+
+func (u *UnicastController) Unicast(r *http.Request, args *UnicastRequest, reply *struct{ Data interface{} }) error {
 	method := removeUnicastNamespace(args.Method)
-	response, err := h.service.ExecuteUnicastCall(args.HubSessionKey, method, args.ServerID, args.ServerArgs)
+	response, err := u.unicaster.Unicast(args.HubSessionKey, method, args.ServerID, args.ServerArgs)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 		return err

@@ -1,4 +1,4 @@
-package service
+package gateway
 
 import (
 	"errors"
@@ -6,21 +6,27 @@ import (
 	"sync"
 )
 
+type Multicaster interface {
+	Multicast(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error)
+}
+
 type MulticastService struct {
-	*service
+	client           Client
+	session          Session
+	sessionValidator sessionValidator
 }
 
-func NewMulticastService(client Client, session Session, hubSumaAPIURL string) *MulticastService {
-	return &MulticastService{&service{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}}
+func NewMulticastService(client Client, session Session, sessionValidator sessionValidator) *MulticastService {
+	return &MulticastService{client, session, sessionValidator}
 }
 
-func (h *MulticastService) ExecuteMulticastCall(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
-	if h.isHubSessionValid(hubSessionKey) {
+func (h *MulticastService) Multicast(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
+	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
 		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, argsByServer)
 		if err != nil {
 			return nil, err
 		}
-		return performMulticastCall(path, serverArgsByURL, h.client), nil
+		return executeMulticastCall(path, serverArgsByURL, h.client), nil
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
 	//TODO: should we return an error here?
@@ -58,7 +64,7 @@ type MulticastResponse struct {
 	Successful, Failed MulticastStateResponse
 }
 
-func performMulticastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
+func executeMulticastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
