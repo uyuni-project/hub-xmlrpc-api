@@ -137,10 +137,19 @@ func (h *HubService) loginIntoSystems(hubSessionKey string, credentialsByServerI
 	loginIntoSystemsArgs, serverURLByServerID, _ := h.resolveLoginIntoSystemsArgs(hubSessionKey, credentialsByServerID)
 	responses := performMulticastCall(LOGIN_PATH, loginIntoSystemsArgs, h.client)
 	successfulResponses := responses.Successful
+	failedResponses := responses.Failed
 
 	//save in session
 	for i, serverID := range successfulResponses.ServerIds {
 		h.session.SaveServerSession(hubSessionKey, serverID, &ServerSession{serverURLByServerID[serverID], successfulResponses.Responses[i].(string)})
+	}
+
+	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
+	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
+
+	//save for failed as well
+	for _, serverID := range failedResponses.ServerIds {
+		h.session.SaveServerSession(hubSessionKey, serverID, &ServerSession{serverURLByServerID[serverID], "login-error"})
 	}
 	return responses, nil
 }
