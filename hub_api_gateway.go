@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/rpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
@@ -23,15 +24,18 @@ func initServer() {
 
 	conf := config.InitializeConfig()
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-	session := session.NewSession()
+
+	var inMemorySession sync.Map
+	session := session.NewSession(&inMemorySession)
+
 	authorizer := gateway.NewAuthorizationService(client, session, conf.Hub.SUMA_API_URL)
 
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 
-	rpcServer.RegisterService(controller.NewAuthorizerController(gateway.NewAuthorizationService(client, session, conf.Hub.SUMA_API_URL)), "")
+	rpcServer.RegisterService(controller.NewAuthorizerController(authorizer), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(gateway.NewHubDelegator(client, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, session, conf.Hub.SUMA_API_URL, authorizer)), "")
+	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, conf.Hub.SUMA_API_URL, authorizer)), "")
 	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticastService(client, session, authorizer)), "")
 	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicastService(client, session, authorizer)), "")
 

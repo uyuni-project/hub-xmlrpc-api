@@ -42,26 +42,22 @@ type multicastServerArgs struct {
 func (h *MulticastService) resolveMulticastServerArgs(hubSessionKey string, argsByServer map[int64][]interface{}) ([]multicastServerArgs, error) {
 	result := make([]multicastServerArgs, 0, len(argsByServer))
 
+	serverSessions := h.session.RetrieveServerSessions(hubSessionKey)
+
 	for serverID, serverArgs := range argsByServer {
-		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
-		if serverSession == nil {
-			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
+		if serverSession, ok := serverSessions[serverID]; ok {
+			args := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
+			result = append(result, multicastServerArgs{serverSession.serverURL, serverID, args})
+		} else {
+			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
 			return nil, errors.New("provided session key is invalid")
 		}
-
-		args := append([]interface{}{serverSession.sessionKey}, serverArgs...)
-		result = append(result, multicastServerArgs{serverSession.url, serverID, args})
 	}
 	return result, nil
 }
 
-type MulticastStateResponse struct {
-	ServerIds []int64
-	Responses []interface{}
-}
-
 type MulticastResponse struct {
-	Successful, Failed MulticastStateResponse
+	SuccessfulResponses, FailedResponses map[int64]interface{}
 }
 
 func executeMulticastCall(method string, args []multicastServerArgs, client Client) *MulticastResponse {
@@ -92,19 +88,5 @@ func executeMulticastCall(method string, args []multicastServerArgs, client Clie
 	}
 	wg.Wait()
 
-	successfulKeys, successfulValues := getServerIDsAndResponses(successfulResponses)
-	failedKeys, failedValues := getServerIDsAndResponses(failedResponses)
-
-	return &MulticastResponse{MulticastStateResponse{successfulKeys, successfulValues}, MulticastStateResponse{failedKeys, failedValues}}
-}
-
-func getServerIDsAndResponses(in map[int64]interface{}) ([]int64, []interface{}) {
-	serverIDs := make([]int64, 0, len(in))
-	responses := make([]interface{}, 0, len(in))
-
-	for serverID, response := range in {
-		serverIDs = append(serverIDs, serverID)
-		responses = append(responses, response)
-	}
-	return serverIDs, responses
+	return &MulticastResponse{successfulResponses, failedResponses}
 }

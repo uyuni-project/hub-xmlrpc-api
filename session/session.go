@@ -7,54 +7,48 @@ import (
 )
 
 type Session struct {
-	sessions *sync.Map
+	session *sync.Map
 }
 
-// NewSession returns a new Session struct
-func NewSession() *Session {
-	var syncMap sync.Map
-	return &Session{sessions: &syncMap}
+func NewSession(session *sync.Map) *Session {
+	return &Session{session}
 }
 
-type storedHubSession struct {
-	hubSession        *gateway.HubSession
-	serverSessionKeys *sync.Map
-}
-
-func (s *Session) SaveHubSession(hubSessionKey string, hubSession *gateway.HubSession) {
-	s.sessions.Store(hubSessionKey, newStoredHubSession(hubSession))
+func (r *Session) SaveHubSession(hubSession *gateway.HubSession) {
+	r.session.Store(hubSession.HubSessionKey, hubSession)
 }
 
 func (s *Session) RetrieveHubSession(hubSessionKey string) *gateway.HubSession {
-	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
-		return hubSession.(*storedHubSession).hubSession
-	}
-	return nil
-}
-
-func (s *Session) SaveServerSession(hubSessionKey string, serverID int64, serverSession *gateway.ServerSession) {
-	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
-		hubSession.(*storedHubSession).serverSessionKeys.Store(serverID, serverSession)
-	}
-}
-
-func (s *Session) RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *gateway.ServerSession {
-	if hubSession, ok := s.sessions.Load(hubSessionKey); ok {
-		if serverSession, ok := hubSession.(*storedHubSession).serverSessionKeys.Load(serverID); ok {
-			return serverSession.(*gateway.ServerSession)
-		}
+	if hubSession, ok := s.session.Load(hubSessionKey); ok {
+		return hubSession.(*gateway.HubSession)
 	}
 	return nil
 }
 
 func (s *Session) RemoveHubSession(hubSessionKey string) {
-	s.sessions.Delete(hubSessionKey)
+	s.session.Delete(hubSessionKey)
 }
 
-func newStoredHubSession(hubSession *gateway.HubSession) *storedHubSession {
-	var syncMap sync.Map
-	return &storedHubSession{
-		hubSession:        hubSession,
-		serverSessionKeys: &syncMap,
+func (s *Session) SaveServerSessions(hubSessionKey string, serverSessions map[int64]*gateway.ServerSession) {
+	if hubSession, ok := s.session.Load(hubSessionKey); ok {
+		for serverID, serverSession := range serverSessions {
+			hubSession.(*gateway.HubSession).ServerSessions[serverID] = serverSession
+		}
 	}
+}
+
+func (s *Session) RetrieveServerSessions(hubSessionKey string) map[int64]*gateway.ServerSession {
+	if hubSession, ok := s.session.Load(hubSessionKey); ok {
+		return hubSession.(*gateway.HubSession).ServerSessions
+	}
+	return make(map[int64]*gateway.ServerSession)
+}
+
+func (s *Session) RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *gateway.ServerSession {
+	if hubSession, ok := s.session.Load(hubSessionKey); ok {
+		if serverSession, ok := hubSession.(*gateway.HubSession).ServerSessions[serverID]; ok {
+			return serverSession
+		}
+	}
+	return nil
 }

@@ -15,13 +15,13 @@ func TestSaveHubSession(t *testing.T) {
 	}{
 		{name: "SaveHubSession Success",
 			hubSessionKey: "sessionKey",
-			hubSession:    gateway.NewHubSession("username", "password", 1),
+			hubSession:    gateway.NewHubSession("sessionKey", "username", "password", 1),
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewSession()
+			session := NewHubSessionRepository()
 
 			session.SaveHubSession(tc.hubSessionKey, tc.hubSession)
 			hubSession := session.RetrieveHubSession(tc.hubSessionKey)

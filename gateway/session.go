@@ -1,26 +1,29 @@
 package gateway
 
 type HubSession struct {
-	username, password string
-	loginMode          int
+	HubSessionKey, username, password string
+	loginMode                         int
+	ServerSessions                    map[int64]*ServerSession
 }
 
-func NewHubSession(username, password string, loginMode int) *HubSession {
-	return &HubSession{username, password, loginMode}
+func NewHubSession(hubSessionKey, username, password string, loginMode int) *HubSession {
+	return &HubSession{hubSessionKey, username, password, loginMode, make(map[int64]*ServerSession)}
 }
 
 type ServerSession struct {
-	url, sessionKey string
+	serverID                                   int64
+	serverURL, serverSessionKey, hubSessionKey string
 }
 
-func NewServerSession(url, sessionKey string) *ServerSession {
-	return &ServerSession{url, sessionKey}
+func NewServerSession(serverID int64, serverURL, serverSessionKey, hubSessionKey string) *ServerSession {
+	return &ServerSession{serverID, serverURL, serverSessionKey, hubSessionKey}
 }
 
 type Session interface {
-	SaveHubSession(hubSessionKey string, hubSession *HubSession)
+	SaveHubSession(hubSession *HubSession)
 	RetrieveHubSession(hubSessionKey string) *HubSession
-	SaveServerSession(hubSessionKey string, serverID int64, serverSessionInfo *ServerSession)
-	RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *ServerSession
 	RemoveHubSession(hubSessionKey string)
+	SaveServerSessions(hubSessionKey string, serverSessions map[int64]*ServerSession)
+	RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *ServerSession
+	RetrieveServerSessions(hubSessionKey string) map[int64]*ServerSession
 }

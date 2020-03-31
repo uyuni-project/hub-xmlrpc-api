@@ -23,13 +23,13 @@ func (h *UnicastService) Unicast(hubSessionKey, path string, serverID int64, ser
 	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
-			log.Printf("ServerSessionKey was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
+			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
 			return nil, errors.New("provided session key is invalid")
 		}
 
-		argumentsForCall := append([]interface{}{serverSession.sessionKey}, serverArgs...)
+		argumentsForCall := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
 
-		return h.client.ExecuteCall(serverSession.url, path, argumentsForCall)
+		return h.client.ExecuteCall(serverSession.serverURL, path, argumentsForCall)
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
 	//TODO: should we return an error here?

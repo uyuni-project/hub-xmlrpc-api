@@ -10,13 +10,12 @@ type HubService interface {
 
 type HubServiceImpl struct {
 	client           Client
-	session          Session
 	hubSumaAPIURL    string
 	sessionValidator sessionValidator
 }
 
-func NewHubServiceImpl(client Client, session Session, hubSumaAPIURL string, sessionValidator sessionValidator) *HubServiceImpl {
-	return &HubServiceImpl{client, session, hubSumaAPIURL, sessionValidator}
+func NewHubServiceImpl(client Client, hubSumaAPIURL string, sessionValidator sessionValidator) *HubServiceImpl {
+	return &HubServiceImpl{client, hubSumaAPIURL, sessionValidator}
 }
 
 func (h *HubServiceImpl) ListServerIDs(hubSessionKey string) ([]int64, error) {

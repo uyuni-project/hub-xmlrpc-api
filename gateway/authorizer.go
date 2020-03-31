@@ -34,7 +34,7 @@ type AuthorizationService struct {
 }
 
 func NewAuthorizationService(client Client, session Session, hubSumaAPIURL string) *AuthorizationService {
-	return &AuthorizationService{client: client, session: session, hubSumaAPIURL: hubSumaAPIURL}
+	return &AuthorizationService{client, session, hubSumaAPIURL}
 }
 
 func (a *AuthorizationService) Login(username, password string) (string, error) {
@@ -101,7 +101,7 @@ func (a *AuthorizationService) loginToHub(username, password string, loginMode i
 		return "", err
 	}
 	hubSessionKey := response.(string)
-	a.session.SaveHubSession(hubSessionKey, &HubSession{username, password, loginMode})
+	a.session.SaveHubSession(NewHubSession(hubSessionKey, username, password, loginMode))
 	return hubSessionKey, nil
 }
 
@@ -129,23 +129,22 @@ func (a *AuthorizationService) loginIntoSystems(hubSessionKey string, credential
 	if err != nil {
 		//TODO: what to do with the error here?
 	}
-	responses := executeMulticastCall(loginPath, loginIntoSystemsArgs, a.client)
-	successfulResponses := responses.Successful
-	failedResponses := responses.Failed
+	multicastResponse := executeMulticastCall(loginPath, loginIntoSystemsArgs, a.client)
 
 	//save in session
-	for i, serverID := range successfulResponses.ServerIds {
-		a.session.SaveServerSession(hubSessionKey, serverID, &ServerSession{serverURLByServerID[serverID], successfulResponses.Responses[i].(string)})
+	serverSessions := make(map[int64]*ServerSession)
+	for serverID, response := range multicastResponse.SuccessfulResponses {
+		serverSessions[serverID] = &ServerSession{serverID, serverURLByServerID[serverID], response.(string), hubSessionKey}
 	}
 
 	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
 	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
-
 	//save for failed as well
-	for _, serverID := range failedResponses.ServerIds {
-		a.session.SaveServerSession(hubSessionKey, serverID, &ServerSession{serverURLByServerID[serverID], "login-error"})
+	for serverID := range multicastResponse.FailedResponses {
+		serverSessions[serverID] = &ServerSession{serverID, serverURLByServerID[serverID], "login-error", hubSessionKey}
 	}
-	return responses, nil
+	a.session.SaveServerSessions(hubSessionKey, serverSessions)
+	return multicastResponse, nil
 }
 
 func (a *AuthorizationService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]multicastServerArgs, map[int64]string, error) {
