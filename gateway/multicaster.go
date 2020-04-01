@@ -21,7 +21,7 @@ func NewMulticastService(client Client, session Session, sessionValidator sessio
 }
 
 func (h *MulticastService) Multicast(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
-	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
+	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
 		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, argsByServer)
 		if err != nil {
 			return nil, err

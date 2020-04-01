@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/rpc"
 	"github.com/kolo/xmlrpc"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
 type Codec struct {
@@ -134,13 +135,13 @@ func (c *CodecRequest) WriteResponse(w http.ResponseWriter, response interface{}
 		err = methodErr
 	}
 	if err != nil {
-		var fault FaultError
+		var fault controller.FaultError
 
 		switch c.err.(type) {
-		case FaultError:
-			fault = c.err.(FaultError)
+		case controller.FaultError:
+			fault = c.err.(controller.FaultError)
 		default:
-			fault = FaultApplicationError
+			fault = controller.FaultApplicationError
 			fault.Message += fmt.Sprintf(": %v", err)
 		}
 		encodedResponse, err = encodeFaultErrorToXML(fault)

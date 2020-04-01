@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"github.com/kolo/xmlrpc"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
 func encodeResponseToXML(response interface{}) ([]byte, error) {
@@ -24,7 +25,7 @@ func encodeResponseToXML(response interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-func encodeFaultErrorToXML(fault FaultError) ([]byte, error) {
+func encodeFaultErrorToXML(fault controller.FaultError) ([]byte, error) {
 	var b bytes.Buffer
 	xmlByte, err := xmlrpc.Marshal(fault)
 	if err != nil {

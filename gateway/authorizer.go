@@ -24,7 +24,7 @@ type Authorizer interface {
 }
 
 type sessionValidator interface {
-	isHubSessionValid(hubSessionKey string) bool
+	isHubSessionKeyValid(hubSessionKey string) bool
 }
 
 type AuthorizationService struct {
@@ -70,7 +70,7 @@ func (a *AuthorizationService) LoginWithAutoconnectMode(username, password strin
 }
 
 func (a *AuthorizationService) AttachToServers(hubSessionKey string, argsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
-	if a.isHubSessionValid(hubSessionKey) {
+	if a.isHubSessionKeyValid(hubSessionKey) {
 
 		hubSession := a.session.RetrieveHubSession(hubSessionKey)
 		if hubSession == nil {
@@ -176,7 +176,7 @@ func (a *AuthorizationService) retrieveServerAPIURL(hubSessionKey string, server
 	return "http://" + firstFqdn + "/rpc/api", nil
 }
 
-func (a *AuthorizationService) isHubSessionValid(hubSessionKey string) bool {
+func (a *AuthorizationService) isHubSessionKeyValid(hubSessionKey string) bool {
 	isValid, err := a.client.ExecuteCall(a.hubSumaAPIURL, isSessionKeyValidPath, []interface{}{hubSessionKey})
 	if err != nil {
 		log.Printf("Login error: %v", err)

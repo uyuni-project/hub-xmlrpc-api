@@ -4,22 +4,24 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
 func Test_encodeFaultErrorToXML(t *testing.T) {
 	tt := []struct {
 		name          string
-		faultError    FaultError
+		faultError    controller.FaultError
 		expectedError string
 	}{
 		{name: "encodeFaultErrorToXML Success",
-			faultError: FaultApplicationError,
+			faultError: controller.FaultApplicationError,
 		},
 		{name: "encodeFaultErrorToXML Success",
-			faultError: FaultInternalError,
+			faultError: controller.FaultInternalError,
 		},
 		{name: "encodeFaultErrorToXML Success",
-			faultError: FaultInvalidCredentials,
+			faultError: controller.FaultInvalidCredentials,
 		},
 	}
 

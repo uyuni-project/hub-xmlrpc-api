@@ -19,7 +19,7 @@ func NewHubServiceImpl(client Client, hubSumaAPIURL string, sessionValidator ses
 }
 
 func (h *HubServiceImpl) ListServerIDs(hubSessionKey string) ([]int64, error) {
-	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
+	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
 		systemList, err := h.client.ExecuteCall(h.hubSumaAPIURL, listSystemsPath, []interface{}{hubSessionKey})
 		if err != nil {
 			log.Printf("Login error: %v", err)

@@ -20,7 +20,7 @@ func NewUnicastService(client Client, session Session, sessionValidator sessionV
 }
 
 func (h *UnicastService) Unicast(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error) {
-	if h.sessionValidator.isHubSessionValid(hubSessionKey) {
+	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
 			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)

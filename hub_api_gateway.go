@@ -7,11 +7,11 @@ import (
 
 	"github.com/gorilla/rpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
-	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
-	"github.com/uyuni-project/hub-xmlrpc-api/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 

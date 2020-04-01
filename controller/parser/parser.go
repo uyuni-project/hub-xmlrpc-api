@@ -4,8 +4,8 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 )
 
 var (
@@ -19,7 +19,7 @@ func parseToListRequest(request *codec.ServerRequest, output interface{}) error 
 	parsedArgs, ok := output.(*controller.ListRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 	*parsedArgs = controller.ListRequest{request.MethodName, request.Params}
 	return nil
@@ -29,20 +29,20 @@ func parseToStruct(request *codec.ServerRequest, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
 	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	args := request.Params
 	if val.NumField() < len(args) {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultWrongArgumentsNumber
+		return controller.FaultWrongArgumentsNumber
 	}
 
 	for i, arg := range args {
 		field := val.Field(i)
 		if field.Type() != reflect.ValueOf(arg).Type() {
 			log.Printf("Error ocurred when parsing arguments")
-			return codec.FaultInvalidParams
+			return controller.FaultInvalidParams
 		}
 		field.Set(reflect.ValueOf(arg))
 	}
@@ -53,25 +53,25 @@ func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) err
 	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	args := request.Params
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultWrongArgumentsNumber
+		return controller.FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
 	if !ok {
 		log.Printf("Error ocurred when parsing hubSessionKey argument")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	serverID, ok := args[1].(int64)
 	if !ok {
 		log.Printf("Error ocurred when parsing serverID argument")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	rest := args[2:len(args)]
@@ -88,25 +88,25 @@ func parseToMulitcastRequest(request *codec.ServerRequest, output interface{}) e
 	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	args := request.Params
 	if len(args) < 2 {
 		log.Printf("Error ocurred when parsing arguments")
-		return codec.FaultWrongArgumentsNumber
+		return controller.FaultWrongArgumentsNumber
 	}
 
 	hubSessionKey, ok := args[0].(string)
 	if !ok {
 		log.Printf("Error ocurred when parsing hubSessionKey argument")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	serverIDs, ok := args[1].([]interface{})
 	if !ok {
 		log.Printf("Error ocurred when parsing serverIDs argument")
-		return codec.FaultInvalidParams
+		return controller.FaultInvalidParams
 	}
 
 	argsByServer, err := resolveArgsByServer(serverIDs, args[2:len(args)])
@@ -125,7 +125,7 @@ func resolveArgsByServer(serverIDs []interface{}, allServerArgs []interface{}) (
 		parsedServerID, ok := serverID.(int64)
 		if !ok {
 			log.Printf("Error ocurred when parsing serverIDs argument")
-			return nil, codec.FaultInvalidParams
+			return nil, controller.FaultInvalidParams
 		}
 
 		args := make([]interface{}, 0, len(allServerArgs)+1)
@@ -134,7 +134,7 @@ func resolveArgsByServer(serverIDs []interface{}, allServerArgs []interface{}) (
 			parsedServerArgs, ok := serverArgs.([]interface{})
 			if !ok {
 				log.Printf("Error ocurred when parsing server arguments")
-				return nil, codec.FaultInvalidParams
+				return nil, controller.FaultInvalidParams
 			}
 			args = append(args, parsedServerArgs[i])
 		}
