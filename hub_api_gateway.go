@@ -28,16 +28,16 @@ func initServer() {
 	var inMemorySession sync.Map
 	session := session.NewSession(&inMemorySession)
 
-	authorizer := gateway.NewAuthorizationService(client, session, conf.Hub.SUMA_API_URL)
+	authenticator := gateway.NewAuthenticationService(client, session, conf.Hub.SUMA_API_URL)
 
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 
-	rpcServer.RegisterService(controller.NewAuthorizerController(authorizer), "")
+	rpcServer.RegisterService(controller.NewAuthenticationController(authenticator), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(gateway.NewHubDelegator(client, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, conf.Hub.SUMA_API_URL, authorizer)), "")
-	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticastService(client, session, authorizer)), "")
-	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicastService(client, session, authorizer)), "")
+	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, conf.Hub.SUMA_API_URL, authenticator)), "")
+	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticastService(client, session, authenticator)), "")
+	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicastService(client, session, authenticator)), "")
 
 	http.Handle("/hub/rpc/api", rpcServer)
 
@@ -50,10 +50,10 @@ func initCodec() *codec.Codec {
 
 	codec.RegisterDefaultParser(parser.StructParser)
 
-	codec.RegisterMapping("hub.login", "AuthorizerController.Login")
-	codec.RegisterMapping("hub.loginWithAutoconnectMode", "AuthorizerController.LoginWithAutoconnectMode")
-	codec.RegisterMapping("hub.loginWithAuthRelayMode", "AuthorizerController.LoginWithAuthRelayMode")
-	codec.RegisterMappingWithParser("hub.attachToServers", "AuthorizerController.AttachToServers", parser.MulticastRequestParser)
+	codec.RegisterMapping("hub.login", "AuthenticationController.Login")
+	codec.RegisterMapping("hub.loginWithAutoconnectMode", "AuthenticationController.LoginWithAutoconnectMode")
+	codec.RegisterMapping("hub.loginWithAuthRelayMode", "AuthenticationController.LoginWithAuthRelayMode")
+	codec.RegisterMappingWithParser("hub.attachToServers", "AuthenticationController.AttachToServers", parser.MulticastRequestParser)
 
 	codec.RegisterMapping("hub.listServerIds", "HubController.ListServerIDs")
 

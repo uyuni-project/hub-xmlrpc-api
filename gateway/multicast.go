@@ -22,7 +22,7 @@ func NewMulticastService(client Client, session Session, sessionValidator sessio
 
 func (h *MulticastService) Multicast(hubSessionKey, path string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
 	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
-		serverArgsByURL, err := h.resolveMulticastServerArgs(hubSessionKey, argsByServer)
+		serverArgsByURL, err := h.appendServerSessionKeyToServerArgs(hubSessionKey, argsByServer)
 		if err != nil {
 			return nil, err
 		}
@@ -39,7 +39,7 @@ type multicastServerArgs struct {
 	args     []interface{}
 }
 
-func (h *MulticastService) resolveMulticastServerArgs(hubSessionKey string, argsByServer map[int64][]interface{}) ([]multicastServerArgs, error) {
+func (h *MulticastService) appendServerSessionKeyToServerArgs(hubSessionKey string, argsByServer map[int64][]interface{}) ([]multicastServerArgs, error) {
 	result := make([]multicastServerArgs, 0, len(argsByServer))
 
 	serverSessions := h.session.RetrieveServerSessions(hubSessionKey)

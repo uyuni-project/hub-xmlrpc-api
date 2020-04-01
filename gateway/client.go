@@ -1,5 +1,5 @@
 package gateway
 
 type Client interface {
-	ExecuteCall(url string, path string, args []interface{}) (response interface{}, err error)
+	ExecuteCall(url string, call string, args []interface{}) (response interface{}, err error)
 }

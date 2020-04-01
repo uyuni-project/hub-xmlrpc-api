@@ -1,4 +1,4 @@
-package gateway
+package integration_tests
 
 /*
 import (

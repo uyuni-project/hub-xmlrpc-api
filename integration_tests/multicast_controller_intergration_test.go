@@ -1,4 +1,4 @@
-package gateway
+package integration_tests
 
 /*
 import (
@@ -6,13 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"testing"
-
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/server"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
-
 func Test_MulticastService_DefaultMethod(t *testing.T) {
 	tt := []struct {
 		name       string
@@ -23,7 +21,6 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 		{name: "multicast.system.listUserSystems", parameters: [][]interface{}{{"admin", "admin"}}},
 		{name: "multicast.system.unknownmethod", parameters: [][]interface{}{{"admin", "admin"}}, output: "request error: bad status code - 400"},
 	}
-
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
@@ -31,7 +28,6 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
-
 			const xmlInput = `
 			<methodCall>
 			<methodName>%s</methodName>
@@ -42,20 +38,16 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			   </params>
 			</methodCall>`
 			xmlBody := fmt.Sprintf(xmlInput, tc.name)
-
 			//login
 			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
 			if err != nil {
 				t.Fatalf("could not create request: %v", err)
 			}
-
 			loginReply := struct{ Data string }{""}
-
 			err = hub.LoginWithAutoconnectMode(req, &server.LoginArgs{"admin", "admin"}, &loginReply)
 			if err != nil {
 				t.Fatalf("could not login to hub: %v", err)
 			}
-
 			//get the serverIDs
 			hubsessionKey := struct{ HubSessionKey string }{loginReply.Data}
 			serverIDs := struct{ Data []int64 }{}
@@ -63,11 +55,9 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 			if err != nil {
 				t.Fatalf("could not login to hub: %v", err)
 			}
-
 			//execute multicast call
 			multicastArgs := server.MulticastArgs{tc.name, hubsessionKey.HubSessionKey, serverIDs.Data, tc.parameters}
 			multicastReply := struct{ Data server.MulticastResponse }{}
-
 			multicastService := server.NewMulticastService(client, session, conf.Hub.SUMA_API_URL)
 			err = multicastService.DefaultMethod(req, &multicastArgs, &multicastReply)
 			if err != nil && tc.output != err.Error() {

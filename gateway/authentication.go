@@ -16,7 +16,7 @@ const (
 	autoconnectLoginMode        // 2
 )
 
-type Authorizer interface {
+type Authenticator interface {
 	Login(username, password string) (string, error)
 	LoginWithAuthRelayMode(username, password string) (string, error)
 	LoginWithAutoconnectMode(username, password string) (string, error)
@@ -27,17 +27,17 @@ type sessionValidator interface {
 	isHubSessionKeyValid(hubSessionKey string) bool
 }
 
-type AuthorizationService struct {
+type AuthenticationService struct {
 	client        Client
 	session       Session
 	hubSumaAPIURL string
 }
 
-func NewAuthorizationService(client Client, session Session, hubSumaAPIURL string) *AuthorizationService {
-	return &AuthorizationService{client, session, hubSumaAPIURL}
+func NewAuthenticationService(client Client, session Session, hubSumaAPIURL string) *AuthenticationService {
+	return &AuthenticationService{client, session, hubSumaAPIURL}
 }
 
-func (a *AuthorizationService) Login(username, password string) (string, error) {
+func (a *AuthenticationService) Login(username, password string) (string, error) {
 	hubSessionKey, err := a.loginToHub(username, password, manualLoginMode)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -46,7 +46,7 @@ func (a *AuthorizationService) Login(username, password string) (string, error) 
 	return hubSessionKey, nil
 }
 
-func (h *AuthorizationService) LoginWithAuthRelayMode(username, password string) (string, error) {
+func (h *AuthenticationService) LoginWithAuthRelayMode(username, password string) (string, error) {
 	hubSessionKey, err := h.loginToHub(username, password, relayLoginMode)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -55,7 +55,7 @@ func (h *AuthorizationService) LoginWithAuthRelayMode(username, password string)
 	return hubSessionKey, nil
 }
 
-func (a *AuthorizationService) LoginWithAutoconnectMode(username, password string) (string, error) {
+func (a *AuthenticationService) LoginWithAutoconnectMode(username, password string) (string, error) {
 	hubSessionKey, err := a.loginToHub(username, password, autoconnectLoginMode)
 	if err != nil {
 		log.Printf("Login error: %v", err)
@@ -69,7 +69,7 @@ func (a *AuthorizationService) LoginWithAutoconnectMode(username, password strin
 	return hubSessionKey, nil
 }
 
-func (a *AuthorizationService) AttachToServers(hubSessionKey string, argsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
+func (a *AuthenticationService) AttachToServers(hubSessionKey string, argsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
 	if a.isHubSessionKeyValid(hubSessionKey) {
 
 		hubSession := a.session.RetrieveHubSession(hubSessionKey)
@@ -94,7 +94,7 @@ func (a *AuthorizationService) AttachToServers(hubSessionKey string, argsByServe
 	return nil, nil
 }
 
-func (a *AuthorizationService) loginToHub(username, password string, loginMode int) (string, error) {
+func (a *AuthenticationService) loginToHub(username, password string, loginMode int) (string, error) {
 	response, err := a.client.ExecuteCall(a.hubSumaAPIURL, loginPath, []interface{}{username, password})
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the Hub: %v", err)
@@ -105,7 +105,7 @@ func (a *AuthorizationService) loginToHub(username, password string, loginMode i
 	return hubSessionKey, nil
 }
 
-func (a *AuthorizationService) loginIntoUserSystems(hubSessionKey, username, password string) error {
+func (a *AuthenticationService) loginIntoUserSystems(hubSessionKey, username, password string) error {
 	userSystems, err := a.client.ExecuteCall(a.hubSumaAPIURL, listUserSystemsPath, []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the user systems: %v", err)
@@ -124,7 +124,7 @@ func (a *AuthorizationService) loginIntoUserSystems(hubSessionKey, username, pas
 	return err
 }
 
-func (a *AuthorizationService) loginIntoSystems(hubSessionKey string, credentialsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
+func (a *AuthenticationService) loginIntoSystems(hubSessionKey string, credentialsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
 	loginIntoSystemsArgs, serverURLByServerID, err := a.resolveLoginIntoSystemsArgs(hubSessionKey, credentialsByServerID)
 	if err != nil {
 		//TODO: what to do with the error here?
@@ -147,7 +147,7 @@ func (a *AuthorizationService) loginIntoSystems(hubSessionKey string, credential
 	return multicastResponse, nil
 }
 
-func (a *AuthorizationService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]multicastServerArgs, map[int64]string, error) {
+func (a *AuthenticationService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]multicastServerArgs, map[int64]string, error) {
 	multicastArgs := make([]multicastServerArgs, 0, len(credentialsByServerID))
 	serverURLByServerID := make(map[int64]string)
 
@@ -163,7 +163,7 @@ func (a *AuthorizationService) resolveLoginIntoSystemsArgs(hubSessionKey string,
 	return multicastArgs, serverURLByServerID, nil
 }
 
-func (a *AuthorizationService) retrieveServerAPIURL(hubSessionKey string, serverID int64) (string, error) {
+func (a *AuthenticationService) retrieveServerAPIURL(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
 	response, err := a.client.ExecuteCall(a.hubSumaAPIURL, listSystemFQDNsPath, []interface{}{hubSessionKey, serverID})
 	if err != nil {
@@ -176,7 +176,7 @@ func (a *AuthorizationService) retrieveServerAPIURL(hubSessionKey string, server
 	return "http://" + firstFqdn + "/rpc/api", nil
 }
 
-func (a *AuthorizationService) isHubSessionKeyValid(hubSessionKey string) bool {
+func (a *AuthenticationService) isHubSessionKeyValid(hubSessionKey string) bool {
 	isValid, err := a.client.ExecuteCall(a.hubSumaAPIURL, isSessionKeyValidPath, []interface{}{hubSessionKey})
 	if err != nil {
 		log.Printf("Login error: %v", err)
