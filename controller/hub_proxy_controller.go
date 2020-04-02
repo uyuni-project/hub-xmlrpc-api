@@ -17,7 +17,7 @@ type ListRequest struct {
 }
 
 func (d *HubProxyController) DelegateToHub(r *http.Request, args *ListRequest, reply *struct{ Data interface{} }) error {
-	response, err := d.hubProxy.DelegateToHub(args.Method, args.Args)
+	response, err := d.hubProxy.ProxyCallToHub(args.Method, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 		return err
