@@ -60,7 +60,7 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 		expectedErr                string
 	}{
 		{
-			name:         "appendServerSessionKeyToServerArgs Success",
+			name:         "appendServerSessionKeyToServerArgs success",
 			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
 			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
 				return func(hubSessionKey string) map[int64]*ServerSession {
@@ -78,7 +78,7 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 			},
 		},
 		{
-			name:         "appendServerSessionKeyToServerArgs serverSessions_not_found Failed",
+			name:         "appendServerSessionKeyToServerArgs serverSessions_not_found",
 			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
 			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
 				return func(hubSessionKey string) map[int64]*ServerSession {
@@ -101,7 +101,6 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
-
 			if err == nil && !reflect.DeepEqual(serverArgs, tc.expectedArgsByServer) {
 				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedArgsByServer)
 			}
@@ -175,6 +174,21 @@ func Test_executeCallOnServers(t *testing.T) {
 }
 
 func Test_Multicast(t *testing.T) {
+	mockIsHubSessionKeyValidTrue := func(hubSessionKey string) bool {
+		return true
+	}
+
+	mockRetrieveServerSessionsFound := func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
+		return func(hubSessionKey string) map[int64]*ServerSession {
+			result := make(map[int64]*ServerSession)
+			for serverID := range argsByServer {
+				strServerID := strconv.FormatInt(serverID, 10)
+				result[serverID] = &ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
+			}
+			return result
+		}
+	}
+
 	tt := []struct {
 		name                       string
 		argsByServer               map[int64][]interface{}
@@ -185,66 +199,38 @@ func Test_Multicast(t *testing.T) {
 		expectedErr                string
 	}{
 		{
-			name:         "Multicast all_calls_successful",
-			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
-				return true
-			},
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					result := make(map[int64]*ServerSession)
-					for serverID := range argsByServer {
-						strServerID := strconv.FormatInt(serverID, 10)
-						result[serverID] = &ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
-					}
-					return result
-				}
-			},
+			name:                       "Multicast all_calls_successful",
+			argsByServer:               map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockIsHubSessionKeyValid:   mockIsHubSessionKeyValidTrue,
+			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return "success_call", nil
 			},
 			expectedMulticastResponse: &MulticastResponse{map[int64]interface{}{1: "success_call", 2: "success_call"}, map[int64]interface{}{}},
 		},
 		{
-			name:         "Multicast all_calls_failed",
-			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
-				return true
-			},
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					result := make(map[int64]*ServerSession)
-					for serverID := range argsByServer {
-						strServerID := strconv.FormatInt(serverID, 10)
-						result[serverID] = &ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
-					}
-					return result
-				}
-			},
+			name:                       "Multicast all_calls_failed",
+			argsByServer:               map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockIsHubSessionKeyValid:   mockIsHubSessionKeyValidTrue,
+			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return nil, errors.New("call_error")
 			},
 			expectedMulticastResponse: &MulticastResponse{map[int64]interface{}{}, map[int64]interface{}{1: "call_error", 2: "call_error"}},
 		},
 		{
-			name:         "Multicast auth_error invalid_hub_session_key Failed",
+			name:         "Multicast auth_error invalid_hub_session_key",
 			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
 			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
 				return false
 			},
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					return nil
-				}
-			},
-			expectedErr: "Authentication error: provided session key is invalid",
+			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
+			expectedErr:                "Authentication error: provided session key is invalid",
 		},
 		{
-			name:         "Multicast serverSessions_not_found Failed",
-			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
-				return true
-			},
+			name:                     "Multicast serverSessions_not_found",
+			argsByServer:             map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockIsHubSessionKeyValid: mockIsHubSessionKeyValidTrue,
 			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
 				return func(hubSessionKey string) map[int64]*ServerSession {
 					return make(map[int64]*ServerSession)
@@ -272,7 +258,6 @@ func Test_Multicast(t *testing.T) {
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
-
 			if err == nil && !reflect.DeepEqual(multicastResponse, tc.expectedMulticastResponse) {
 				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedMulticastResponse)
 			}

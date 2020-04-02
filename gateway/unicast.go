@@ -24,7 +24,7 @@ func (h *UnicastService) Unicast(hubSessionKey, call string, serverID int64, ser
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
 			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
-			return nil, errors.New("provided session key is invalid")
+			return nil, errors.New("Authentication error: provided session key is invalid")
 		}
 
 		callArguments := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
@@ -32,6 +32,6 @@ func (h *UnicastService) Unicast(hubSessionKey, call string, serverID int64, ser
 		return h.client.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
-	//TODO: should we return an error here?
-	return nil, nil
+	//TODO: which error message should we return here?
+	return nil, errors.New("Authentication error: provided session key is invalid")
 }

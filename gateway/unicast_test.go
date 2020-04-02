@@ -1,71 +1,95 @@
 package gateway
 
-/*
 import (
-	"bytes"
-	"fmt"
-	"net/http"
-	"strings"
+	"errors"
+	"reflect"
+	"strconv"
 	"testing"
-
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
-	"github.com/uyuni-project/hub-xmlrpc-api/config"
-	"github.com/uyuni-project/hub-xmlrpc-api/server"
-	"github.com/uyuni-project/hub-xmlrpc-api/session"
 )
 
-func TestUniCastDefaultMethod(t *testing.T) {
+func Test_Unicast(t *testing.T) {
+	mockIsHubSessionKeyValidTrue := func(hubSessionKey string) bool {
+		return true
+	}
+	mockRetrieveServerSessionByServerIDFound := func(hubSessionKey string, serverID int64) *ServerSession {
+		strServerID := strconv.FormatInt(serverID, 10)
+		return &ServerSession{serverID, strServerID + "serverAPIEndpoint", strServerID + "serverSessionkey", hubSessionKey}
+	}
+
 	tt := []struct {
-		name       string
-		parameters []interface{}
-		output     string
+		name                                string
+		serverID                            int64
+		serverArgs                          []interface{}
+		mockIsHubSessionKeyValid            func(hubSessionKey string) bool
+		mockRetrieveServerSessionByServerID func(hubSessionKey string, serverID int64) *ServerSession
+		mockExecuteCall                     func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error)
+		expectedResponse                    interface{}
+		expectedErr                         string
 	}{
-		{name: "unicast.system.listSystems"},
-		{name: "unicast.system.listUserSystems", parameters: []interface{}{"admin"}},
-		{name: "unicast.system.unknownmethod", parameters: []interface{}{"admin"}, output: "request error: bad status code - 400"},
+		{
+			name:                                "Unicast call_successful",
+			serverID:                            1,
+			serverArgs:                          []interface{}{"arg1", "arg2"},
+			mockIsHubSessionKeyValid:            mockIsHubSessionKeyValidTrue,
+			mockRetrieveServerSessionByServerID: mockRetrieveServerSessionByServerIDFound,
+			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+				return "success_response", nil
+			},
+			expectedResponse: "success_response",
+		},
+		{
+			name:                                "Unicast call_error",
+			serverID:                            1,
+			serverArgs:                          []interface{}{"arg1", "arg2"},
+			mockIsHubSessionKeyValid:            mockIsHubSessionKeyValidTrue,
+			mockRetrieveServerSessionByServerID: mockRetrieveServerSessionByServerIDFound,
+			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+				return nil, errors.New("call_error")
+			},
+			expectedErr: "call_error",
+		},
+		{
+			name:       "Unicast auth_error invalid_hub_session_key",
+			serverID:   1,
+			serverArgs: []interface{}{"arg1", "arg2"},
+			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
+				return false
+			},
+			expectedErr: "Authentication error: provided session key is invalid",
+		},
+		{
+			name:                     "Unicast serverSession_not_found",
+			serverID:                 1,
+			serverArgs:               []interface{}{"arg1", "arg2"},
+			mockIsHubSessionKeyValid: mockIsHubSessionKeyValidTrue,
+			mockRetrieveServerSessionByServerID: func(hubSessionKey string, serverID int64) *ServerSession {
+				return nil
+			},
+			expectedErr: "Authentication error: provided session key is invalid",
+		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			const xmlInput = `
-			<methodCall>
-			<methodName>%s</methodName>
-			   <params>
-				  <param>
-					 <value><int>0000</int></value>
-				  </param>
-			   </params>
-			</methodCall>`
-			xmlBody := fmt.Sprintf(xmlInput, tc.name)
+			mockSession := new(mockSession)
+			mockSession.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
 
-			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
-			session := session.NewSession()
-			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
+			mockSessionValidator := new(mockSessionValidator)
+			mockSessionValidator.mockIsHubSessionKeyValid = tc.mockIsHubSessionKeyValid
 
-			req, err := http.NewRequest("GET", conf.Hub.SUMA_API_URL, bytes.NewBuffer([]byte(xmlBody)))
-			if err != nil {
-				t.Fatalf("could not create request: %v", err)
-			}
+			mockClient := new(mockClient)
+			mockClient.mockExecuteCall = tc.mockExecuteCall
 
-			reply := struct{ Data string }{""}
-			//login
-			hub.LoginWithAutoconnectMode(req, &server.LoginArgs{"admin", "admin"}, &reply)
-			sessionKey := struct{ HubSessionKey string }{reply.Data}
-			//get the server Ids
-			serverIdsreply := struct{ Data []int64 }{}
-			hub.ListServerIds(req, &sessionKey, &serverIdsreply)
-			firstServerIDs := serverIdsreply.Data[0]
-			unicastArgs := server.UnicastArgs{tc.name, reply.Data, firstServerIDs, tc.parameters}
-			unicastReply := struct{ Data interface{} }{}
+			unicastService := NewUnicastService(mockClient, mockSession, mockSessionValidator)
 
-			unicastService := server.NewUnicastService(client, session, conf.Hub.SUMA_API_URL)
+			response, err := unicastService.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
 
-			err = unicastService.DefaultMethod(req, &unicastArgs, &unicastReply)
-			if err != nil && !strings.Contains(err.Error(), tc.output) {
+			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
+			}
+			if err == nil && !reflect.DeepEqual(response, tc.expectedResponse) {
+				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedResponse)
 			}
 		})
 	}
 }
-*/
