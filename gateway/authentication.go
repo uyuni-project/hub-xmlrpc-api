@@ -28,13 +28,13 @@ type sessionValidator interface {
 }
 
 type AuthenticationService struct {
-	client        Client
-	session       Session
-	hubSumaAPIURL string
+	client         Client
+	session        Session
+	hubAPIEndpoint string
 }
 
-func NewAuthenticationService(client Client, session Session, hubSumaAPIURL string) *AuthenticationService {
-	return &AuthenticationService{client, session, hubSumaAPIURL}
+func NewAuthenticationService(client Client, session Session, hubAPIEndpoint string) *AuthenticationService {
+	return &AuthenticationService{client, session, hubAPIEndpoint}
 }
 
 func (a *AuthenticationService) Login(username, password string) (string, error) {
@@ -95,7 +95,7 @@ func (a *AuthenticationService) AttachToServers(hubSessionKey string, argsByServ
 }
 
 func (a *AuthenticationService) loginToHub(username, password string, loginMode int) (string, error) {
-	response, err := a.client.ExecuteCall(a.hubSumaAPIURL, loginPath, []interface{}{username, password})
+	response, err := a.client.ExecuteCall(a.hubAPIEndpoint, loginPath, []interface{}{username, password})
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the Hub: %v", err)
 		return "", err
@@ -106,7 +106,7 @@ func (a *AuthenticationService) loginToHub(username, password string, loginMode 
 }
 
 func (a *AuthenticationService) loginIntoUserSystems(hubSessionKey, username, password string) error {
-	userSystems, err := a.client.ExecuteCall(a.hubSumaAPIURL, listUserSystemsPath, []interface{}{hubSessionKey, username})
+	userSystems, err := a.client.ExecuteCall(a.hubAPIEndpoint, listUserSystemsPath, []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the user systems: %v", err)
 		return err
@@ -129,7 +129,7 @@ func (a *AuthenticationService) loginIntoSystems(hubSessionKey string, credentia
 	if err != nil {
 		//TODO: what to do with the error here?
 	}
-	multicastResponse := executeMulticastCall(loginPath, loginIntoSystemsArgs, a.client)
+	multicastResponse := executeCallOnServers(loginPath, loginIntoSystemsArgs, a.client)
 
 	//save in session
 	serverSessions := make(map[int64]*ServerSession)
@@ -147,25 +147,25 @@ func (a *AuthenticationService) loginIntoSystems(hubSessionKey string, credentia
 	return multicastResponse, nil
 }
 
-func (a *AuthenticationService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]multicastServerArgs, map[int64]string, error) {
-	multicastArgs := make([]multicastServerArgs, 0, len(credentialsByServerID))
-	serverURLByServerID := make(map[int64]string)
+func (a *AuthenticationService) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]serverCall, map[int64]string, error) {
+	multicastArgs := make([]serverCall, 0, len(credentialsByServerID))
+	serverAPIEndpointByServerID := make(map[int64]string)
 
 	for serverID, credentials := range credentialsByServerID {
-		url, err := a.retrieveServerAPIURL(hubSessionKey, serverID)
+		serverAPIEndpoint, err := a.retrieveServerAPIEndpoint(hubSessionKey, serverID)
 		if err != nil {
 			//TODO: what to do with failing servers?
 		} else {
-			serverURLByServerID[serverID] = url
-			multicastArgs = append(multicastArgs, multicastServerArgs{url, serverID, credentials})
+			serverAPIEndpointByServerID[serverID] = serverAPIEndpoint
+			multicastArgs = append(multicastArgs, serverCall{serverID, serverAPIEndpoint, credentials})
 		}
 	}
-	return multicastArgs, serverURLByServerID, nil
+	return multicastArgs, serverAPIEndpointByServerID, nil
 }
 
-func (a *AuthenticationService) retrieveServerAPIURL(hubSessionKey string, serverID int64) (string, error) {
+func (a *AuthenticationService) retrieveServerAPIEndpoint(hubSessionKey string, serverID int64) (string, error) {
 	//TODO: we should deal with cases when we have more than one fqdn
-	response, err := a.client.ExecuteCall(a.hubSumaAPIURL, listSystemFQDNsPath, []interface{}{hubSessionKey, serverID})
+	response, err := a.client.ExecuteCall(a.hubAPIEndpoint, listSystemFQDNsPath, []interface{}{hubSessionKey, serverID})
 	if err != nil {
 		log.Printf("Error ocurred when retrieving the system Fqdns for serverID: %v, error:%v", serverID, err)
 		return "", err
@@ -177,7 +177,7 @@ func (a *AuthenticationService) retrieveServerAPIURL(hubSessionKey string, serve
 }
 
 func (a *AuthenticationService) isHubSessionKeyValid(hubSessionKey string) bool {
-	isValid, err := a.client.ExecuteCall(a.hubSumaAPIURL, isSessionKeyValidPath, []interface{}{hubSessionKey})
+	isValid, err := a.client.ExecuteCall(a.hubAPIEndpoint, isSessionKeyValidPath, []interface{}{hubSessionKey})
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		a.session.RemoveHubSession(hubSessionKey)

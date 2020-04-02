@@ -6,7 +6,7 @@ import (
 )
 
 type Unicaster interface {
-	Unicast(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error)
+	Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error)
 }
 
 type UnicastService struct {
@@ -19,7 +19,7 @@ func NewUnicastService(client Client, session Session, sessionValidator sessionV
 	return &UnicastService{client, session, sessionValidator}
 }
 
-func (h *UnicastService) Unicast(hubSessionKey, path string, serverID int64, serverArgs []interface{}) (interface{}, error) {
+func (h *UnicastService) Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error) {
 	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
 		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
 		if serverSession == nil {
@@ -27,9 +27,9 @@ func (h *UnicastService) Unicast(hubSessionKey, path string, serverID int64, ser
 			return nil, errors.New("provided session key is invalid")
 		}
 
-		argumentsForCall := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
+		callArguments := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
 
-		return h.client.ExecuteCall(serverSession.serverURL, path, argumentsForCall)
+		return h.client.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
 	}
 	log.Printf("Provided session key is invalid: %v", hubSessionKey)
 	//TODO: should we return an error here?

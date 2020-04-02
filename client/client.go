@@ -16,8 +16,8 @@ func NewClient(connectTimeout, readWriteTimeout int) *Client {
 	return &Client{connectTimeout: connectTimeout, readWriteTimeout: readWriteTimeout}
 }
 
-func (c *Client) ExecuteCall(url string, call string, args []interface{}) (response interface{}, err error) {
-	client, err := getClientWithTimeout(url, c.connectTimeout, c.readWriteTimeout)
+func (c *Client) ExecuteCall(endpoint string, call string, args []interface{}) (response interface{}, err error) {
+	client, err := getClientWithTimeout(endpoint, c.connectTimeout, c.readWriteTimeout)
 	if err != nil {
 		return nil, err
 	}

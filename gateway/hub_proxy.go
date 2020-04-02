@@ -7,16 +7,16 @@ type HubProxy interface {
 }
 
 type HubDelegator struct {
-	client        Client
-	hubSumaAPIURL string
+	client         Client
+	hubAPIEndpoint string
 }
 
-func NewHubDelegator(client Client, hubSumaAPIURL string) *HubDelegator {
-	return &HubDelegator{client: client, hubSumaAPIURL: hubSumaAPIURL}
+func NewHubDelegator(client Client, hubAPIEndpoint string) *HubDelegator {
+	return &HubDelegator{client, hubAPIEndpoint}
 }
 
 func (d *HubDelegator) DelegateToHub(path string, args []interface{}) (interface{}, error) {
-	response, err := d.client.ExecuteCall(d.hubSumaAPIURL, path, args)
+	response, err := d.client.ExecuteCall(d.hubAPIEndpoint, path, args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 		return nil, err

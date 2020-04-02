@@ -11,12 +11,12 @@ func NewHubSession(hubSessionKey, username, password string, loginMode int) *Hub
 }
 
 type ServerSession struct {
-	serverID                                   int64
-	serverURL, serverSessionKey, hubSessionKey string
+	serverID                                           int64
+	serverAPIEndpoint, serverSessionKey, hubSessionKey string
 }
 
-func NewServerSession(serverID int64, serverURL, serverSessionKey, hubSessionKey string) *ServerSession {
-	return &ServerSession{serverID, serverURL, serverSessionKey, hubSessionKey}
+func NewServerSession(serverID int64, serverEndpoinit, serverSessionKey, hubSessionKey string) *ServerSession {
+	return &ServerSession{serverID, serverEndpoinit, serverSessionKey, hubSessionKey}
 }
 
 type Session interface {
