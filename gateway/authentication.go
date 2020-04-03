@@ -10,6 +10,7 @@ const (
 	listUserSystemsPath   = "system.listUserSystems"
 	listSystemFQDNsPath   = "system.listFqdns"
 	isSessionKeyValidPath = "auth.isSessionKeyValid"
+	systemIDField         = "id"
 
 	manualLoginMode      = iota // 0
 	relayLoginMode              // 1
@@ -115,7 +116,7 @@ func (a *AuthenticationService) loginIntoUserSystems(hubSessionKey, username, pa
 
 	credentialsByServerID := make(map[int64][]interface{})
 	for _, userSystem := range userSystemsSlice {
-		serverID := userSystem.(map[string]interface{})["id"].(int64)
+		serverID := userSystem.(map[string]interface{})[systemIDField].(int64)
 		credentialsByServerID[serverID] = []interface{}{username, password}
 	}
 
