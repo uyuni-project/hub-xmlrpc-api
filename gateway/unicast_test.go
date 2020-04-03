@@ -8,9 +8,6 @@ import (
 )
 
 func Test_Unicast(t *testing.T) {
-	mockIsHubSessionKeyValidTrue := func(hubSessionKey string) bool {
-		return true
-	}
 	mockRetrieveServerSessionByServerIDFound := func(hubSessionKey string, serverID int64) *ServerSession {
 		strServerID := strconv.FormatInt(serverID, 10)
 		return &ServerSession{serverID, strServerID + "serverAPIEndpoint", strServerID + "serverSessionkey", hubSessionKey}
@@ -20,7 +17,6 @@ func Test_Unicast(t *testing.T) {
 		name                                string
 		serverID                            int64
 		serverArgs                          []interface{}
-		mockIsHubSessionKeyValid            func(hubSessionKey string) bool
 		mockRetrieveServerSessionByServerID func(hubSessionKey string, serverID int64) *ServerSession
 		mockExecuteCall                     func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error)
 		expectedResponse                    interface{}
@@ -30,7 +26,6 @@ func Test_Unicast(t *testing.T) {
 			name:                                "Unicast call_successful",
 			serverID:                            1,
 			serverArgs:                          []interface{}{"arg1", "arg2"},
-			mockIsHubSessionKeyValid:            mockIsHubSessionKeyValidTrue,
 			mockRetrieveServerSessionByServerID: mockRetrieveServerSessionByServerIDFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return "success_response", nil
@@ -41,7 +36,6 @@ func Test_Unicast(t *testing.T) {
 			name:                                "Unicast call_error",
 			serverID:                            1,
 			serverArgs:                          []interface{}{"arg1", "arg2"},
-			mockIsHubSessionKeyValid:            mockIsHubSessionKeyValidTrue,
 			mockRetrieveServerSessionByServerID: mockRetrieveServerSessionByServerIDFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return nil, errors.New("call_error")
@@ -49,19 +43,9 @@ func Test_Unicast(t *testing.T) {
 			expectedErr: "call_error",
 		},
 		{
-			name:       "Unicast auth_error invalid_hub_session_key",
+			name:       "Unicast serverSession_not_found",
 			serverID:   1,
 			serverArgs: []interface{}{"arg1", "arg2"},
-			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
-				return false
-			},
-			expectedErr: "Authentication error: provided session key is invalid",
-		},
-		{
-			name:                     "Unicast serverSession_not_found",
-			serverID:                 1,
-			serverArgs:               []interface{}{"arg1", "arg2"},
-			mockIsHubSessionKeyValid: mockIsHubSessionKeyValidTrue,
 			mockRetrieveServerSessionByServerID: func(hubSessionKey string, serverID int64) *ServerSession {
 				return nil
 			},
@@ -74,15 +58,12 @@ func Test_Unicast(t *testing.T) {
 			mockSession := new(mockSession)
 			mockSession.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
 
-			mockSessionValidator := new(mockSessionValidator)
-			mockSessionValidator.mockIsHubSessionKeyValid = tc.mockIsHubSessionKeyValid
-
 			mockClient := new(mockClient)
 			mockClient.mockExecuteCall = tc.mockExecuteCall
 
-			unicastService := NewUnicastService(mockClient, mockSession, mockSessionValidator)
+			unicaster := NewUnicaster(mockClient, mockSession)
 
-			response, err := unicastService.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
+			response, err := unicaster.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

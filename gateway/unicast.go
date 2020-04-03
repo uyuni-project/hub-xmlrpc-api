@@ -9,29 +9,22 @@ type Unicaster interface {
 	Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error)
 }
 
-type UnicastService struct {
-	client           Client
-	session          Session
-	sessionValidator sessionValidator
+type unicaster struct {
+	client  Client
+	session Session
 }
 
-func NewUnicastService(client Client, session Session, sessionValidator sessionValidator) *UnicastService {
-	return &UnicastService{client, session, sessionValidator}
+func NewUnicaster(client Client, session Session) *unicaster {
+	return &unicaster{client, session}
 }
 
-func (h *UnicastService) Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error) {
-	if h.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
-		serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
-		if serverSession == nil {
-			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
-			return nil, errors.New("Authentication error: provided session key is invalid")
-		}
-
-		callArguments := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
-
-		return h.client.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
+func (h *unicaster) Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error) {
+	serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
+	if serverSession == nil {
+		log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
+		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	log.Printf("Provided session key is invalid: %v", hubSessionKey)
-	//TODO: which error message should we return here?
-	return nil, errors.New("Authentication error: provided session key is invalid")
+	callArguments := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
+
+	return h.client.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
 }

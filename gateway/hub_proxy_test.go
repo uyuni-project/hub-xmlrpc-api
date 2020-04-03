@@ -37,9 +37,9 @@ func Test_ProxyCallToHub(t *testing.T) {
 			mockClient := new(mockClient)
 			mockClient.mockExecuteCall = tc.mockExecuteCall
 
-			hubDelegator := NewHubDelegator(mockClient, "hubAPIEndpoint")
+			hubProxy := NewHubProxy(mockClient, "hubAPIEndpoint")
 
-			response, err := hubDelegator.ProxyCallToHub("call", tc.args)
+			response, err := hubProxy.ProxyCallToHub("call", tc.args)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

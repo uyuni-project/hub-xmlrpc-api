@@ -43,34 +43,23 @@ func (m *mockClient) ExecuteCall(endpoint string, call string, args []interface{
 	return m.mockExecuteCall(endpoint, call, args)
 }
 
-type mockSessionValidator struct {
-	mockIsHubSessionKeyValid func(hubSessionKey string) bool
-}
-
-func (m *mockSessionValidator) isHubSessionKeyValid(hubSessionKey string) bool {
-	return m.mockIsHubSessionKeyValid(hubSessionKey)
-}
-
 func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 	tt := []struct {
-		name                       string
-		argsByServer               map[int64][]interface{}
-		mockRetrieveServerSessions func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession
-		expectedArgsByServer       []serverCall
-		expectedErr                string
+		name                 string
+		argsByServer         map[int64][]interface{}
+		serverSessions       map[int64]*ServerSession
+		expectedArgsByServer []serverCall
+		expectedErr          string
 	}{
 		{
-			name:         "appendServerSessionKeyToServerArgs success",
-			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					result := make(map[int64]*ServerSession)
-					for serverID := range argsByServer {
-						strServerID := strconv.FormatInt(serverID, 10)
-						result[serverID] = &ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
-					}
-					return result
-				}
+			name: "appendServerSessionKeyToServerArgs success",
+			argsByServer: map[int64][]interface{}{
+				1: []interface{}{"arg1_Server1"},
+				2: []interface{}{"arg1_Server2"},
+			},
+			serverSessions: map[int64]*ServerSession{
+				1: &ServerSession{1, "1-serverEndpoint", "1-sessionKey", "hubSessionKey"},
+				2: &ServerSession{2, "2-serverEndpoint", "2-sessionKey", "hubSessionKey"},
 			},
 			expectedArgsByServer: []serverCall{
 				serverCall{1, "1-serverEndpoint", []interface{}{"1-sessionKey", "arg1_Server1"}},
@@ -78,14 +67,13 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 			},
 		},
 		{
-			name:         "appendServerSessionKeyToServerArgs serverSessions_not_found",
-			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					return make(map[int64]*ServerSession)
-				}
+			name: "appendServerSessionKeyToServerArgs serverSessions_not_found",
+			argsByServer: map[int64][]interface{}{
+				1: []interface{}{"arg1_Server1"},
+				2: []interface{}{"arg1_Server2"},
 			},
-			expectedErr: "Authentication error: provided session key is invalid",
+			serverSessions: make(map[int64]*ServerSession),
+			expectedErr:    "Authentication error: provided session key is invalid",
 		},
 	}
 
@@ -93,10 +81,9 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
 			mockSession := new(mockSession)
-			mockSession.mockRetrieveServerSessions = tc.mockRetrieveServerSessions(tc.argsByServer)
-			multicastService := NewMulticastService(new(mockClient), mockSession, new(mockSessionValidator))
+			multicaster := NewMulticaster(new(mockClient), mockSession)
 
-			serverArgs, err := multicastService.appendServerSessionKeyToServerArgs("hubSessionKey", tc.argsByServer)
+			serverArgs, err := multicaster.appendServerSessionKeyToServerArgs(tc.serverSessions, tc.argsByServer)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
@@ -174,45 +161,45 @@ func Test_executeCallOnServers(t *testing.T) {
 }
 
 func Test_Multicast(t *testing.T) {
-	mockIsHubSessionKeyValidTrue := func(hubSessionKey string) bool {
-		return true
-	}
-
-	mockRetrieveServerSessionsFound := func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-		return func(hubSessionKey string) map[int64]*ServerSession {
-			result := make(map[int64]*ServerSession)
+	mockRetrieveHubSessionFound := func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession {
+		return func(hubSessionKey string) *HubSession {
+			serverSessions := make(map[int64]*ServerSession)
 			for serverID := range argsByServer {
 				strServerID := strconv.FormatInt(serverID, 10)
-				result[serverID] = &ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
+				serverSessions[serverID] =
+					&ServerSession{serverID, strServerID + "-serverEndpoint", strServerID + "-sessionKey", hubSessionKey}
 			}
-			return result
+			return &HubSession{"hubSessionKey", "username", "password", 1, serverSessions}
 		}
 	}
+	mockRetrieveHubSessionFoundWithEmptyServerSessions :=
+		func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession {
+			return func(hubSessionKey string) *HubSession {
+				return &HubSession{"hubSessionKey", "username", "password", 1, make(map[int64]*ServerSession)}
+			}
+		}
 
 	tt := []struct {
-		name                       string
-		argsByServer               map[int64][]interface{}
-		mockIsHubSessionKeyValid   func(hubSessionKey string) bool
-		mockRetrieveServerSessions func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession
-		mockExecuteCall            func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error)
-		expectedMulticastResponse  *MulticastResponse
-		expectedErr                string
+		name                      string
+		argsByServer              map[int64][]interface{}
+		mockRetrieveHubSession    func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession
+		mockExecuteCall           func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error)
+		expectedMulticastResponse *MulticastResponse
+		expectedErr               string
 	}{
 		{
-			name:                       "Multicast all_calls_successful",
-			argsByServer:               map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid:   mockIsHubSessionKeyValidTrue,
-			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
+			name:                   "Multicast all_calls_successful",
+			argsByServer:           map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockRetrieveHubSession: mockRetrieveHubSessionFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return "success_call", nil
 			},
 			expectedMulticastResponse: &MulticastResponse{map[int64]interface{}{1: "success_call", 2: "success_call"}, map[int64]interface{}{}},
 		},
 		{
-			name:                       "Multicast all_calls_failed",
-			argsByServer:               map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid:   mockIsHubSessionKeyValidTrue,
-			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
+			name:                   "Multicast all_calls_failed",
+			argsByServer:           map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockRetrieveHubSession: mockRetrieveHubSessionFound,
 			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return nil, errors.New("call_error")
 			},
@@ -221,39 +208,32 @@ func Test_Multicast(t *testing.T) {
 		{
 			name:         "Multicast auth_error invalid_hub_session_key",
 			argsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid: func(hubSessionKey string) bool {
-				return false
-			},
-			mockRetrieveServerSessions: mockRetrieveServerSessionsFound,
-			expectedErr:                "Authentication error: provided session key is invalid",
-		},
-		{
-			name:                     "Multicast serverSessions_not_found",
-			argsByServer:             map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
-			mockIsHubSessionKeyValid: mockIsHubSessionKeyValidTrue,
-			mockRetrieveServerSessions: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) map[int64]*ServerSession {
-				return func(hubSessionKey string) map[int64]*ServerSession {
-					return make(map[int64]*ServerSession)
+			mockRetrieveHubSession: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession {
+				return func(hubSessionKey string) *HubSession {
+					return nil
 				}
 			},
 			expectedErr: "Authentication error: provided session key is invalid",
+		},
+		{
+			name:                   "Multicast serverSessions_not_found",
+			argsByServer:           map[int64][]interface{}{1: []interface{}{"arg1_Server1"}, 2: []interface{}{"arg1_Server2"}},
+			mockRetrieveHubSession: mockRetrieveHubSessionFoundWithEmptyServerSessions,
+			expectedErr:            "Authentication error: provided session key is invalid",
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			mockSession := new(mockSession)
-			mockSession.mockRetrieveServerSessions = tc.mockRetrieveServerSessions(tc.argsByServer)
-
-			mockSessionValidator := new(mockSessionValidator)
-			mockSessionValidator.mockIsHubSessionKeyValid = tc.mockIsHubSessionKeyValid
+			mockSession.mockRetrieveHubSession = tc.mockRetrieveHubSession(tc.argsByServer)
 
 			mockClient := new(mockClient)
 			mockClient.mockExecuteCall = tc.mockExecuteCall
 
-			multicastService := NewMulticastService(mockClient, mockSession, mockSessionValidator)
+			multicaster := NewMulticaster(mockClient, mockSession)
 
-			multicastResponse, err := multicastService.Multicast("hubSessionKey", "call", tc.argsByServer)
+			multicastResponse, err := multicaster.Multicast("hubSessionKey", "call", tc.argsByServer)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

@@ -10,27 +10,26 @@ type Multicaster interface {
 	Multicast(hubSessionKey, call string, argsByServer map[int64][]interface{}) (*MulticastResponse, error)
 }
 
-type MulticastService struct {
-	client           Client
-	session          Session
-	sessionValidator sessionValidator
+type multicaster struct {
+	client  Client
+	session Session
 }
 
-func NewMulticastService(client Client, session Session, sessionValidator sessionValidator) *MulticastService {
-	return &MulticastService{client, session, sessionValidator}
+func NewMulticaster(client Client, session Session) *multicaster {
+	return &multicaster{client, session}
 }
 
-func (m *MulticastService) Multicast(hubSessionKey, call string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
-	if m.sessionValidator.isHubSessionKeyValid(hubSessionKey) {
-		serverCalls, err := m.appendServerSessionKeyToServerArgs(hubSessionKey, argsByServer)
-		if err != nil {
-			return nil, err
-		}
-		return executeCallOnServers(call, serverCalls, m.client), nil
+func (m *multicaster) Multicast(hubSessionKey, call string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
+	hubSession := m.session.RetrieveHubSession(hubSessionKey)
+	if hubSession == nil {
+		log.Printf("HubSession was not found. HubSessionKey: %v", hubSessionKey)
+		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	log.Printf("Provided session key is invalid: %v", hubSessionKey)
-	//TODO: what error message return?
-	return nil, errors.New("Authentication error: provided session key is invalid")
+	serverCalls, err := m.appendServerSessionKeyToServerArgs(hubSession.ServerSessions, argsByServer)
+	if err != nil {
+		return nil, err
+	}
+	return executeCallOnServers(call, serverCalls, m.client), nil
 }
 
 type serverCall struct {
@@ -39,17 +38,15 @@ type serverCall struct {
 	serverArgs     []interface{}
 }
 
-func (m *MulticastService) appendServerSessionKeyToServerArgs(hubSessionKey string, argsByServer map[int64][]interface{}) ([]serverCall, error) {
+func (m *multicaster) appendServerSessionKeyToServerArgs(serverSessions map[int64]*ServerSession, argsByServer map[int64][]interface{}) ([]serverCall, error) {
 	result := make([]serverCall, 0, len(argsByServer))
-
-	serverSessions := m.session.RetrieveServerSessions(hubSessionKey)
 
 	for serverID, serverArgs := range argsByServer {
 		if serverSession, ok := serverSessions[serverID]; ok {
 			args := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
 			result = append(result, serverCall{serverID, serverSession.serverAPIEndpoint, args})
 		} else {
-			log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
+			log.Printf("ServerSession was not found. ServerID: %v", serverID)
 			return nil, errors.New("Authentication error: provided session key is invalid")
 		}
 	}
