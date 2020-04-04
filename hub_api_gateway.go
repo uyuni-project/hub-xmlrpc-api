@@ -31,11 +31,11 @@ func initServer() {
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 
-	rpcServer.RegisterService(controller.NewAuthenticationController(gateway.NewAuthenticationService(client, session, conf.Hub.SUMA_API_URL)), "")
+	rpcServer.RegisterService(controller.NewAuthenticationController(gateway.NewAuthenticator(client, session, conf.Hub.SUMA_API_URL)), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(gateway.NewHubProxy(client, conf.Hub.SUMA_API_URL)), "")
 	rpcServer.RegisterService(controller.NewHubController(gateway.NewHubServiceImpl(client, conf.Hub.SUMA_API_URL)), "")
-	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticastService(client, session)), "")
-	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicastService(client, session)), "")
+	rpcServer.RegisterService(controller.NewMulticastController(gateway.NewMulticaster(client, session)), "")
+	rpcServer.RegisterService(controller.NewUnicastController(gateway.NewUnicaster(client, session)), "")
 
 	http.Handle("/hub/rpc/api", rpcServer)
 

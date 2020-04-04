@@ -6,11 +6,10 @@ import (
 )
 
 const (
-	loginPath             = "auth.login"
-	listUserSystemsPath   = "system.listUserSystems"
-	listSystemFQDNsPath   = "system.listFqdns"
-	isSessionKeyValidPath = "auth.isSessionKeyValid"
-	systemIDField         = "id"
+	loginPath           = "auth.login"
+	listUserSystemsPath = "system.listUserSystems"
+	listSystemFQDNsPath = "system.listFqdns"
+	systemIDField       = "id"
 
 	manualLoginMode      = iota // 0
 	relayLoginMode              // 1
@@ -59,30 +58,37 @@ func (a *authenticator) LoginWithAutoconnectMode(username, password string) (str
 		return "", err
 	}
 
-	err = a.loginIntoUserSystems(hubSessionKey, username, password)
+	userServerIDs, err := a.getUserServerIDs(hubSessionKey, username)
+	if err != nil {
+		//TODO: should we return an error? retry the login or what?
+	}
+	_, err = a.loginIntoServersUsingSameCredentials(userServerIDs, username, password, hubSessionKey)
 	if err != nil {
 		//TODO: should we return an error? retry the login or what?
 	}
 	return hubSessionKey, nil
 }
 
-func (a *authenticator) AttachToServers(hubSessionKey string, argsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
+func (a *authenticator) AttachToServers(hubSessionKey string, credentialsByServer map[int64][]interface{}) (*MulticastResponse, error) {
 	hubSession := a.session.RetrieveHubSession(hubSessionKey)
 	if hubSession == nil {
-		log.Printf("HubSessionKey was not found: %v", hubSessionKey)
-		//TODO: what error should we return here?
-		return nil, errors.New("provided session key is invalid")
+		log.Printf("HubSession was not found: %v", hubSessionKey)
+		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
 
-	credentialsByServerID := argsByServerID
 	if hubSession.loginMode == relayLoginMode {
-
-		credentialsByServerID = make(map[int64][]interface{})
-		for serverID := range argsByServerID {
-			credentialsByServerID[serverID] = []interface{}{hubSession.username, hubSession.password}
+		serverIDs := make([]int64, 0)
+		for serverID := range credentialsByServer {
+			serverIDs = append(serverIDs, serverID)
 		}
+		return a.loginIntoServersUsingSameCredentials(serverIDs, hubSession.username, hubSession.password, hubSessionKey)
 	}
-	return a.loginIntoSystems(hubSessionKey, credentialsByServerID)
+	return a.loginIntoSystems(hubSessionKey, credentialsByServer)
+}
+
+func (a *authenticator) loginIntoServersUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error) {
+	credentialsByServer := generateSameCredentialsForServers(serverIDs, username, password)
+	return a.loginIntoSystems(hubSessionKey, credentialsByServer)
 }
 
 func (a *authenticator) loginToHub(username, password string, loginMode int) (string, error) {
@@ -96,62 +102,58 @@ func (a *authenticator) loginToHub(username, password string, loginMode int) (st
 	return hubSessionKey, nil
 }
 
-func (a *authenticator) loginIntoUserSystems(hubSessionKey, username, password string) error {
-	userSystems, err := a.client.ExecuteCall(a.hubAPIEndpoint, listUserSystemsPath, []interface{}{hubSessionKey, username})
+func (a *authenticator) getUserServerIDs(hubSessionKey, username string) ([]int64, error) {
+	userServers, err := a.client.ExecuteCall(a.hubAPIEndpoint, listUserSystemsPath, []interface{}{hubSessionKey, username})
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the user systems: %v", err)
-		return err
+		return nil, err
 	}
-	userSystemsSlice := userSystems.([]interface{})
+	userServersSlice := userServers.([]interface{})
 
-	credentialsByServerID := make(map[int64][]interface{})
-	for _, userSystem := range userSystemsSlice {
+	serverIDs := make([]int64, 0, len(userServersSlice))
+	for _, userSystem := range userServersSlice {
 		serverID := userSystem.(map[string]interface{})[systemIDField].(int64)
-		credentialsByServerID[serverID] = []interface{}{username, password}
+		serverIDs = append(serverIDs, serverID)
 	}
-
-	//TODO: what to do with the response here?
-	_, err = a.loginIntoSystems(hubSessionKey, credentialsByServerID)
-	return err
+	return serverIDs, nil
 }
 
 func (a *authenticator) loginIntoSystems(hubSessionKey string, credentialsByServerID map[int64][]interface{}) (*MulticastResponse, error) {
-	loginIntoSystemsArgs, serverURLByServerID, err := a.resolveLoginIntoSystemsArgs(hubSessionKey, credentialsByServerID)
+	loginIntoSystemsArgs, err := a.generateServerCallRequests(hubSessionKey, credentialsByServerID)
 	if err != nil {
 		//TODO: what to do with the error here?
 	}
-	multicastResponse := executeCallOnServers(loginPath, loginIntoSystemsArgs, a.client)
-
-	//save in session
-	serverSessions := make(map[int64]*ServerSession)
-	for serverID, response := range multicastResponse.SuccessfulResponses {
-		serverSessions[serverID] = &ServerSession{serverID, serverURLByServerID[serverID], response.(string), hubSessionKey}
-	}
-
-	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
-	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
-	//save for failed as well
-	for serverID := range multicastResponse.FailedResponses {
-		serverSessions[serverID] = &ServerSession{serverID, serverURLByServerID[serverID], "login-error", hubSessionKey}
-	}
-	a.session.SaveServerSessions(hubSessionKey, serverSessions)
+	multicastResponse := executeCallOnServers(loginIntoSystemsArgs, a.client)
+	a.saveServerSessions(hubSessionKey, multicastResponse)
 	return multicastResponse, nil
 }
 
-func (a *authenticator) resolveLoginIntoSystemsArgs(hubSessionKey string, credentialsByServerID map[int64][]interface{}) ([]serverCall, map[int64]string, error) {
-	multicastArgs := make([]serverCall, 0, len(credentialsByServerID))
-	serverAPIEndpointByServerID := make(map[int64]string)
+func (a *authenticator) saveServerSessions(hubSessionKey string, loginResponses *MulticastResponse) {
+	serverSessions := make(map[int64]*ServerSession)
+	for _, response := range loginResponses.SuccessfulResponses {
+		serverSessions[response.ServerID] = &ServerSession{response.ServerID, response.endpoint, response.Response.(string), hubSessionKey}
+	}
+	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
+	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
+	//save for failed as well
+	for _, response := range loginResponses.FailedResponses {
+		serverSessions[response.ServerID] = &ServerSession{response.ServerID, response.endpoint, "login-error", hubSessionKey}
+	}
+	a.session.SaveServerSessions(hubSessionKey, serverSessions)
+}
 
-	for serverID, credentials := range credentialsByServerID {
+func (a *authenticator) generateServerCallRequests(hubSessionKey string, credentialsByServer map[int64][]interface{}) ([]serverCallRequest, error) {
+	serverCallRequests := make([]serverCallRequest, 0, len(credentialsByServer))
+
+	for serverID, credentials := range credentialsByServer {
 		serverAPIEndpoint, err := a.retrieveServerAPIEndpoint(hubSessionKey, serverID)
 		if err != nil {
 			//TODO: what to do with failing servers?
 		} else {
-			serverAPIEndpointByServerID[serverID] = serverAPIEndpoint
-			multicastArgs = append(multicastArgs, serverCall{serverID, serverAPIEndpoint, credentials})
+			serverCallRequests = append(serverCallRequests, serverCallRequest{serverAPIEndpoint, loginPath, serverID, credentials})
 		}
 	}
-	return multicastArgs, serverAPIEndpointByServerID, nil
+	return serverCallRequests, nil
 }
 
 func (a *authenticator) retrieveServerAPIEndpoint(hubSessionKey string, serverID int64) (string, error) {
@@ -165,4 +167,12 @@ func (a *authenticator) retrieveServerAPIEndpoint(hubSessionKey string, serverID
 	//TODO: check the fqdn array is not empty
 	firstFqdn := response.([]interface{})[0].(string)
 	return "http://" + firstFqdn + "/rpc/api", nil
+}
+
+func generateSameCredentialsForServers(serverIDs []int64, username, password string) map[int64][]interface{} {
+	credentialsByServerID := make(map[int64][]interface{})
+	for _, serverID := range serverIDs {
+		credentialsByServerID[serverID] = []interface{}{username, password}
+	}
+	return credentialsByServerID
 }

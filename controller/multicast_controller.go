@@ -47,19 +47,19 @@ func removeMulticastNamespace(method string) string {
 }
 
 func transformToOutputModel(multicastResponse *gateway.MulticastResponse) *MulticastResponse {
-	successfulKeys, successfulValues := getServerIDsAndResponses(multicastResponse.SuccessfulResponses)
-	failedKeys, failedValues := getServerIDsAndResponses(multicastResponse.FailedResponses)
-
-	return &MulticastResponse{MulticastStateResponse{successfulKeys, successfulValues}, MulticastStateResponse{failedKeys, failedValues}}
+	return &MulticastResponse{
+		transformToMulticastStateResponse(multicastResponse.SuccessfulResponses),
+		transformToMulticastStateResponse(multicastResponse.FailedResponses),
+	}
 }
 
-func getServerIDsAndResponses(in map[int64]interface{}) ([]int64, []interface{}) {
-	serverIDs := make([]int64, 0, len(in))
-	responses := make([]interface{}, 0, len(in))
+func transformToMulticastStateResponse(serverCallResponses []gateway.ServerCallResponse) MulticastStateResponse {
+	serverIDs := make([]int64, 0, len(serverCallResponses))
+	responses := make([]interface{}, 0, len(serverCallResponses))
 
-	for serverID, response := range in {
-		serverIDs = append(serverIDs, serverID)
-		responses = append(responses, response)
+	for _, response := range serverCallResponses {
+		serverIDs = append(serverIDs, response.ServerID)
+		responses = append(responses, response.Response)
 	}
-	return serverIDs, responses
+	return MulticastStateResponse{serverIDs, responses}
 }

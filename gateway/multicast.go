@@ -25,26 +25,34 @@ func (m *multicaster) Multicast(hubSessionKey, call string, argsByServer map[int
 		log.Printf("HubSession was not found. HubSessionKey: %v", hubSessionKey)
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	serverCalls, err := m.appendServerSessionKeyToServerArgs(hubSession.ServerSessions, argsByServer)
+	serverCalls, err := m.generateServerCallRequests(call, hubSession.ServerSessions, argsByServer)
 	if err != nil {
 		return nil, err
 	}
-	return executeCallOnServers(call, serverCalls, m.client), nil
+	return executeCallOnServers(serverCalls, m.client), nil
 }
 
-type serverCall struct {
-	serverID       int64
-	serverEndpoint string
-	serverArgs     []interface{}
+type serverCallRequest struct {
+	endpoint string
+	call     string
+	serverID int64
+	args     []interface{}
 }
 
-func (m *multicaster) appendServerSessionKeyToServerArgs(serverSessions map[int64]*ServerSession, argsByServer map[int64][]interface{}) ([]serverCall, error) {
-	result := make([]serverCall, 0, len(argsByServer))
+type ServerCallResponse struct {
+	endpoint string
+	call     string
+	ServerID int64
+	Response interface{}
+}
+
+func (m *multicaster) generateServerCallRequests(call string, serverSessions map[int64]*ServerSession, argsByServer map[int64][]interface{}) ([]serverCallRequest, error) {
+	result := make([]serverCallRequest, 0, len(argsByServer))
 
 	for serverID, serverArgs := range argsByServer {
 		if serverSession, ok := serverSessions[serverID]; ok {
 			args := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
-			result = append(result, serverCall{serverID, serverSession.serverAPIEndpoint, args})
+			result = append(result, serverCallRequest{serverSession.serverAPIEndpoint, call, serverID, args})
 		} else {
 			log.Printf("ServerSession was not found. ServerID: %v", serverID)
 			return nil, errors.New("Authentication error: provided session key is invalid")
@@ -54,34 +62,34 @@ func (m *multicaster) appendServerSessionKeyToServerArgs(serverSessions map[int6
 }
 
 type MulticastResponse struct {
-	SuccessfulResponses, FailedResponses map[int64]interface{}
+	SuccessfulResponses, FailedResponses []ServerCallResponse
 }
 
-func executeCallOnServers(call string, serverCalls []serverCall, client Client) *MulticastResponse {
+func executeCallOnServers(serverCalls []serverCallRequest, client Client) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
-	successfulResponses := make(map[int64]interface{})
-	failedResponses := make(map[int64]interface{})
+	successfulResponses := make([]ServerCallResponse, 0)
+	failedResponses := make([]ServerCallResponse, 0)
 
 	var wg sync.WaitGroup
 	wg.Add(len(serverCalls))
 
 	for _, serverCall := range serverCalls {
-		go func(serverEndpoint string, serverID int64, serverArgs []interface{}) {
+		go func(endpoint, call string, serverID int64, args []interface{}) {
 			defer wg.Done()
-			response, err := client.ExecuteCall(serverEndpoint, call, serverArgs)
+			response, err := client.ExecuteCall(endpoint, call, args)
 			if err != nil {
 				log.Printf("Error ocurred in multicast call, serverID: %v, call:%v, error: %v", serverID, call, err)
 				mutexForFailedResponses.Lock()
-				failedResponses[serverID] = err.Error()
+				failedResponses = append(failedResponses, ServerCallResponse{endpoint, call, serverID, err.Error()})
 				mutexForFailedResponses.Unlock()
 			} else {
 				mutexForSuccesfulResponses.Lock()
-				successfulResponses[serverID] = response
+				successfulResponses = append(successfulResponses, ServerCallResponse{endpoint, call, serverID, response})
 				mutexForSuccesfulResponses.Unlock()
 			}
-		}(serverCall.serverEndpoint, serverCall.serverID, serverCall.serverArgs)
+		}(serverCall.endpoint, serverCall.call, serverCall.serverID, serverCall.args)
 	}
 	wg.Wait()
 	return &MulticastResponse{successfulResponses, failedResponses}
