@@ -35,21 +35,25 @@ func (m *mockSession) RetrieveServerSessions(hubSessionKey string) map[int64]*Se
 	return m.mockRetrieveServerSessions(hubSessionKey)
 }
 
-type mockClient struct {
+type mockServer struct {
 	mockExecuteCall func(endpoint string, call string, args []interface{}) (response interface{}, err error)
 }
 
-func (m *mockClient) ExecuteCall(endpoint string, call string, args []interface{}) (response interface{}, err error) {
+func (m *mockServer) ExecuteCall(endpoint string, call string, args []interface{}) (response interface{}, err error) {
 	return m.mockExecuteCall(endpoint, call, args)
 }
 
-func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
+func Test_generateMulticastCallRequest(t *testing.T) {
+	serverCall := func(endpoint string, args []interface{}) (interface{}, error) {
+		return "server_call_executed", nil
+	}
+
 	tt := []struct {
-		name                 string
-		argsByServer         map[int64][]interface{}
-		serverSessions       map[int64]*ServerSession
-		expectedArgsByServer []serverCall
-		expectedErr          string
+		name                         string
+		argsByServer                 map[int64][]interface{}
+		serverSessions               map[int64]*ServerSession
+		expectedMulticastCallrequest *multicastCallRequest
+		expectedErr                  string
 	}{
 		{
 			name: "appendServerSessionKeyToServerArgs success",
@@ -61,9 +65,12 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 				1: &ServerSession{1, "1-serverEndpoint", "1-sessionKey", "hubSessionKey"},
 				2: &ServerSession{2, "2-serverEndpoint", "2-sessionKey", "hubSessionKey"},
 			},
-			expectedArgsByServer: []serverCall{
-				serverCall{1, "1-serverEndpoint", []interface{}{"1-sessionKey", "arg1_Server1"}},
-				serverCall{2, "2-serverEndpoint", []interface{}{"2-sessionKey", "arg1_Server2"}},
+			expectedMulticastCallrequest: &multicastCallRequest{
+				serverCall,
+				[]serverCallInfo{
+					serverCallInfo{1, "1-serverEndpoint", []interface{}{"1-sessionKey", "arg1_Server1"}},
+					serverCallInfo{2, "2-serverEndpoint", []interface{}{"2-sessionKey", "arg1_Server2"}},
+				},
 			},
 		},
 		{
@@ -83,7 +90,7 @@ func Test_appendServerSessionKeyToServerArgs(t *testing.T) {
 			mockSession := new(mockSession)
 			multicaster := NewMulticaster(new(mockClient), mockSession)
 
-			serverArgs, err := multicaster.appendServerSessionKeyToServerArgs(tc.serverSessions, tc.argsByServer)
+			serverArgs, err := multicaster.generateMulticastCallRequest(tc.serverSessions, tc.argsByServer)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

@@ -1,4 +1,4 @@
-package parser
+package transformer
 
 import (
 	"reflect"

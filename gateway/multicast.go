@@ -7,89 +7,107 @@ import (
 )
 
 type Multicaster interface {
-	Multicast(hubSessionKey, call string, argsByServer map[int64][]interface{}) (*MulticastResponse, error)
+	Multicast(request *MulticastRequest) (*MulticastResponse, error)
+}
+
+type MulticastRequest struct {
+	Call          string
+	HubSessionKey string
+	ServerIDs     []int64
+	ArgsByServer  map[int64][]interface{}
 }
 
 type multicaster struct {
-	client  Client
-	session Session
+	uyuniServerCallExecutor UyuniServerCallExecutor
+	session                 Session
 }
 
-func NewMulticaster(client Client, session Session) *multicaster {
-	return &multicaster{client, session}
+func NewMulticaster(uyuniServerCallExecutor UyuniServerCallExecutor, session Session) *multicaster {
+	return &multicaster{uyuniServerCallExecutor, session}
 }
 
-func (m *multicaster) Multicast(hubSessionKey, call string, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
-	hubSession := m.session.RetrieveHubSession(hubSessionKey)
+func (m *multicaster) Multicast(request *MulticastRequest) (*MulticastResponse, error) {
+	hubSession := m.session.RetrieveHubSession(request.HubSessionKey)
 	if hubSession == nil {
-		log.Printf("HubSession was not found. HubSessionKey: %v", hubSessionKey)
+		log.Printf("HubSession was not found. HubSessionKey: %v", request.HubSessionKey)
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	serverCalls, err := m.generateServerCallRequests(call, hubSession.ServerSessions, argsByServer)
+	multicastCallRequest, err := m.generateMulticastCallRequest(request.Call, hubSession.ServerSessions, request.ServerIDs, request.ArgsByServer)
 	if err != nil {
 		return nil, err
 	}
-	return executeCallOnServers(serverCalls, m.client), nil
+	return executeCallOnServers(multicastCallRequest), nil
 }
 
-type serverCallRequest struct {
-	endpoint string
-	call     string
+type multicastCallRequest struct {
+	call            serverCall
+	serverCallInfos []serverCallInfo
+}
+type serverCallInfo struct {
 	serverID int64
+	endpoint string
 	args     []interface{}
 }
+type serverCall func(endpoint string, args []interface{}) (interface{}, error)
 
-type ServerCallResponse struct {
+type ServerSuccessfulResponse struct {
 	endpoint string
-	call     string
 	ServerID int64
 	Response interface{}
 }
+type ServerFailedResponse struct {
+	endpoint     string
+	ServerID     int64
+	ErrorMessage string
+}
 
-func (m *multicaster) generateServerCallRequests(call string, serverSessions map[int64]*ServerSession, argsByServer map[int64][]interface{}) ([]serverCallRequest, error) {
-	result := make([]serverCallRequest, 0, len(argsByServer))
+func (m *multicaster) generateMulticastCallRequest(call string, serverSessions map[int64]*ServerSession, serverIDs []int64, argsByServer map[int64][]interface{}) (*multicastCallRequest, error) {
+	callFunc := func(endpoint string, args []interface{}) (interface{}, error) {
+		return m.uyuniServerCallExecutor.ExecuteCall(endpoint, call, args)
+	}
 
-	for serverID, serverArgs := range argsByServer {
+	serverCallInfos := make([]serverCallInfo, 0, len(argsByServer))
+	for _, serverID := range serverIDs {
 		if serverSession, ok := serverSessions[serverID]; ok {
-			args := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
-			result = append(result, serverCallRequest{serverSession.serverAPIEndpoint, call, serverID, args})
+			args := append([]interface{}{serverSession.serverSessionKey}, argsByServer[serverID]...)
+			serverCallInfos = append(serverCallInfos, serverCallInfo{serverID, serverSession.serverAPIEndpoint, args})
 		} else {
 			log.Printf("ServerSession was not found. ServerID: %v", serverID)
 			return nil, errors.New("Authentication error: provided session key is invalid")
 		}
 	}
-	return result, nil
+	return &multicastCallRequest{callFunc, serverCallInfos}, nil
 }
 
 type MulticastResponse struct {
-	SuccessfulResponses, FailedResponses []ServerCallResponse
+	SuccessfulResponses []*ServerSuccessfulResponse
+	FailedResponses     []*ServerFailedResponse
 }
 
-func executeCallOnServers(serverCalls []serverCallRequest, client Client) *MulticastResponse {
+func executeCallOnServers(multicastCallRequest *multicastCallRequest) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
-	successfulResponses := make([]ServerCallResponse, 0)
-	failedResponses := make([]ServerCallResponse, 0)
+	successfulResponses := make([]*ServerSuccessfulResponse, 0)
+	failedResponses := make([]*ServerFailedResponse, 0)
 
 	var wg sync.WaitGroup
-	wg.Add(len(serverCalls))
+	wg.Add(len(multicastCallRequest.serverCallInfos))
 
-	for _, serverCall := range serverCalls {
-		go func(endpoint, call string, serverID int64, args []interface{}) {
+	for _, serverCallInfo := range multicastCallRequest.serverCallInfos {
+		go func(call serverCall, endpoint string, args []interface{}, serverID int64) {
 			defer wg.Done()
-			response, err := client.ExecuteCall(endpoint, call, args)
+			response, err := call(endpoint, args)
 			if err != nil {
-				log.Printf("Error ocurred in multicast call, serverID: %v, call:%v, error: %v", serverID, call, err)
 				mutexForFailedResponses.Lock()
-				failedResponses = append(failedResponses, ServerCallResponse{endpoint, call, serverID, err.Error()})
+				failedResponses = append(failedResponses, &ServerFailedResponse{endpoint, serverID, err.Error()})
 				mutexForFailedResponses.Unlock()
 			} else {
 				mutexForSuccesfulResponses.Lock()
-				successfulResponses = append(successfulResponses, ServerCallResponse{endpoint, call, serverID, response})
+				successfulResponses = append(successfulResponses, &ServerSuccessfulResponse{endpoint, serverID, response})
 				mutexForSuccesfulResponses.Unlock()
 			}
-		}(serverCall.endpoint, serverCall.call, serverCall.serverID, serverCall.args)
+		}(multicastCallRequest.call, serverCallInfo.endpoint, serverCallInfo.args, serverCallInfo.serverID)
 	}
 	wg.Wait()
 	return &MulticastResponse{successfulResponses, failedResponses}

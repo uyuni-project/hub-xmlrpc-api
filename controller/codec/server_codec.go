@@ -16,8 +16,7 @@ type Codec struct {
 	mappings                 map[string]string
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
-	parsers                  map[string]Parser
-	defaultParser            Parser
+	transformers             map[string]Transformer
 }
 
 func NewCodec() *Codec {
@@ -25,32 +24,23 @@ func NewCodec() *Codec {
 		mappings:                 make(map[string]string),
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
-		parsers:                  make(map[string]Parser),
-		defaultParser:            nil,
+		transformers:             make(map[string]Transformer),
 	}
 }
 
-func (c *Codec) RegisterDefaultParser(parser Parser) {
-	c.defaultParser = parser
-}
-
-func (c *Codec) RegisterMapping(mapping string, method string) {
+func (c *Codec) RegisterMapping(mapping string, method string, transformer Transformer) {
 	c.mappings[mapping] = method
+	c.transformers[c.resolveServiceMethod(method)] = transformer
 }
 
-func (c *Codec) RegisterMappingWithParser(mapping string, method string, parser Parser) {
-	c.mappings[mapping] = method
-	c.parsers[c.resolveServiceMethod(method)] = parser
-}
-
-func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
+func (c *Codec) RegisterDefaultMethod(method string, transformer Transformer) {
 	c.defaultMethod = method
-	c.parsers[c.resolveServiceMethod(method)] = parser
+	c.transformers[c.resolveServiceMethod(method)] = transformer
 }
 
-func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, transformer Transformer) {
 	c.defaultMethodByNamespace[namespace] = method
-	c.parsers[c.resolveServiceMethod(method)] = parser
+	c.transformers[c.resolveServiceMethod(method)] = transformer
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
@@ -63,22 +53,22 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawxml))
 
 	var serverRequest ServerRequest
-	if err := xmlrpc.UnmarshalServerRequest(rawxml, &serverRequest); err != nil {
+	if err := xmlrpc.UnmarshalMethodCall(rawxml, &serverRequest); err != nil {
 		return &CodecRequest{err: err}
 	}
 
 	userMethod := serverRequest.MethodName
 	serviceMethod := c.resolveServiceMethod(userMethod)
-	parser := c.resolveParser(serviceMethod)
+	transformer := c.resolveTransformer(serviceMethod)
 
-	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, parser: parser}
+	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, transformer: transformer}
 }
 
-func (c *Codec) resolveParser(requestMethod string) Parser {
-	if parser, ok := c.parsers[requestMethod]; ok {
-		return parser
+func (c *Codec) resolveTransformer(requestMethod string) Transformer {
+	if transformer, ok := c.transformers[requestMethod]; ok {
+		return transformer
 	}
-	return c.defaultParser
+	return nil
 }
 
 func (c *Codec) resolveServiceMethod(requestMethod string) string {
@@ -109,7 +99,7 @@ type ServerRequest struct {
 type CodecRequest struct {
 	serviceMethod string
 	request       *ServerRequest
-	parser        Parser
+	transformer   Transformer
 	err           error
 }
 
@@ -121,7 +111,10 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	c.err = c.parser(c.request, args)
+	if c.transformer == nil {
+		return controller.FaultInternalError
+	}
+	c.err = c.transformer(c.request, args)
 	if c.err != nil {
 		return c.err
 	}

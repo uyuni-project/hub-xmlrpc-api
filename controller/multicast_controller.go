@@ -11,12 +11,6 @@ type MulticastController struct {
 	multicaster gateway.Multicaster
 }
 
-type MulticastRequest struct {
-	Method        string
-	HubSessionKey string
-	ArgsByServer  map[int64][]interface{}
-}
-
 type MulticastResponse struct {
 	Successful, Failed MulticastStateResponse
 }
@@ -30,9 +24,8 @@ func NewMulticastController(multicaster gateway.Multicaster) *MulticastControlle
 	return &MulticastController{multicaster}
 }
 
-func (h *MulticastController) Multicast(r *http.Request, args *MulticastRequest, reply *struct{ Data *MulticastResponse }) error {
-	method := removeMulticastNamespace(args.Method)
-	multicastResponse, err := h.multicaster.Multicast(args.HubSessionKey, method, args.ArgsByServer)
+func (h *MulticastController) Multicast(r *http.Request, args *gateway.MulticastRequest, reply *struct{ Data *MulticastResponse }) error {
+	multicastResponse, err := h.multicaster.Multicast(args)
 	if err != nil {
 		return err
 	}
@@ -48,18 +41,29 @@ func removeMulticastNamespace(method string) string {
 
 func transformToOutputModel(multicastResponse *gateway.MulticastResponse) *MulticastResponse {
 	return &MulticastResponse{
-		transformToMulticastStateResponse(multicastResponse.SuccessfulResponses),
-		transformToMulticastStateResponse(multicastResponse.FailedResponses),
+		transformToSuccessfulResponses(multicastResponse.SuccessfulResponses),
+		transformToFailedResponses(multicastResponse.FailedResponses),
 	}
 }
 
-func transformToMulticastStateResponse(serverCallResponses []gateway.ServerCallResponse) MulticastStateResponse {
+func transformToSuccessfulResponses(serverCallResponses []*gateway.ServerSuccessfulResponse) MulticastStateResponse {
 	serverIDs := make([]int64, 0, len(serverCallResponses))
 	responses := make([]interface{}, 0, len(serverCallResponses))
 
 	for _, response := range serverCallResponses {
 		serverIDs = append(serverIDs, response.ServerID)
 		responses = append(responses, response.Response)
+	}
+	return MulticastStateResponse{serverIDs, responses}
+}
+
+func transformToFailedResponses(serverCallResponses []*gateway.ServerFailedResponse) MulticastStateResponse {
+	serverIDs := make([]int64, 0, len(serverCallResponses))
+	responses := make([]interface{}, 0, len(serverCallResponses))
+
+	for _, response := range serverCallResponses {
+		serverIDs = append(serverIDs, response.ServerID)
+		responses = append(responses, response.ErrorMessage)
 	}
 	return MulticastStateResponse{serverIDs, responses}
 }

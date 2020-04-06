@@ -6,25 +6,31 @@ import (
 )
 
 type Unicaster interface {
-	Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error)
+	Unicast(request *UnicastRequest) (interface{}, error)
+}
+
+type UnicastRequest struct {
+	Call          string
+	HubSessionKey string
+	ServerID      int64
+	Args          []interface{}
 }
 
 type unicaster struct {
-	client  Client
-	session Session
+	uyuniServerCallExecutor UyuniServerCallExecutor
+	session                 Session
 }
 
-func NewUnicaster(client Client, session Session) *unicaster {
-	return &unicaster{client, session}
+func NewUnicaster(uyuniServerCallExecutor UyuniServerCallExecutor, session Session) *unicaster {
+	return &unicaster{uyuniServerCallExecutor, session}
 }
 
-func (h *unicaster) Unicast(hubSessionKey, call string, serverID int64, serverArgs []interface{}) (interface{}, error) {
-	serverSession := h.session.RetrieveServerSessionByServerID(hubSessionKey, serverID)
+func (u *unicaster) Unicast(request *UnicastRequest) (interface{}, error) {
+	serverSession := u.session.RetrieveServerSessionByServerID(request.HubSessionKey, request.ServerID)
 	if serverSession == nil {
-		log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", hubSessionKey, serverID)
+		log.Printf("ServerSession was not found. HubSessionKey: %v, ServerID: %v", request.HubSessionKey, request.ServerID)
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	callArguments := append([]interface{}{serverSession.serverSessionKey}, serverArgs...)
-
-	return h.client.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
+	callArguments := append([]interface{}{serverSession.serverSessionKey}, request.Args...)
+	return u.uyuniServerCallExecutor.ExecuteCall(serverSession.serverAPIEndpoint, request.Call, callArguments)
 }
