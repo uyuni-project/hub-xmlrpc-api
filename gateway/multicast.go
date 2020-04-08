@@ -50,17 +50,6 @@ type serverCallInfo struct {
 }
 type serverCall func(endpoint string, args []interface{}) (interface{}, error)
 
-type ServerSuccessfulResponse struct {
-	endpoint string
-	ServerID int64
-	Response interface{}
-}
-type ServerFailedResponse struct {
-	endpoint     string
-	ServerID     int64
-	ErrorMessage string
-}
-
 func (m *multicaster) generateMulticastCallRequest(call string, serverSessions map[int64]*ServerSession, serverIDs []int64, argsByServer map[int64][]interface{}) (*multicastCallRequest, error) {
 	callFunc := func(endpoint string, args []interface{}) (interface{}, error) {
 		return m.uyuniServerCallExecutor.ExecuteCall(endpoint, call, args)
@@ -80,16 +69,26 @@ func (m *multicaster) generateMulticastCallRequest(call string, serverSessions m
 }
 
 type MulticastResponse struct {
-	SuccessfulResponses []*ServerSuccessfulResponse
-	FailedResponses     []*ServerFailedResponse
+	SuccessfulResponses map[int64]ServerSuccessfulResponse
+	FailedResponses     map[int64]ServerFailedResponse
+}
+type ServerSuccessfulResponse struct {
+	ServerID int64
+	endpoint string
+	Response interface{}
+}
+type ServerFailedResponse struct {
+	ServerID     int64
+	endpoint     string
+	ErrorMessage string
 }
 
 func executeCallOnServers(multicastCallRequest *multicastCallRequest) *MulticastResponse {
 	var mutexForSuccesfulResponses = &sync.Mutex{}
 	var mutexForFailedResponses = &sync.Mutex{}
 
-	successfulResponses := make([]*ServerSuccessfulResponse, 0)
-	failedResponses := make([]*ServerFailedResponse, 0)
+	successfulResponses := make(map[int64]ServerSuccessfulResponse)
+	failedResponses := make(map[int64]ServerFailedResponse)
 
 	var wg sync.WaitGroup
 	wg.Add(len(multicastCallRequest.serverCallInfos))
@@ -100,11 +99,11 @@ func executeCallOnServers(multicastCallRequest *multicastCallRequest) *Multicast
 			response, err := call(endpoint, args)
 			if err != nil {
 				mutexForFailedResponses.Lock()
-				failedResponses = append(failedResponses, &ServerFailedResponse{endpoint, serverID, err.Error()})
+				failedResponses[serverID] = ServerFailedResponse{serverID, endpoint, err.Error()}
 				mutexForFailedResponses.Unlock()
 			} else {
 				mutexForSuccesfulResponses.Lock()
-				successfulResponses = append(successfulResponses, &ServerSuccessfulResponse{endpoint, serverID, response})
+				successfulResponses[serverID] = ServerSuccessfulResponse{serverID, endpoint, response}
 				mutexForSuccesfulResponses.Unlock()
 			}
 		}(multicastCallRequest.call, serverCallInfo.endpoint, serverCallInfo.args, serverCallInfo.serverID)

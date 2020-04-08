@@ -58,12 +58,12 @@ func Test_Unicast(t *testing.T) {
 			mockSession := new(mockSession)
 			mockSession.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
 
-			mockClient := new(mockClient)
-			mockClient.mockExecuteCall = tc.mockExecuteCall
+			mockUyuniServerCallExecutor := new(mockUyuniServerCallExecutor)
+			mockUyuniServerCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			unicaster := NewUnicaster(mockClient, mockSession)
+			unicaster := NewUnicaster(mockUyuniServerCallExecutor, mockSession)
 
-			response, err := unicaster.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
+			response, err := unicaster.Unicast(&UnicastRequest{"hubSessionKey", "call", tc.serverID, tc.serverArgs})
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)

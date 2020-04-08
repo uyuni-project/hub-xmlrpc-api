@@ -6,18 +6,25 @@ import (
 	"testing"
 )
 
+type mockUyuniHubCallExecutor struct {
+	mockExecuteCall func(call string, args []interface{}) (response interface{}, err error)
+}
+
+func (m *mockUyuniHubCallExecutor) ExecuteCall(call string, args []interface{}) (interface{}, error) {
+	return m.mockExecuteCall(call, args)
+}
 func Test_ProxyCallToHub(t *testing.T) {
 	tt := []struct {
 		name             string
 		args             []interface{}
-		mockExecuteCall  func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error)
+		mockExecuteCall  func(call string, args []interface{}) (response interface{}, err error)
 		expectedResponse interface{}
 		expectedErr      string
 	}{
 		{
 			name: "ProxyCallToHub call_successful",
 			args: []interface{}{"arg1", "arg2"},
-			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+			mockExecuteCall: func(call string, args []interface{}) (response interface{}, err error) {
 				return "success_response", nil
 			},
 			expectedResponse: "success_response",
@@ -25,7 +32,7 @@ func Test_ProxyCallToHub(t *testing.T) {
 		{
 			name: "ProxyCallToHub call_error",
 			args: []interface{}{"arg1", "arg2"},
-			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+			mockExecuteCall: func(call string, args []interface{}) (response interface{}, err error) {
 				return nil, errors.New("call_error")
 			},
 			expectedErr: "call_error",
@@ -34,10 +41,10 @@ func Test_ProxyCallToHub(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mockClient := new(mockClient)
-			mockClient.mockExecuteCall = tc.mockExecuteCall
+			mockUyuniHubCallExecutor := new(mockUyuniHubCallExecutor)
+			mockUyuniHubCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			hubProxy := NewHubProxy(mockClient, "hubAPIEndpoint")
+			hubProxy := NewHubProxy(mockUyuniHubCallExecutor)
 
 			response, err := hubProxy.ProxyCallToHub("call", tc.args)
 

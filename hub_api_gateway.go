@@ -23,7 +23,7 @@ func initServer() {
 	rpcServer := rpc.NewServer()
 
 	//init config
-	conf := config.InitializeConfig()
+	conf := config.NewConfig()
 
 	//init xmlrpc client implementation
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)

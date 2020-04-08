@@ -77,14 +77,14 @@ func (a *serverAuthenticator) generateLoginMuticastCallRequest(credentialsByServ
 
 func (a *serverAuthenticator) saveServerSessions(hubSessionKey string, loginResponses *MulticastResponse) {
 	serverSessions := make(map[int64]*ServerSession)
-	for _, response := range loginResponses.SuccessfulResponses {
-		serverSessions[response.ServerID] = &ServerSession{response.ServerID, response.endpoint, response.Response.(string), hubSessionKey}
+	for serverID, response := range loginResponses.SuccessfulResponses {
+		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, response.Response.(string), hubSessionKey}
 	}
 	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
 	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
 	//save for failed as well
-	for _, response := range loginResponses.FailedResponses {
-		serverSessions[response.ServerID] = &ServerSession{response.ServerID, response.endpoint, "login-error", hubSessionKey}
+	for serverID, response := range loginResponses.FailedResponses {
+		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, "login-error", hubSessionKey}
 	}
 	a.session.SaveServerSessions(hubSessionKey, serverSessions)
 }

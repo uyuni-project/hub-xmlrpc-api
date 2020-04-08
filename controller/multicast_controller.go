@@ -46,23 +46,23 @@ func transformToOutputModel(multicastResponse *gateway.MulticastResponse) *Multi
 	}
 }
 
-func transformToSuccessfulResponses(serverCallResponses []*gateway.ServerSuccessfulResponse) MulticastStateResponse {
+func transformToSuccessfulResponses(serverCallResponses map[int64]gateway.ServerSuccessfulResponse) MulticastStateResponse {
 	serverIDs := make([]int64, 0, len(serverCallResponses))
 	responses := make([]interface{}, 0, len(serverCallResponses))
 
-	for _, response := range serverCallResponses {
-		serverIDs = append(serverIDs, response.ServerID)
+	for serverID, response := range serverCallResponses {
+		serverIDs = append(serverIDs, serverID)
 		responses = append(responses, response.Response)
 	}
 	return MulticastStateResponse{serverIDs, responses}
 }
 
-func transformToFailedResponses(serverCallResponses []*gateway.ServerFailedResponse) MulticastStateResponse {
+func transformToFailedResponses(serverCallResponses map[int64]gateway.ServerFailedResponse) MulticastStateResponse {
 	serverIDs := make([]int64, 0, len(serverCallResponses))
 	responses := make([]interface{}, 0, len(serverCallResponses))
 
-	for _, response := range serverCallResponses {
-		serverIDs = append(serverIDs, response.ServerID)
+	for serverID, response := range serverCallResponses {
+		serverIDs = append(serverIDs, serverID)
 		responses = append(responses, response.ErrorMessage)
 	}
 	return MulticastStateResponse{serverIDs, responses}
