@@ -6,14 +6,8 @@ import (
 )
 
 type ServerAuthenticator interface {
-	AttachToServers(request *AttachToServersRequest) (*MulticastResponse, error)
+	AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error)
 	loginToServersUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error)
-}
-
-type AttachToServersRequest struct {
-	HubSessionKey       string
-	ServerIDs           []int64
-	CredentialsByServer map[int64]*Credentials
 }
 
 type Credentials struct {
@@ -23,24 +17,25 @@ type Credentials struct {
 type serverAuthenticator struct {
 	uyuniServerAuthenticator      UyuniServerAuthenticator
 	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever
-	session                       Session
+	hubSessionRepository          HubSessionRepository
+	serverSessionRepository       ServerSessionRepository
 }
 
 func NewServerAuthenticator(uyuniServerAuthenticator UyuniServerAuthenticator,
-	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, session Session) *serverAuthenticator {
-	return &serverAuthenticator{uyuniServerAuthenticator, uyuniHubTopologyInfoRetriever, session}
+	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, hubSessionRepository HubSessionRepository, serverSessionRepository ServerSessionRepository) *serverAuthenticator {
+	return &serverAuthenticator{uyuniServerAuthenticator, uyuniHubTopologyInfoRetriever, hubSessionRepository, serverSessionRepository}
 }
 
-func (a *serverAuthenticator) AttachToServers(request *AttachToServersRequest) (*MulticastResponse, error) {
-	hubSession := a.session.RetrieveHubSession(request.HubSessionKey)
+func (a *serverAuthenticator) AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error) {
+	hubSession := a.hubSessionRepository.RetrieveHubSession(hubSessionKey)
 	if hubSession == nil {
-		log.Printf("HubSession was not found: %v", request.HubSessionKey)
+		log.Printf("HubSession was not found: %v", hubSessionKey)
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
 	if hubSession.loginMode == relayLoginMode {
-		return a.loginToServersUsingSameCredentials(request.ServerIDs, hubSession.username, hubSession.password, request.HubSessionKey)
+		return a.loginToServersUsingSameCredentials(serverIDs, hubSession.username, hubSession.password, hubSessionKey)
 	}
-	return a.loginToServers(request.ServerIDs, request.CredentialsByServer, request.HubSessionKey)
+	return a.loginToServers(serverIDs, credentialsByServer, hubSessionKey)
 }
 
 func (a *serverAuthenticator) loginToServersUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error) {
@@ -80,13 +75,12 @@ func (a *serverAuthenticator) saveServerSessions(hubSessionKey string, loginResp
 	for serverID, response := range loginResponses.SuccessfulResponses {
 		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, response.Response.(string), hubSessionKey}
 	}
-	// TODO: If we don't save responses for failed servers in session, user will get `Invalid session error" because of failed lookup later
-	// and wouldn't even get results for those where call was successful. We need a better mechanism to handle such cases.
+	// TODO:
 	//save for failed as well
 	for serverID, response := range loginResponses.FailedResponses {
 		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, "login-error", hubSessionKey}
 	}
-	a.session.SaveServerSessions(hubSessionKey, serverSessions)
+	a.serverSessionRepository.SaveServerSessions(hubSessionKey, serverSessions)
 }
 
 func generateSameCredentialsForServers(serverIDs []int64, username, password string) map[int64]*Credentials {

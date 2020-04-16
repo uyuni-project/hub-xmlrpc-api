@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/rpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
@@ -23,7 +24,7 @@ func initServer() {
 	rpcServer := rpc.NewServer()
 
 	//init config
-	conf := config.NewConfig()
+	conf := config.InitConfig()
 
 	//init xmlrpc client implementation
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
@@ -37,17 +38,19 @@ func initServer() {
 	uyuniHubTopoloyInfoRetriever := uyuni.NewUyuniHubTopologyInfoRetriever(uyuniHubCallExecutor)
 
 	//init session storage
-	session := session.NewInMemorySession()
+	var syncMap sync.Map
+	hubSessionRepository := session.NewInMemoryHubSessionRepository(&syncMap)
+	serverSessionRepository := session.NewInMemoryServerSessionRepository(&syncMap)
 
 	//init gateway
-	serverAuthenticator := gateway.NewServerAuthenticator(uyuniServerAuthenticator, uyuniHubTopoloyInfoRetriever, session)
-	hubAuthenticator := gateway.NewHubAuthenticator(uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopoloyInfoRetriever, session)
+	serverAuthenticator := gateway.NewServerAuthenticator(uyuniServerAuthenticator, uyuniHubTopoloyInfoRetriever, hubSessionRepository, serverSessionRepository)
+	hubAuthenticator := gateway.NewHubAuthenticator(uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopoloyInfoRetriever, hubSessionRepository)
 
 	hubProxy := gateway.NewHubProxy(uyuniHubCallExecutor)
 	hubTopologyInfoRetriever := gateway.NewHubTopologyInfoRetriever(uyuniHubTopoloyInfoRetriever)
 
-	multicaster := gateway.NewMulticaster(uyuniServerCallExecutor, session)
-	unicaster := gateway.NewUnicaster(uyuniServerCallExecutor, session)
+	multicaster := gateway.NewMulticaster(uyuniServerCallExecutor, hubSessionRepository)
+	unicaster := gateway.NewUnicaster(uyuniServerCallExecutor, serverSessionRepository)
 
 	//init controller
 	xmlrpcCodec := initCodec()
@@ -57,7 +60,7 @@ func initServer() {
 	rpcServer.RegisterService(controller.NewHubAuthenticationController(hubAuthenticator), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(hubProxy), "")
 	rpcServer.RegisterService(controller.NewHubTopologyController(hubTopologyInfoRetriever), "")
-	rpcServer.RegisterService(controller.NewMulticastController(multicaster), "")
+	rpcServer.RegisterService(controller.NewMulticastController(multicaster, transformer.MulticastResponseTransformer), "")
 	rpcServer.RegisterService(controller.NewUnicastController(unicaster), "")
 
 	//init server
@@ -78,7 +81,7 @@ func initCodec() *codec.Codec {
 
 	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.Multicast", transformer.MulticastRequestTransformer)
 	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.Unicast", transformer.UnicastRequestTransformer)
-	codec.RegisterDefaultMethod("HubProxyController.ProxyCallToHub", transformer.ListRequestTransformer)
+	codec.RegisterDefaultMethod("HubProxyController.ProxyCallToHub", transformer.ProxyCallToHubRequestTransformer)
 
 	return codec
 }

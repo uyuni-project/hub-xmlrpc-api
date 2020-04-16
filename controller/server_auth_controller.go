@@ -15,9 +15,15 @@ func NewServerAuthenticationController(serverAuthenticator gateway.ServerAuthent
 	return &ServerAuthenticationController{serverAuthenticator}
 }
 
-func (h *ServerAuthenticationController) AttachToServers(r *http.Request, args *gateway.AttachToServersRequest, reply *struct{ Data []error }) error {
+type AttachToServersRequest struct {
+	HubSessionKey       string
+	ServerIDs           []int64
+	CredentialsByServer map[int64]*gateway.Credentials
+}
+
+func (h *ServerAuthenticationController) AttachToServers(r *http.Request, args *AttachToServersRequest, reply *struct{ Data []error }) error {
 	//TODO: what to do with the response?
-	_, err := h.serverAuthenticator.AttachToServers(args)
+	_, err := h.serverAuthenticator.AttachToServers(args.HubSessionKey, args.ServerIDs, args.CredentialsByServer)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err

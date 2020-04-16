@@ -11,7 +11,7 @@ import (
 var AttachToServersRequestTransformer = transformToAttachToServersRequest
 
 func transformToAttachToServersRequest(request *codec.ServerRequest, output interface{}) error {
-	parsedRequest, ok := output.(*gateway.AttachToServersRequest)
+	parsedRequest, ok := output.(*controller.AttachToServersRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return controller.FaultInvalidParams
@@ -42,7 +42,7 @@ func transformToAttachToServersRequest(request *codec.ServerRequest, output inte
 		}
 	}
 
-	*parsedRequest = gateway.AttachToServersRequest{hubSessionKey, serverIDs, credentialsByServer}
+	*parsedRequest = controller.AttachToServersRequest{hubSessionKey, serverIDs, credentialsByServer}
 	return nil
 }
 

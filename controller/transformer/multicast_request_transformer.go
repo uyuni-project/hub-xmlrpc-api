@@ -6,13 +6,12 @@ import (
 
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
-	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
 var MulticastRequestTransformer = transformToMulitcastRequest
 
 func transformToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
-	parsedRequest, ok := output.(*gateway.MulticastRequest)
+	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return controller.FaultInvalidParams
@@ -45,7 +44,7 @@ func transformToMulitcastRequest(request *codec.ServerRequest, output interface{
 
 	method := removeNamespace(request.MethodName)
 
-	*parsedRequest = gateway.MulticastRequest{method, hubSessionKey, serverIDs, argsByServer}
+	*parsedRequest = controller.MulticastRequest{method, hubSessionKey, serverIDs, argsByServer}
 	return nil
 }
 

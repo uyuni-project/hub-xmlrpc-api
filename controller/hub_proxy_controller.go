@@ -11,13 +11,13 @@ type HubProxyController struct {
 	hubProxy gateway.HubProxy
 }
 
-type ListRequest struct {
-	Method string
-	Args   []interface{}
+type ProxyCallToHubRequest struct {
+	Call string
+	Args []interface{}
 }
 
-func (d *HubProxyController) ProxyCallToHub(r *http.Request, args *ListRequest, reply *struct{ Data interface{} }) error {
-	response, err := d.hubProxy.ProxyCallToHub(args.Method, args.Args)
+func (d *HubProxyController) ProxyCallToHub(r *http.Request, args *ProxyCallToHubRequest, reply *struct{ Data interface{} }) error {
+	response, err := d.hubProxy.ProxyCallToHub(args.Call, args.Args)
 	if err != nil {
 		log.Printf("Call error: %v", err)
 		return err

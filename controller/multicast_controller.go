@@ -2,14 +2,15 @@ package controller
 
 import (
 	"net/http"
-	"strings"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
 type MulticastController struct {
-	multicaster gateway.Multicaster
+	multicaster         gateway.Multicaster
+	responseTransformer multicastResponseTransformer
 }
+type multicastResponseTransformer func(multicastResponse *gateway.MulticastResponse) *MulticastResponse
 
 type MulticastResponse struct {
 	Successful, Failed MulticastStateResponse
@@ -20,50 +21,22 @@ type MulticastStateResponse struct {
 	Responses []interface{}
 }
 
-func NewMulticastController(multicaster gateway.Multicaster) *MulticastController {
-	return &MulticastController{multicaster}
+func NewMulticastController(multicaster gateway.Multicaster, responseTransformer multicastResponseTransformer) *MulticastController {
+	return &MulticastController{multicaster, responseTransformer}
 }
 
-func (h *MulticastController) Multicast(r *http.Request, args *gateway.MulticastRequest, reply *struct{ Data *MulticastResponse }) error {
-	multicastResponse, err := h.multicaster.Multicast(args)
+type MulticastRequest struct {
+	Call          string
+	HubSessionKey string
+	ServerIDs     []int64
+	ArgsByServer  map[int64][]interface{}
+}
+
+func (h *MulticastController) Multicast(r *http.Request, args *MulticastRequest, reply *struct{ Data *MulticastResponse }) error {
+	multicastResponse, err := h.multicaster.Multicast(args.HubSessionKey, args.Call, args.ServerIDs, args.ArgsByServer)
 	if err != nil {
 		return err
 	}
-	reply.Data = transformToOutputModel(multicastResponse)
+	reply.Data = h.responseTransformer(multicastResponse)
 	return nil
-}
-
-func removeMulticastNamespace(method string) string {
-	parts := strings.Split(method, ".")
-	slice := parts[1:len(parts)]
-	return strings.Join(slice, ".")
-}
-
-func transformToOutputModel(multicastResponse *gateway.MulticastResponse) *MulticastResponse {
-	return &MulticastResponse{
-		transformToSuccessfulResponses(multicastResponse.SuccessfulResponses),
-		transformToFailedResponses(multicastResponse.FailedResponses),
-	}
-}
-
-func transformToSuccessfulResponses(serverCallResponses map[int64]gateway.ServerSuccessfulResponse) MulticastStateResponse {
-	serverIDs := make([]int64, 0, len(serverCallResponses))
-	responses := make([]interface{}, 0, len(serverCallResponses))
-
-	for serverID, response := range serverCallResponses {
-		serverIDs = append(serverIDs, serverID)
-		responses = append(responses, response.Response)
-	}
-	return MulticastStateResponse{serverIDs, responses}
-}
-
-func transformToFailedResponses(serverCallResponses map[int64]gateway.ServerFailedResponse) MulticastStateResponse {
-	serverIDs := make([]int64, 0, len(serverCallResponses))
-	responses := make([]interface{}, 0, len(serverCallResponses))
-
-	for serverID, response := range serverCallResponses {
-		serverIDs = append(serverIDs, serverID)
-		responses = append(responses, response.ErrorMessage)
-	}
-	return MulticastStateResponse{serverIDs, responses}
 }

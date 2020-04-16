@@ -19,10 +19,13 @@ func NewServerSession(serverID int64, serverEndpoinit, serverSessionKey, hubSess
 	return &ServerSession{serverID, serverEndpoinit, serverSessionKey, hubSessionKey}
 }
 
-type Session interface {
+type HubSessionRepository interface {
 	SaveHubSession(hubSession *HubSession)
 	RetrieveHubSession(hubSessionKey string) *HubSession
 	RemoveHubSession(hubSessionKey string)
+}
+
+type ServerSessionRepository interface {
 	SaveServerSessions(hubSessionKey string, serverSessions map[int64]*ServerSession)
 	RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *ServerSession
 	RetrieveServerSessions(hubSessionKey string) map[int64]*ServerSession

@@ -19,6 +19,8 @@ type Codec struct {
 	transformers             map[string]Transformer
 }
 
+type Transformer func(request *ServerRequest, output interface{}) error
+
 func NewCodec() *Codec {
 	return &Codec{
 		mappings:                 make(map[string]string),

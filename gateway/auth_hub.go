@@ -20,11 +20,11 @@ type hubAuthenticator struct {
 	uyuniHubAuthenticator         UyuniHubAuthenticator
 	serverAuthenticator           ServerAuthenticator
 	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever
-	session                       Session
+	hubSessionRepository          HubSessionRepository
 }
 
-func NewHubAuthenticator(uyuniHubAuthenticator UyuniHubAuthenticator, serverAuthenticator ServerAuthenticator, uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, session Session) *hubAuthenticator {
-	return &hubAuthenticator{uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopologyInfoRetriever, session}
+func NewHubAuthenticator(uyuniHubAuthenticator UyuniHubAuthenticator, serverAuthenticator ServerAuthenticator, uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, hubSessionRepository HubSessionRepository) *hubAuthenticator {
+	return &hubAuthenticator{uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopologyInfoRetriever, hubSessionRepository}
 }
 
 func (h *hubAuthenticator) Login(username, password string) (string, error) {
@@ -55,6 +55,6 @@ func (h *hubAuthenticator) loginToHub(username, password string, loginMode int) 
 		log.Printf("Error ocurred while trying to login into the Hub: %v", err)
 		return "", err
 	}
-	h.session.SaveHubSession(NewHubSession(hubToken, username, password, loginMode))
+	h.hubSessionRepository.SaveHubSession(NewHubSession(hubToken, username, password, loginMode))
 	return hubToken, nil
 }

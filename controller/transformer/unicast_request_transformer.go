@@ -5,13 +5,12 @@ import (
 
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
-	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
 var UnicastRequestTransformer = transformToUnicastRequest
 
 func transformToUnicastRequest(request *codec.ServerRequest, output interface{}) error {
-	parsedArgs, ok := output.(*gateway.UnicastRequest)
+	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
 		return controller.FaultInvalidParams
@@ -42,6 +41,6 @@ func transformToUnicastRequest(request *codec.ServerRequest, output interface{})
 	}
 
 	method := removeNamespace(request.MethodName)
-	*parsedArgs = gateway.UnicastRequest{method, hubSessionKey, serverID, serverArgs}
+	*parsedArgs = controller.UnicastRequest{method, hubSessionKey, serverID, serverArgs}
 	return nil
 }

@@ -7,32 +7,25 @@ import (
 )
 
 type Multicaster interface {
-	Multicast(request *MulticastRequest) (*MulticastResponse, error)
-}
-
-type MulticastRequest struct {
-	Call          string
-	HubSessionKey string
-	ServerIDs     []int64
-	ArgsByServer  map[int64][]interface{}
+	Multicast(hubSessionKey string, call string, serverIDs []int64, argsByServer map[int64][]interface{}) (*MulticastResponse, error)
 }
 
 type multicaster struct {
 	uyuniServerCallExecutor UyuniServerCallExecutor
-	session                 Session
+	hubSessionRepository    HubSessionRepository
 }
 
-func NewMulticaster(uyuniServerCallExecutor UyuniServerCallExecutor, session Session) *multicaster {
-	return &multicaster{uyuniServerCallExecutor, session}
+func NewMulticaster(uyuniServerCallExecutor UyuniServerCallExecutor, hubSessionRepository HubSessionRepository) *multicaster {
+	return &multicaster{uyuniServerCallExecutor, hubSessionRepository}
 }
 
-func (m *multicaster) Multicast(request *MulticastRequest) (*MulticastResponse, error) {
-	hubSession := m.session.RetrieveHubSession(request.HubSessionKey)
+func (m *multicaster) Multicast(hubSessionKey string, call string, serverIDs []int64, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
+	hubSession := m.hubSessionRepository.RetrieveHubSession(hubSessionKey)
 	if hubSession == nil {
-		log.Printf("HubSession was not found. HubSessionKey: %v", request.HubSessionKey)
+		log.Printf("HubSession was not found. HubSessionKey: %v", hubSessionKey)
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
-	multicastCallRequest, err := m.generateMulticastCallRequest(request.Call, hubSession.ServerSessions, request.ServerIDs, request.ArgsByServer)
+	multicastCallRequest, err := m.generateMulticastCallRequest(call, hubSession.ServerSessions, serverIDs, argsByServer)
 	if err != nil {
 		return nil, err
 	}
