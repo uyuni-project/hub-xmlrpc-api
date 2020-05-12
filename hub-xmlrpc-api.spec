@@ -1,5 +1,6 @@
 #
 # spec file for package hub-xmlrpc-api
+#
 # Copyright (c) 2020 SUSE LLC
 #
 # All modifications and additions to the file contributed by third parties
@@ -15,14 +16,12 @@
 #
 
 
-
 %global provider        github
 %global provider_tld    com
 %global org             uyuni-project
 %global project         hub-xmlrpc-api
 %global provider_prefix %{provider}.%{provider_tld}/%{org}/%{project}
 %global import_path     %{provider_prefix}
-
 
 Name:           %{project}
 Version:        0.1.4
@@ -35,8 +34,11 @@ Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  go >= 1.9
 BuildRequires:  golang-packaging
+BuildRequires:  rsyslog
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
+Requires:       logrotate
+Requires:       rsyslog
 Requires:       systemd
 
 %description
@@ -65,11 +67,11 @@ install -D -m 0644 %{_release_dir}/hub.conf %{buildroot}%{_sysconfdir}/hub
 install -D -m 0644 %{_release_dir}/hub-xmlrpc-api-config.json  %{buildroot}%{_sysconfdir}/hub
 install -d -m 0750 %{buildroot}%{_var}/log/hub
 
+# Add syslog config to redirect logs to /var/log/hub/hub-xmlrpc-api.log
+install -D -m 0644 %{_release_dir}/hub-logs.conf %{buildroot}%{_sysconfdir}/rsyslog.d/hub-logs.conf
 
-#add syslog config to redirect logs to /var/log/hub/hub-xmlrpc-api.log
-install -d -m 755 %{buildroot}%{_sysconfdir}/rsyslog.d
-install -D -m 0644 %{_release_dir}/hub-logs.conf %{buildroot}%{_sysconfdir}/rsyslog.d
-
+#logrotate config
+install -D -m 0644 %{_release_dir}/hub-xmlrpc-api %{buildroot}%{_sysconfdir}/logrotate.d/hub-xmlrpc-api
 
 %pre
 %service_add_pre hub-xmlrpc-api.service
@@ -84,12 +86,10 @@ if [ $1 == 1 ];then
    echo "### You can start Hub XMLRPC API by executing the following command"
    echo " sudo systemctl start hub-xmlrpc-api.service"
    echo ""
-   echo " Make sure 'etc/hub/hub-xmlrpc-api-config.json' is pointing to correct hub instance"
+   echo " Make sure '/etc/hub/hub-xmlrpc-api-config.json' is pointing to correct hub instance"
    echo " Logs can be viewed at /var/log/hub/hub-xmlrpc-api.log"
-   echo ""
-   echo "For more information go to %{provider_prefix}"
 
-   systemctl restart rsyslog.service > /dev/null 2>&1 || :
+   /usr/bin/systemctl restart rsyslog.service > /dev/null 2>&1 || :
 fi
 
 %preun
@@ -98,18 +98,19 @@ fi
 %postun
 %service_del_postun hub-xmlrpc-api.service
 
-
-%files -f file.lst
+%files
 
 %defattr(-,root,root)
-%dir %{_sysconfdir}/rsyslog.d
+%doc README.md
 %{_bindir}/hub-xmlrpc-api
 
 %{_unitdir}/hub-xmlrpc-api.service
 %dir %{_sysconfdir}/hub
 %dir %{_var}/log/hub
-%config(noreplace) /etc/rsyslog.d/hub-logs.conf
+
+%config(noreplace) %{_sysconfdir}/rsyslog.d/hub-logs.conf
 %config(noreplace) %{_sysconfdir}/hub/hub-xmlrpc-api-config.json
 %config(noreplace) %{_sysconfdir}/hub/hub.conf
+%config(noreplace) %{_sysconfdir}/logrotate.d/hub-xmlrpc-api
 
 %changelog
