@@ -8,7 +8,7 @@ import (
 )
 
 type HubTopologyController struct {
-	hubService gateway.HubTopologyInfoRetriever
+	hubService gateway.TopologyInfoRetriever
 }
 
 func (h *HubTopologyController) ListServerIDs(r *http.Request, args *struct{ HubSessionKey string }, reply *struct{ Data []int64 }) error {
@@ -21,6 +21,6 @@ func (h *HubTopologyController) ListServerIDs(r *http.Request, args *struct{ Hub
 	return nil
 }
 
-func NewHubTopologyController(hubTopologyInfoRetriever gateway.HubTopologyInfoRetriever) *HubTopologyController {
-	return &HubTopologyController{hubTopologyInfoRetriever}
+func NewHubTopologyController(topologyInfoRetriever gateway.TopologyInfoRetriever) *HubTopologyController {
+	return &HubTopologyController{topologyInfoRetriever}
 }

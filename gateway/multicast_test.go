@@ -43,67 +43,6 @@ func (m *mockUyuniServerCallExecutor) ExecuteCall(endpoint, call string, args []
 	return m.mockExecuteCall(endpoint, call, args)
 }
 
-/*
-func Test_generateMulticastCallRequest(t *testing.T) {
-	serverCall := func(endpoint string, args []interface{}) (interface{}, error) {
-		return "server_call_executed", nil
-	}
-
-	tt := []struct {
-		name                         string
-		argsByServer                 map[int64][]interface{}
-		serverSessions               map[int64]*ServerSession
-		expectedMulticastCallrequest *multicastCallRequest
-		expectedErr                  string
-	}{
-		{
-			name: "appendServerSessionKeyToServerArgs success",
-			argsByServer: map[int64][]interface{}{
-				1: []interface{}{"arg1_Server1"},
-				2: []interface{}{"arg1_Server2"},
-			},
-			serverSessions: map[int64]*ServerSession{
-				1: &ServerSession{1, "1-serverEndpoint", "1-sessionKey", "hubSessionKey"},
-				2: &ServerSession{2, "2-serverEndpoint", "2-sessionKey", "hubSessionKey"},
-			},
-			expectedMulticastCallrequest: &multicastCallRequest{
-				serverCall,
-				[]serverCallInfo{
-					serverCallInfo{1, "1-serverEndpoint", []interface{}{"1-sessionKey", "arg1_Server1"}},
-					serverCallInfo{2, "2-serverEndpoint", []interface{}{"2-sessionKey", "arg1_Server2"}},
-				},
-			},
-		},
-		{
-			name: "appendServerSessionKeyToServerArgs serverSessions_not_found",
-			argsByServer: map[int64][]interface{}{
-				1: []interface{}{"arg1_Server1"},
-				2: []interface{}{"arg1_Server2"},
-			},
-			serverSessions: make(map[int64]*ServerSession),
-			expectedErr:    "Authentication error: provided session key is invalid",
-		},
-	}
-
-	for _, tc := range tt {
-		t.Run(tc.name, func(t *testing.T) {
-			//setup env
-			mockSession := new(mockSession)
-			multicaster := NewMulticaster(new(mockUyuniServerCallExecutor), mockSession)
-
-			serverArgs, err := multicaster.generateMulticastCallRequest(call, tc.serverSessions, serversIDs, tc.argsByServer)
-
-			if err != nil && tc.expectedErr != err.Error() {
-				t.Fatalf("Error during executing request: %v", err)
-			}
-			if err == nil && !reflect.DeepEqual(serverArgs, tc.expectedArgsByServer) {
-				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedArgsByServer)
-			}
-		})
-	}
-}
-*/
-
 func Test_executeCallOnServers(t *testing.T) {
 	tt := []struct {
 		name                      string

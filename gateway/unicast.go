@@ -10,12 +10,12 @@ type Unicaster interface {
 }
 
 type unicaster struct {
-	uyuniServerCallExecutor UyuniServerCallExecutor
+	uyuniCallExecutor       UyuniCallExecutor
 	serverSessionRepository ServerSessionRepository
 }
 
-func NewUnicaster(uyuniServerCallExecutor UyuniServerCallExecutor, serverSessionRepository ServerSessionRepository) *unicaster {
-	return &unicaster{uyuniServerCallExecutor, serverSessionRepository}
+func NewUnicaster(uyuniCallExecutor UyuniCallExecutor, serverSessionRepository ServerSessionRepository) *unicaster {
+	return &unicaster{uyuniCallExecutor, serverSessionRepository}
 }
 
 func (u *unicaster) Unicast(hubSessionKey string, call string, serverID int64, args []interface{}) (interface{}, error) {
@@ -25,5 +25,5 @@ func (u *unicaster) Unicast(hubSessionKey string, call string, serverID int64, a
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
 	callArguments := append([]interface{}{serverSession.serverSessionKey}, args...)
-	return u.uyuniServerCallExecutor.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
+	return u.uyuniCallExecutor.ExecuteCall(serverSession.serverAPIEndpoint, call, callArguments)
 }

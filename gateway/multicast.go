@@ -11,12 +11,12 @@ type Multicaster interface {
 }
 
 type multicaster struct {
-	uyuniServerCallExecutor UyuniServerCallExecutor
-	hubSessionRepository    HubSessionRepository
+	uyuniCallExecutor    UyuniCallExecutor
+	hubSessionRepository HubSessionRepository
 }
 
-func NewMulticaster(uyuniServerCallExecutor UyuniServerCallExecutor, hubSessionRepository HubSessionRepository) *multicaster {
-	return &multicaster{uyuniServerCallExecutor, hubSessionRepository}
+func NewMulticaster(uyuniCallExecutor UyuniCallExecutor, hubSessionRepository HubSessionRepository) *multicaster {
+	return &multicaster{uyuniCallExecutor, hubSessionRepository}
 }
 
 func (m *multicaster) Multicast(hubSessionKey string, call string, serverIDs []int64, argsByServer map[int64][]interface{}) (*MulticastResponse, error) {
@@ -45,7 +45,7 @@ type serverCall func(endpoint string, args []interface{}) (interface{}, error)
 
 func (m *multicaster) generateMulticastCallRequest(call string, serverSessions map[int64]*ServerSession, serverIDs []int64, argsByServer map[int64][]interface{}) (*multicastCallRequest, error) {
 	callFunc := func(endpoint string, args []interface{}) (interface{}, error) {
-		return m.uyuniServerCallExecutor.ExecuteCall(endpoint, call, args)
+		return m.uyuniCallExecutor.ExecuteCall(endpoint, call, args)
 	}
 
 	serverCallInfos := make([]serverCallInfo, 0, len(argsByServer))

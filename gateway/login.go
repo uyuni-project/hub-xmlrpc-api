@@ -17,14 +17,17 @@ type HubAuthenticator interface {
 }
 
 type hubAuthenticator struct {
-	uyuniHubAuthenticator         UyuniHubAuthenticator
-	serverAuthenticator           ServerAuthenticator
-	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever
-	hubSessionRepository          HubSessionRepository
+	hubAPIEndpoint                   string
+	uyuniAuthenticator               UyuniAuthenticator
+	serverAuthenticator              ServerAuthenticator
+	uyuniServerTopologyInfoRetriever UyuniTopologyInfoRetriever
+	hubSessionRepository             HubSessionRepository
 }
 
-func NewHubAuthenticator(uyuniHubAuthenticator UyuniHubAuthenticator, serverAuthenticator ServerAuthenticator, uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, hubSessionRepository HubSessionRepository) *hubAuthenticator {
-	return &hubAuthenticator{uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopologyInfoRetriever, hubSessionRepository}
+func NewHubAuthenticator(hubAPIEndpoint string, uyuniAuthenticator UyuniAuthenticator,
+	serverAuthenticator ServerAuthenticator, uyuniTopologyInfoRetriever UyuniTopologyInfoRetriever,
+	hubSessionRepository HubSessionRepository) *hubAuthenticator {
+	return &hubAuthenticator{hubAPIEndpoint, uyuniAuthenticator, serverAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository}
 }
 
 func (h *hubAuthenticator) Login(username, password string) (string, error) {
@@ -38,19 +41,18 @@ func (h *hubAuthenticator) LoginWithAuthRelayMode(username, password string) (st
 func (h *hubAuthenticator) LoginWithAutoconnectMode(username, password string) (string, error) {
 	hubSessionKey, err := h.loginToHub(username, password, autoconnectLoginMode)
 	if err != nil {
-		log.Printf("Login error: %v", err)
 		return "", err
 	}
-	userServerIDs, err := h.uyuniHubTopologyInfoRetriever.RetrieveUserServerIDs(hubSessionKey, username)
+	userServerIDs, err := h.uyuniServerTopologyInfoRetriever.RetrieveUserServerIDs(h.hubAPIEndpoint, hubSessionKey, username)
 	if err != nil {
-		//TODO: should we return an error? retry the login or what?
+		return "", err
 	}
-	h.serverAuthenticator.loginToServersUsingSameCredentials(userServerIDs, username, password, hubSessionKey)
+	h.serverAuthenticator.attachServersToHubSessionUsingSameCredentials(userServerIDs, username, password, hubSessionKey)
 	return hubSessionKey, nil
 }
 
 func (h *hubAuthenticator) loginToHub(username, password string, loginMode int) (string, error) {
-	hubToken, err := h.uyuniHubAuthenticator.Login(username, password)
+	hubToken, err := h.uyuniAuthenticator.Login(h.hubAPIEndpoint, username, password)
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the Hub: %v", err)
 		return "", err

@@ -7,7 +7,8 @@ import (
 
 type ServerAuthenticator interface {
 	AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error)
-	loginToServersUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error)
+	attachServersToHubSessionUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error)
+	logoutFromServersInHubSession(hubSessionKey string) error
 }
 
 type Credentials struct {
@@ -15,15 +16,17 @@ type Credentials struct {
 }
 
 type serverAuthenticator struct {
-	uyuniServerAuthenticator      UyuniServerAuthenticator
-	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever
-	hubSessionRepository          HubSessionRepository
-	serverSessionRepository       ServerSessionRepository
+	hubAPIEndpoint             string
+	uyuniAuthenticator         UyuniAuthenticator
+	uyuniTopologyInfoRetriever UyuniTopologyInfoRetriever
+	hubSessionRepository       HubSessionRepository
+	serverSessionRepository    ServerSessionRepository
 }
 
-func NewServerAuthenticator(uyuniServerAuthenticator UyuniServerAuthenticator,
-	uyuniHubTopologyInfoRetriever UyuniHubTopologyInfoRetriever, hubSessionRepository HubSessionRepository, serverSessionRepository ServerSessionRepository) *serverAuthenticator {
-	return &serverAuthenticator{uyuniServerAuthenticator, uyuniHubTopologyInfoRetriever, hubSessionRepository, serverSessionRepository}
+func NewServerAuthenticator(hubAPIEndpoint string, uyuniAuthenticator UyuniAuthenticator,
+	uyuniTopologyInfoRetriever UyuniTopologyInfoRetriever, hubSessionRepository HubSessionRepository,
+	serverSessionRepository ServerSessionRepository) *serverAuthenticator {
+	return &serverAuthenticator{hubAPIEndpoint, uyuniAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository, serverSessionRepository}
 }
 
 func (a *serverAuthenticator) AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error) {
@@ -33,41 +36,37 @@ func (a *serverAuthenticator) AttachToServers(hubSessionKey string, serverIDs []
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
 	if hubSession.loginMode == relayLoginMode {
-		return a.loginToServersUsingSameCredentials(serverIDs, hubSession.username, hubSession.password, hubSessionKey)
+		return a.attachServersToHubSessionUsingSameCredentials(serverIDs, hubSession.username, hubSession.password, hubSessionKey)
 	}
-	return a.loginToServers(serverIDs, credentialsByServer, hubSessionKey)
+	return a.attachServersToHubSession(serverIDs, credentialsByServer, hubSessionKey)
 }
 
-func (a *serverAuthenticator) loginToServersUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error) {
+func (a *serverAuthenticator) attachServersToHubSessionUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error) {
 	credentialsByServer := generateSameCredentialsForServers(serverIDs, username, password)
-	return a.loginToServers(serverIDs, credentialsByServer, hubSessionKey)
+	return a.attachServersToHubSession(serverIDs, credentialsByServer, hubSessionKey)
 }
 
-func (a *serverAuthenticator) loginToServers(serverIDs []int64, credentialsByServer map[int64]*Credentials, hubSessionKey string) (*MulticastResponse, error) {
-	endpointByServer, err := a.uyuniHubTopologyInfoRetriever.RetrieveServerAPIEndpoints(hubSessionKey, serverIDs)
+func (a *serverAuthenticator) attachServersToHubSession(serverIDs []int64, credentialsByServer map[int64]*Credentials, hubSessionKey string) (*MulticastResponse, error) {
+	endpointByServer, err := a.uyuniTopologyInfoRetriever.RetrieveServerAPIEndpoints(a.hubAPIEndpoint, hubSessionKey, serverIDs)
 	if err != nil {
 		//TODO: what to do with failing servers?
 	}
-	multicastCallRequest, err := a.generateLoginMuticastCallRequest(credentialsByServer, endpointByServer)
-	if err != nil {
-		//TODO: what to do with the error here?
-	}
+	multicastCallRequest := a.generateLoginMuticastCallRequest(credentialsByServer, endpointByServer)
 	loginResponse := executeCallOnServers(multicastCallRequest)
 	a.saveServerSessions(hubSessionKey, loginResponse)
 	return loginResponse, nil
 }
 
-func (a *serverAuthenticator) generateLoginMuticastCallRequest(credentialsByServer map[int64]*Credentials, endpointByServer map[int64]string) (*multicastCallRequest, error) {
+func (a *serverAuthenticator) generateLoginMuticastCallRequest(credentialsByServer map[int64]*Credentials, endpointByServer map[int64]string) *multicastCallRequest {
 	call := func(endpoint string, args []interface{}) (interface{}, error) {
-		return a.uyuniServerAuthenticator.Login(endpoint, args[0].(string), args[1].(string))
+		return a.uyuniAuthenticator.Login(endpoint, args[0].(string), args[1].(string))
 	}
-
 	serverCallInfos := make([]serverCallInfo, 0, len(credentialsByServer))
 	for serverID, endpoint := range endpointByServer {
 		args := []interface{}{credentialsByServer[serverID].Username, credentialsByServer[serverID].Password}
 		serverCallInfos = append(serverCallInfos, serverCallInfo{serverID, endpoint, args})
 	}
-	return &multicastCallRequest{call, serverCallInfos}, nil
+	return &multicastCallRequest{call, serverCallInfos}
 }
 
 func (a *serverAuthenticator) saveServerSessions(hubSessionKey string, loginResponses *MulticastResponse) {

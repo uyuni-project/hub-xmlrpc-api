@@ -7,15 +7,16 @@ type HubProxy interface {
 }
 
 type hubProxy struct {
-	uyuniHubCallExecutor UyuniHubCallExecutor
+	hubAPIEndpoint    string
+	uyuniCallExecutor UyuniCallExecutor
 }
 
-func NewHubProxy(uyuniHubCallExecutor UyuniHubCallExecutor) *hubProxy {
-	return &hubProxy{uyuniHubCallExecutor}
+func NewHubProxy(hubAPIEndpoint string, uyuniCallExecutor UyuniCallExecutor) *hubProxy {
+	return &hubProxy{hubAPIEndpoint, uyuniCallExecutor}
 }
 
 func (p *hubProxy) ProxyCallToHub(call string, args []interface{}) (interface{}, error) {
-	response, err := p.uyuniHubCallExecutor.ExecuteCall(call, args)
+	response, err := p.uyuniCallExecutor.ExecuteCall(p.hubAPIEndpoint, call, args)
 	if err != nil {
 		log.Printf("Error ocurred when delegating call to Hub: %v", err)
 		return nil, err
