@@ -30,12 +30,9 @@ func initServer() {
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
 
 	//init uyuni adapters
-	uyuniServerCallExecutor := uyuni.NewUyuniServerCallExecutor(client)
-	uyuniServerAuthenticator := uyuni.NewUyuniServerAuthenticator(uyuniServerCallExecutor)
-
-	uyuniHubAuthenticator := uyuni.NewUyuniHubAuthenticator(uyuniServerAuthenticator, conf.Hub.SUMA_API_URL)
-	uyuniHubCallExecutor := uyuni.NewUyuniHubCallExecutor(uyuniServerCallExecutor, conf.Hub.SUMA_API_URL)
-	uyuniHubTopoloyInfoRetriever := uyuni.NewUyuniHubTopologyInfoRetriever(uyuniHubCallExecutor)
+	uyuniCallExecutor := uyuni.NewUyuniCallExecutor(client)
+	uyuniAuthenticator := uyuni.NewUyuniAuthenticator(uyuniCallExecutor)
+	uyuniTopoloyInfoRetriever := uyuni.NewUyuniTopologyInfoRetriever(uyuniCallExecutor)
 
 	//init session storage
 	var syncMap sync.Map
@@ -43,14 +40,14 @@ func initServer() {
 	serverSessionRepository := session.NewInMemoryServerSessionRepository(&syncMap)
 
 	//init gateway
-	serverAuthenticator := gateway.NewServerAuthenticator(uyuniServerAuthenticator, uyuniHubTopoloyInfoRetriever, hubSessionRepository, serverSessionRepository)
-	hubAuthenticator := gateway.NewHubAuthenticator(uyuniHubAuthenticator, serverAuthenticator, uyuniHubTopoloyInfoRetriever, hubSessionRepository)
+	serverAuthenticator := gateway.NewServerAuthenticator(conf.Hub.SUMA_API_URL, uyuniAuthenticator, uyuniTopoloyInfoRetriever, hubSessionRepository, serverSessionRepository)
+	hubAuthenticator := gateway.NewHubAuthenticator(conf.Hub.SUMA_API_URL, uyuniAuthenticator, serverAuthenticator, uyuniTopoloyInfoRetriever, hubSessionRepository)
 
-	hubProxy := gateway.NewHubProxy(uyuniHubCallExecutor)
-	hubTopologyInfoRetriever := gateway.NewHubTopologyInfoRetriever(uyuniHubTopoloyInfoRetriever)
+	hubProxy := gateway.NewHubProxy(conf.Hub.SUMA_API_URL, uyuniCallExecutor)
+	hubTopologyInfoRetriever := gateway.NewTopologyInfoRetriever(conf.Hub.SUMA_API_URL, uyuniTopoloyInfoRetriever)
 
-	multicaster := gateway.NewMulticaster(uyuniServerCallExecutor, hubSessionRepository)
-	unicaster := gateway.NewUnicaster(uyuniServerCallExecutor, serverSessionRepository)
+	multicaster := gateway.NewMulticaster(uyuniCallExecutor, hubSessionRepository)
+	unicaster := gateway.NewUnicaster(uyuniCallExecutor, serverSessionRepository)
 
 	//init controller
 	xmlrpcCodec := initCodec()

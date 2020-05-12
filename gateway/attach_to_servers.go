@@ -8,7 +8,6 @@ import (
 type ServerAuthenticator interface {
 	AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error)
 	attachServersToHubSessionUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error)
-	logoutFromServersInHubSession(hubSessionKey string) error
 }
 
 type Credentials struct {
