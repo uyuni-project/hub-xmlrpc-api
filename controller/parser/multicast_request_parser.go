@@ -1,4 +1,4 @@
-package transformer
+package parser
 
 import (
 	"log"
@@ -8,9 +8,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 )
 
-var MulticastRequestTransformer = transformToMulitcastRequest
+var MulticastRequestParser = parserToMulitcastRequest
 
-func transformToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
+func parserToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

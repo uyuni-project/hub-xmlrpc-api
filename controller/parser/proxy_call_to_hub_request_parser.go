@@ -1,4 +1,4 @@
-package transformer
+package parser
 
 import (
 	"log"
@@ -7,9 +7,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 )
 
-var ProxyCallToHubRequestTransformer = transformToListRequest
+var ProxyCallToHubRequestParser = parseToListRequest
 
-func transformToListRequest(request *codec.ServerRequest, output interface{}) error {
+func parseToListRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.ProxyCallToHubRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

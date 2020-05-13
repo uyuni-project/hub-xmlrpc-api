@@ -1,4 +1,4 @@
-package transformer
+package parser
 
 import (
 	"log"
@@ -7,9 +7,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 )
 
-var UnicastRequestTransformer = transformToUnicastRequest
+var UnicastRequestParser = parseToUnicastRequest
 
-func transformToUnicastRequest(request *codec.ServerRequest, output interface{}) error {
+func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

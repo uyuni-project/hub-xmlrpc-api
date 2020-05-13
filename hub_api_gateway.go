@@ -10,6 +10,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/transformer"
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
@@ -70,15 +71,15 @@ func initServer() {
 func initCodec() *codec.Codec {
 	var codec = codec.NewCodec()
 
-	codec.RegisterMapping("hub.login", "HubAuthenticationController.Login", transformer.LoginRequestTransformer)
-	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubAuthenticationController.LoginWithAutoconnectMode", transformer.LoginRequestTransformer)
-	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubAuthenticationController.LoginWithAuthRelayMode", transformer.LoginRequestTransformer)
-	codec.RegisterMapping("hub.attachToServers", "ServerAuthenticationController.AttachToServers", transformer.AttachToServersRequestTransformer)
-	codec.RegisterMapping("hub.listServerIds", "HubTopologyController.ListServerIDs", transformer.LoginRequestTransformer)
+	codec.RegisterMapping("hub.login", "HubAuthenticationController.Login", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubAuthenticationController.LoginWithAutoconnectMode", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubAuthenticationController.LoginWithAuthRelayMode", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.attachToServers", "ServerAuthenticationController.AttachToServers", parser.AttachToServersRequestParser)
+	codec.RegisterMapping("hub.listServerIds", "HubTopologyController.ListServerIDs", parser.LoginRequestParser)
 
-	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.Multicast", transformer.MulticastRequestTransformer)
-	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.Unicast", transformer.UnicastRequestTransformer)
-	codec.RegisterDefaultMethod("HubProxyController.ProxyCallToHub", transformer.ProxyCallToHubRequestTransformer)
+	codec.RegisterDefaultMethodForNamespace("multicast", "MulticastController.Multicast", parser.MulticastRequestParser)
+	codec.RegisterDefaultMethodForNamespace("unicast", "UnicastController.Unicast", parser.UnicastRequestParser)
+	codec.RegisterDefaultMethod("HubProxyController.ProxyCallToHub", parser.ProxyCallToHubRequestParser)
 
 	return codec
 }

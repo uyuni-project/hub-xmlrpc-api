@@ -16,33 +16,33 @@ type Codec struct {
 	mappings                 map[string]string
 	defaultMethodByNamespace map[string]string
 	defaultMethod            string
-	transformers             map[string]Transformer
+	parsers                  map[string]Parser
 }
 
-type Transformer func(request *ServerRequest, output interface{}) error
+type Parser func(request *ServerRequest, output interface{}) error
 
 func NewCodec() *Codec {
 	return &Codec{
 		mappings:                 make(map[string]string),
 		defaultMethodByNamespace: make(map[string]string),
 		defaultMethod:            "",
-		transformers:             make(map[string]Transformer),
+		parsers:                  make(map[string]Parser),
 	}
 }
 
-func (c *Codec) RegisterMapping(mapping string, method string, transformer Transformer) {
+func (c *Codec) RegisterMapping(mapping string, method string, parser Parser) {
 	c.mappings[mapping] = method
-	c.transformers[c.resolveServiceMethod(method)] = transformer
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
-func (c *Codec) RegisterDefaultMethod(method string, transformer Transformer) {
+func (c *Codec) RegisterDefaultMethod(method string, parser Parser) {
 	c.defaultMethod = method
-	c.transformers[c.resolveServiceMethod(method)] = transformer
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
-func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, transformer Transformer) {
+func (c *Codec) RegisterDefaultMethodForNamespace(namespace, method string, parser Parser) {
 	c.defaultMethodByNamespace[namespace] = method
-	c.transformers[c.resolveServiceMethod(method)] = transformer
+	c.parsers[c.resolveServiceMethod(method)] = parser
 }
 
 func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
@@ -61,14 +61,14 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 
 	userMethod := serverRequest.MethodName
 	serviceMethod := c.resolveServiceMethod(userMethod)
-	transformer := c.resolveTransformer(serviceMethod)
+	parser := c.resolveParser(serviceMethod)
 
-	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, transformer: transformer}
+	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, parser: parser}
 }
 
-func (c *Codec) resolveTransformer(requestMethod string) Transformer {
-	if transformer, ok := c.transformers[requestMethod]; ok {
-		return transformer
+func (c *Codec) resolveParser(requestMethod string) Parser {
+	if parser, ok := c.parsers[requestMethod]; ok {
+		return parser
 	}
 	return nil
 }
@@ -101,7 +101,7 @@ type ServerRequest struct {
 type CodecRequest struct {
 	serviceMethod string
 	request       *ServerRequest
-	transformer   Transformer
+	parser        Parser
 	err           error
 }
 
@@ -113,10 +113,10 @@ func (c *CodecRequest) Method() (string, error) {
 }
 
 func (c *CodecRequest) ReadRequest(args interface{}) error {
-	if c.transformer == nil {
+	if c.parser == nil {
 		return controller.FaultInternalError
 	}
-	c.err = c.transformer(c.request, args)
+	c.err = c.parser(c.request, args)
 	if c.err != nil {
 		return c.err
 	}

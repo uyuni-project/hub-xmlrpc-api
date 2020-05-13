@@ -1,4 +1,4 @@
-package transformer
+package parser
 
 import (
 	"log"
@@ -8,9 +8,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 )
 
-var LoginRequestTransformer = transformToLoginRequest
+var LoginRequestParser = parseToLoginRequest
 
-func transformToLoginRequest(request *codec.ServerRequest, output interface{}) error {
+func parseToLoginRequest(request *codec.ServerRequest, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
 	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")

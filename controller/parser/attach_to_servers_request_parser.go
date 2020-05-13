@@ -1,4 +1,4 @@
-package transformer
+package parser
 
 import (
 	"log"
@@ -8,9 +8,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
-var AttachToServersRequestTransformer = transformToAttachToServersRequest
+var AttachToServersRequestParser = parseToAttachToServersRequest
 
-func transformToAttachToServersRequest(request *codec.ServerRequest, output interface{}) error {
+func parseToAttachToServersRequest(request *codec.ServerRequest, output interface{}) error {
 	parsedRequest, ok := output.(*controller.AttachToServersRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
