@@ -1,3 +1,5 @@
+- made API daemon run as non root user
+
 -------------------------------------------------------------------
 Thu Mar 30 2020 - Abid Mehmood <amehmood@suse.de>
 
