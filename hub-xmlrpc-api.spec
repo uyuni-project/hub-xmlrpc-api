@@ -62,7 +62,7 @@ Hub-xmlrpc-api package provide an API which allows access to Uyuni server functi
 install -D -m 0644 %{_release_dir}/hub-xmlrpc-api.service %{buildroot}%{_unitdir}/hub-xmlrpc-api.service
 
 # Add config files for hub
-install -d -m 0750 %{buildroot}%{_sysconfdir}/hub
+install -d -m 0755 %{buildroot}%{_sysconfdir}/hub
 install -D -m 0644 %{_release_dir}/hub.conf %{buildroot}%{_sysconfdir}/hub
 install -D -m 0644 %{_release_dir}/hub-xmlrpc-api-config.json  %{buildroot}%{_sysconfdir}/hub
 install -d -m 0750 %{buildroot}%{_var}/log/hub

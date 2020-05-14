@@ -4,6 +4,7 @@ Description=The Hub XMLRPC API helps to operate SUSE Manager or Uyuni infrastruc
 [Service]
 Type=simple
 Restart=always
+User=nobody
 EnvironmentFile=/etc/hub/hub.conf
 StandardOutput=syslog
 StandardError=syslog
