@@ -7,7 +7,6 @@ import (
 
 type ServerAuthenticator interface {
 	AttachToServers(hubSessionKey string, serverIDs []int64, credentialsByServer map[int64]*Credentials) (*MulticastResponse, error)
-	attachServersToHubSessionUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error)
 }
 
 type Credentials struct {
@@ -35,13 +34,8 @@ func (a *serverAuthenticator) AttachToServers(hubSessionKey string, serverIDs []
 		return nil, errors.New("Authentication error: provided session key is invalid")
 	}
 	if hubSession.loginMode == relayLoginMode {
-		return a.attachServersToHubSessionUsingSameCredentials(serverIDs, hubSession.username, hubSession.password, hubSessionKey)
+		credentialsByServer = generateSameCredentialsForServers(serverIDs, hubSession.username, hubSession.password)
 	}
-	return a.attachServersToHubSession(serverIDs, credentialsByServer, hubSessionKey)
-}
-
-func (a *serverAuthenticator) attachServersToHubSessionUsingSameCredentials(serverIDs []int64, username, password, hubSessionKey string) (*MulticastResponse, error) {
-	credentialsByServer := generateSameCredentialsForServers(serverIDs, username, password)
 	return a.attachServersToHubSession(serverIDs, credentialsByServer, hubSessionKey)
 }
 

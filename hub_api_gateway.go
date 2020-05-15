@@ -42,7 +42,8 @@ func initServer() {
 
 	//init gateway
 	serverAuthenticator := gateway.NewServerAuthenticator(conf.Hub.SUMA_API_URL, uyuniAuthenticator, uyuniTopoloyInfoRetriever, hubSessionRepository, serverSessionRepository)
-	hubAuthenticator := gateway.NewHubAuthenticator(conf.Hub.SUMA_API_URL, uyuniAuthenticator, serverAuthenticator, uyuniTopoloyInfoRetriever, hubSessionRepository)
+	hubLoginer := gateway.NewHubLoginer(conf.Hub.SUMA_API_URL, uyuniAuthenticator, serverAuthenticator, uyuniTopoloyInfoRetriever, hubSessionRepository)
+	hubLogouter := gateway.NewHubLogouter(conf.Hub.SUMA_API_URL, uyuniAuthenticator, hubSessionRepository)
 
 	hubProxy := gateway.NewHubProxy(conf.Hub.SUMA_API_URL, uyuniCallExecutor)
 	hubTopologyInfoRetriever := gateway.NewTopologyInfoRetriever(conf.Hub.SUMA_API_URL, uyuniTopoloyInfoRetriever)
@@ -54,8 +55,9 @@ func initServer() {
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 
-	rpcServer.RegisterService(controller.NewServerAuthenticationController(serverAuthenticator), "")
-	rpcServer.RegisterService(controller.NewHubAuthenticationController(hubAuthenticator), "")
+	rpcServer.RegisterService(controller.NewServerAuthenticationController(serverAuthenticator, transformer.MulticastResponseTransformer), "")
+	rpcServer.RegisterService(controller.NewHubLoginController(hubLoginer), "")
+	rpcServer.RegisterService(controller.NewHubLogoutController(hubLogouter), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(hubProxy), "")
 	rpcServer.RegisterService(controller.NewHubTopologyController(hubTopologyInfoRetriever), "")
 	rpcServer.RegisterService(controller.NewMulticastController(multicaster, transformer.MulticastResponseTransformer), "")
@@ -71,9 +73,10 @@ func initServer() {
 func initCodec() *codec.Codec {
 	var codec = codec.NewCodec()
 
-	codec.RegisterMapping("hub.login", "HubAuthenticationController.Login", parser.LoginRequestParser)
-	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubAuthenticationController.LoginWithAutoconnectMode", parser.LoginRequestParser)
-	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubAuthenticationController.LoginWithAuthRelayMode", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.login", "HubLoginController.Login", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubLoginController.LoginWithAutoconnectMode", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.loginWithAuthRelayMode", "HubLoginController.LoginWithAuthRelayMode", parser.LoginRequestParser)
+	codec.RegisterMapping("hub.logout", "HubLogoutController.Logout", parser.LoginRequestParser)
 	codec.RegisterMapping("hub.attachToServers", "ServerAuthenticationController.AttachToServers", parser.AttachToServersRequestParser)
 	codec.RegisterMapping("hub.listServerIds", "HubTopologyController.ListServerIDs", parser.LoginRequestParser)
 

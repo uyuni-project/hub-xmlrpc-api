@@ -5,18 +5,18 @@ import (
 )
 
 const (
-	manualLoginMode      = iota // 0
-	relayLoginMode              // 1
-	autoconnectLoginMode        // 2
+	manualLoginMode = iota // 0
+	relayLoginMode         // 1
 )
 
-type HubAuthenticator interface {
+//HubLoginer interface for Login operations
+type HubLoginer interface {
 	Login(username, password string) (string, error)
 	LoginWithAuthRelayMode(username, password string) (string, error)
 	LoginWithAutoconnectMode(username, password string) (string, error)
 }
 
-type hubAuthenticator struct {
+type hubLoginer struct {
 	hubAPIEndpoint                   string
 	uyuniAuthenticator               UyuniAuthenticator
 	serverAuthenticator              ServerAuthenticator
@@ -24,22 +24,23 @@ type hubAuthenticator struct {
 	hubSessionRepository             HubSessionRepository
 }
 
-func NewHubAuthenticator(hubAPIEndpoint string, uyuniAuthenticator UyuniAuthenticator,
+//NewHubLoginer instantiates a hubLoginer
+func NewHubLoginer(hubAPIEndpoint string, uyuniAuthenticator UyuniAuthenticator,
 	serverAuthenticator ServerAuthenticator, uyuniTopologyInfoRetriever UyuniTopologyInfoRetriever,
-	hubSessionRepository HubSessionRepository) *hubAuthenticator {
-	return &hubAuthenticator{hubAPIEndpoint, uyuniAuthenticator, serverAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository}
+	hubSessionRepository HubSessionRepository) *hubLoginer {
+	return &hubLoginer{hubAPIEndpoint, uyuniAuthenticator, serverAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository}
 }
 
-func (h *hubAuthenticator) Login(username, password string) (string, error) {
+func (h *hubLoginer) Login(username, password string) (string, error) {
 	return h.loginToHub(username, password, manualLoginMode)
 }
 
-func (h *hubAuthenticator) LoginWithAuthRelayMode(username, password string) (string, error) {
+func (h *hubLoginer) LoginWithAuthRelayMode(username, password string) (string, error) {
 	return h.loginToHub(username, password, relayLoginMode)
 }
 
-func (h *hubAuthenticator) LoginWithAutoconnectMode(username, password string) (string, error) {
-	hubSessionKey, err := h.loginToHub(username, password, autoconnectLoginMode)
+func (h *hubLoginer) LoginWithAutoconnectMode(username, password string) (string, error) {
+	hubSessionKey, err := h.LoginWithAuthRelayMode(username, password)
 	if err != nil {
 		return "", err
 	}
@@ -47,11 +48,11 @@ func (h *hubAuthenticator) LoginWithAutoconnectMode(username, password string) (
 	if err != nil {
 		return "", err
 	}
-	h.serverAuthenticator.attachServersToHubSessionUsingSameCredentials(userServerIDs, username, password, hubSessionKey)
+	h.serverAuthenticator.AttachToServers(hubSessionKey, userServerIDs, nil)
 	return hubSessionKey, nil
 }
 
-func (h *hubAuthenticator) loginToHub(username, password string, loginMode int) (string, error) {
+func (h *hubLoginer) loginToHub(username, password string, loginMode int) (string, error) {
 	hubToken, err := h.uyuniAuthenticator.Login(h.hubAPIEndpoint, username, password)
 	if err != nil {
 		log.Printf("Error ocurred while trying to login into the Hub: %v", err)

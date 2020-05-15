@@ -5,7 +5,23 @@ import (
 	"log"
 )
 
-func (h *hubAuthenticator) Logout(hubSessionKey string) error {
+//HubLogouter provides an interface for logout operations
+type HubLogouter interface {
+	Logout(hubSessionKey string) error
+}
+
+type hubLogouter struct {
+	hubAPIEndpoint       string
+	uyuniAuthenticator   UyuniAuthenticator
+	hubSessionRepository HubSessionRepository
+}
+
+//NewHubLogouter instantiates a HubLogouter
+func NewHubLogouter(hubAPIEndpoint string, uyuniAuthenticator UyuniAuthenticator, hubSessionRepository HubSessionRepository) *hubLogouter {
+	return &hubLogouter{hubAPIEndpoint, uyuniAuthenticator, hubSessionRepository}
+}
+
+func (h *hubLogouter) Logout(hubSessionKey string) error {
 	hubSession := h.hubSessionRepository.RetrieveHubSession(hubSessionKey)
 	if hubSession == nil {
 		log.Printf("HubSession was not found. HubSessionKey: %v", hubSessionKey)
@@ -20,12 +36,12 @@ func (h *hubAuthenticator) Logout(hubSessionKey string) error {
 	return nil
 }
 
-func (h *hubAuthenticator) logoutFromServersInHubSession(serverSessions map[int64]*ServerSession) *MulticastResponse {
+func (h *hubLogouter) logoutFromServersInHubSession(serverSessions map[int64]*ServerSession) *MulticastResponse {
 	multicastCallRequest := h.generateLogoutMuticastCallRequest(serverSessions)
 	return executeCallOnServers(multicastCallRequest)
 }
 
-func (h *hubAuthenticator) generateLogoutMuticastCallRequest(serverSessions map[int64]*ServerSession) *multicastCallRequest {
+func (h *hubLogouter) generateLogoutMuticastCallRequest(serverSessions map[int64]*ServerSession) *multicastCallRequest {
 	call := func(endpoint string, args []interface{}) (interface{}, error) {
 		return nil, h.uyuniAuthenticator.Logout(endpoint, args[0].(string))
 	}

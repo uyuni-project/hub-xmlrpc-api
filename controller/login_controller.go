@@ -7,8 +7,8 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
-type HubAuthenticationController struct {
-	hubAuthenticator gateway.HubAuthenticator
+type HubLoginController struct {
+	hubLoginer gateway.HubLoginer
 }
 
 type LoginRequest struct {
@@ -16,12 +16,12 @@ type LoginRequest struct {
 	Password string
 }
 
-func NewHubAuthenticationController(hubAuthenticator gateway.HubAuthenticator) *HubAuthenticationController {
-	return &HubAuthenticationController{hubAuthenticator}
+func NewHubLoginController(hubLoginer gateway.HubLoginer) *HubLoginController {
+	return &HubLoginController{hubLoginer}
 }
 
-func (h *HubAuthenticationController) Login(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
-	hubSessionKey, err := h.hubAuthenticator.Login(args.Username, args.Password)
+func (h *HubLoginController) Login(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.hubLoginer.Login(args.Username, args.Password)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
@@ -30,8 +30,8 @@ func (h *HubAuthenticationController) Login(r *http.Request, args *LoginRequest,
 	return nil
 }
 
-func (h *HubAuthenticationController) LoginWithAutoconnectMode(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
-	hubSessionKey, err := h.hubAuthenticator.LoginWithAutoconnectMode(args.Username, args.Password)
+func (h *HubLoginController) LoginWithAuthRelayMode(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.hubLoginer.LoginWithAuthRelayMode(args.Username, args.Password)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
@@ -40,8 +40,8 @@ func (h *HubAuthenticationController) LoginWithAutoconnectMode(r *http.Request, 
 	return nil
 }
 
-func (h *HubAuthenticationController) LoginWithAuthRelayMode(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
-	hubSessionKey, err := h.hubAuthenticator.LoginWithAuthRelayMode(args.Username, args.Password)
+func (h *HubLoginController) LoginWithAutoconnectMode(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
+	hubSessionKey, err := h.hubLoginer.LoginWithAutoconnectMode(args.Username, args.Password)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err

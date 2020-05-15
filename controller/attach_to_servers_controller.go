@@ -9,10 +9,11 @@ import (
 
 type ServerAuthenticationController struct {
 	serverAuthenticator gateway.ServerAuthenticator
+	responseTransformer multicastResponseTransformer
 }
 
-func NewServerAuthenticationController(serverAuthenticator gateway.ServerAuthenticator) *ServerAuthenticationController {
-	return &ServerAuthenticationController{serverAuthenticator}
+func NewServerAuthenticationController(serverAuthenticator gateway.ServerAuthenticator, responseTransformer multicastResponseTransformer) *ServerAuthenticationController {
+	return &ServerAuthenticationController{serverAuthenticator, responseTransformer}
 }
 
 type AttachToServersRequest struct {
@@ -21,12 +22,13 @@ type AttachToServersRequest struct {
 	CredentialsByServer map[int64]*gateway.Credentials
 }
 
-func (h *ServerAuthenticationController) AttachToServers(r *http.Request, args *AttachToServersRequest, reply *struct{ Data []error }) error {
+func (h *ServerAuthenticationController) AttachToServers(r *http.Request, args *AttachToServersRequest, reply *struct{ Data *MulticastResponse }) error {
 	//TODO: what to do with the response?
-	_, err := h.serverAuthenticator.AttachToServers(args.HubSessionKey, args.ServerIDs, args.CredentialsByServer)
+	attachToServersResponse, err := h.serverAuthenticator.AttachToServers(args.HubSessionKey, args.ServerIDs, args.CredentialsByServer)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
 	}
+	reply.Data = h.responseTransformer(attachToServersResponse)
 	return nil
 }
