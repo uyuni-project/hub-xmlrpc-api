@@ -13,7 +13,7 @@ const (
 type HubLoginer interface {
 	Login(username, password string) (string, error)
 	LoginWithAuthRelayMode(username, password string) (string, error)
-	LoginWithAutoconnectMode(username, password string) (string, error)
+	LoginWithAutoconnectMode(username, password string) (*LoginWithAutoconnectModeResponse, error)
 }
 
 type hubLoginer struct {
@@ -39,17 +39,25 @@ func (h *hubLoginer) LoginWithAuthRelayMode(username, password string) (string, 
 	return h.loginToHub(username, password, relayLoginMode)
 }
 
-func (h *hubLoginer) LoginWithAutoconnectMode(username, password string) (string, error) {
+type LoginWithAutoconnectModeResponse struct {
+	HubSessionKey           string
+	AttachToServersResponse *MulticastResponse
+}
+
+func (h *hubLoginer) LoginWithAutoconnectMode(username, password string) (*LoginWithAutoconnectModeResponse, error) {
 	hubSessionKey, err := h.LoginWithAuthRelayMode(username, password)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	userServerIDs, err := h.uyuniServerTopologyInfoRetriever.RetrieveUserServerIDs(h.hubAPIEndpoint, hubSessionKey, username)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	h.serverAuthenticator.AttachToServers(hubSessionKey, userServerIDs, nil)
-	return hubSessionKey, nil
+	attachTServesResponse, err := h.serverAuthenticator.AttachToServers(hubSessionKey, userServerIDs, nil)
+	if err != nil {
+		return nil, err
+	}
+	return &LoginWithAutoconnectModeResponse{hubSessionKey, attachTServesResponse}, nil
 }
 
 func (h *hubLoginer) loginToHub(username, password string, loginMode int) (string, error) {

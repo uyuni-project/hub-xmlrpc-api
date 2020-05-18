@@ -8,7 +8,9 @@ HUB_PASSWORD = "admin"
 
 client = xmlrpclib.Server(HUB_URL, verbose=0)
 
-hubSessionKey = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
+#login to Hub and peripheral servers
+loginResponse = client.hub.loginWithAutoconnectMode(HUB_LOGIN, HUB_PASSWORD)
+hubSessionKey = loginResponse["SessionKey"]
 
 #get the server IDs
 serverIDs = client.hub.listServerIds(hubSessionKey)

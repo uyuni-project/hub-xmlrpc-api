@@ -8,7 +8,8 @@ import (
 )
 
 type HubLoginController struct {
-	hubLoginer gateway.HubLoginer
+	hubLoginer          gateway.HubLoginer
+	responseTransformer multicastResponseTransformer
 }
 
 type LoginRequest struct {
@@ -16,8 +17,8 @@ type LoginRequest struct {
 	Password string
 }
 
-func NewHubLoginController(hubLoginer gateway.HubLoginer) *HubLoginController {
-	return &HubLoginController{hubLoginer}
+func NewHubLoginController(hubLoginer gateway.HubLoginer, responseTransformer multicastResponseTransformer) *HubLoginController {
+	return &HubLoginController{hubLoginer, responseTransformer}
 }
 
 func (h *HubLoginController) Login(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
@@ -40,12 +41,20 @@ func (h *HubLoginController) LoginWithAuthRelayMode(r *http.Request, args *Login
 	return nil
 }
 
-func (h *HubLoginController) LoginWithAutoconnectMode(r *http.Request, args *LoginRequest, reply *struct{ Data string }) error {
-	hubSessionKey, err := h.hubLoginer.LoginWithAutoconnectMode(args.Username, args.Password)
+type LoginWithAutoconnectModeResponse struct {
+	SessionKey         string
+	Successful, Failed MulticastStateResponse
+}
+
+func (h *HubLoginController) LoginWithAutoconnectMode(r *http.Request, args *LoginRequest, reply *struct {
+	Data *LoginWithAutoconnectModeResponse
+}) error {
+	loginResponse, err := h.hubLoginer.LoginWithAutoconnectMode(args.Username, args.Password)
 	if err != nil {
 		log.Printf("Login error: %v", err)
 		return err
 	}
-	reply.Data = hubSessionKey
+	attachToServersResponse := h.responseTransformer(loginResponse.AttachToServersResponse)
+	reply.Data = &LoginWithAutoconnectModeResponse{loginResponse.HubSessionKey, attachToServersResponse.Successful, attachToServersResponse.Failed}
 	return nil
 }

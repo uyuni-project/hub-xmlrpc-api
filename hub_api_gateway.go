@@ -56,7 +56,7 @@ func initServer() {
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 
 	rpcServer.RegisterService(controller.NewServerAuthenticationController(serverAuthenticator, transformer.MulticastResponseTransformer), "")
-	rpcServer.RegisterService(controller.NewHubLoginController(hubLoginer), "")
+	rpcServer.RegisterService(controller.NewHubLoginController(hubLoginer, transformer.MulticastResponseTransformer), "")
 	rpcServer.RegisterService(controller.NewHubLogoutController(hubLogouter), "")
 	rpcServer.RegisterService(controller.NewHubProxyController(hubProxy), "")
 	rpcServer.RegisterService(controller.NewHubTopologyController(hubTopologyInfoRetriever), "")
