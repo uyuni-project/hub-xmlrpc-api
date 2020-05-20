@@ -7,42 +7,6 @@ import (
 	"testing"
 )
 
-type mockSession struct {
-	mockSaveHubSession                  func(hubSession *HubSession)
-	mockRetrieveHubSession              func(hubSessionKey string) *HubSession
-	mockRemoveHubSession                func(hubSessionKey string)
-	mockSaveServerSessions              func(hubSessionKey string, serverSessions map[int64]*ServerSession)
-	mockRetrieveServerSessionByServerID func(hubSessionKey string, serverID int64) *ServerSession
-	mockRetrieveServerSessions          func(hubSessionKey string) map[int64]*ServerSession
-}
-
-func (m *mockSession) SaveHubSession(hubSession *HubSession) {
-	m.mockSaveHubSession(hubSession)
-}
-func (m *mockSession) RetrieveHubSession(hubSessionKey string) *HubSession {
-	return m.mockRetrieveHubSession(hubSessionKey)
-}
-func (m *mockSession) RemoveHubSession(hubSessionKey string) {
-	m.mockRemoveHubSession(hubSessionKey)
-}
-func (m *mockSession) SaveServerSessions(hubSessionKey string, serverSessions map[int64]*ServerSession) {
-	m.mockSaveServerSessions(hubSessionKey, serverSessions)
-}
-func (m *mockSession) RetrieveServerSessionByServerID(hubSessionKey string, serverID int64) *ServerSession {
-	return m.mockRetrieveServerSessionByServerID(hubSessionKey, serverID)
-}
-func (m *mockSession) RetrieveServerSessions(hubSessionKey string) map[int64]*ServerSession {
-	return m.mockRetrieveServerSessions(hubSessionKey)
-}
-
-type mockUyuniServerCallExecutor struct {
-	mockExecuteCall func(endpoint string, call string, args []interface{}) (response interface{}, err error)
-}
-
-func (m *mockUyuniServerCallExecutor) ExecuteCall(endpoint, call string, args []interface{}) (interface{}, error) {
-	return m.mockExecuteCall(endpoint, call, args)
-}
-
 func Test_executeCallOnServers(t *testing.T) {
 	tt := []struct {
 		name                      string
@@ -142,6 +106,18 @@ func Test_Multicast(t *testing.T) {
 			}
 		}
 
+	mockRetrieveHubSessionNotFound := func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession {
+		return func(hubSessionKey string) *HubSession {
+			return nil
+		}
+	}
+	mockExecuteCallSuccessful := func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+		return "success_call", nil
+	}
+	mockExecuteCallError := func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
+		return nil, errors.New("call_error")
+	}
+
 	tt := []struct {
 		name                      string
 		serverIDs                 []int64
@@ -159,9 +135,7 @@ func Test_Multicast(t *testing.T) {
 				2: []interface{}{"arg1_Server2"},
 			},
 			mockRetrieveHubSession: mockRetrieveHubSessionFound,
-			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
-				return "success_call", nil
-			},
+			mockExecuteCall:        mockExecuteCallSuccessful,
 			expectedMulticastResponse: &MulticastResponse{
 				map[int64]ServerSuccessfulResponse{
 					1: ServerSuccessfulResponse{1, "1-serverEndpoint", "success_call"},
@@ -178,9 +152,7 @@ func Test_Multicast(t *testing.T) {
 				2: []interface{}{"arg1_Server2"},
 			},
 			mockRetrieveHubSession: mockRetrieveHubSessionFound,
-			mockExecuteCall: func(serverEndpoint string, call string, args []interface{}) (response interface{}, err error) {
-				return nil, errors.New("call_error")
-			},
+			mockExecuteCall:        mockExecuteCallError,
 			expectedMulticastResponse: &MulticastResponse{
 				map[int64]ServerSuccessfulResponse{},
 				map[int64]ServerFailedResponse{
@@ -196,12 +168,8 @@ func Test_Multicast(t *testing.T) {
 				1: []interface{}{"arg1_Server1"},
 				2: []interface{}{"arg1_Server2"},
 			},
-			mockRetrieveHubSession: func(argsByServer map[int64][]interface{}) func(hubSessionKey string) *HubSession {
-				return func(hubSessionKey string) *HubSession {
-					return nil
-				}
-			},
-			expectedErr: "Authentication error: provided session key is invalid",
+			mockRetrieveHubSession: mockRetrieveHubSessionNotFound,
+			expectedErr:            "Authentication error: provided session key is invalid",
 		},
 		{
 			name:      "Multicast serverSessions_not_found",
@@ -220,19 +188,18 @@ func Test_Multicast(t *testing.T) {
 			mockSession := new(mockSession)
 			mockSession.mockRetrieveHubSession = tc.mockRetrieveHubSession(tc.argsByServer)
 
-			mockUyuniServerCallExecutor := new(mockUyuniServerCallExecutor)
-			mockUyuniServerCallExecutor.mockExecuteCall = tc.mockExecuteCall
+			mockUyuniCallExecutor := new(mockUyuniCallExecutor)
+			mockUyuniCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			multicaster := NewMulticaster(mockUyuniServerCallExecutor, mockSession)
+			multicaster := NewMulticaster(mockUyuniCallExecutor, mockSession)
 
-			multicastRequest := &MulticastRequest{"call", "hubSessionKey", tc.serverIDs, tc.argsByServer}
-			multicastResponse, err := multicaster.Multicast(multicastRequest)
+			multicastResponse, err := multicaster.Multicast("hubSessionKey", "call", tc.serverIDs, tc.argsByServer)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
 			if err == nil && !reflect.DeepEqual(multicastResponse, tc.expectedMulticastResponse) {
-				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedMulticastResponse)
+				t.Fatalf("Expected and actual values don't match, Expected value is: %v", tc.expectedMulticastResponse)
 			}
 		})
 	}

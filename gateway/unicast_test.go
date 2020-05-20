@@ -13,6 +13,10 @@ func Test_Unicast(t *testing.T) {
 		return &ServerSession{serverID, strServerID + "serverAPIEndpoint", strServerID + "serverSessionkey", hubSessionKey}
 	}
 
+	mockRetrieveServerSessionByServerIDNotFound := func(hubSessionKey string, serverID int64) *ServerSession {
+		return nil
+	}
+
 	tt := []struct {
 		name                                string
 		serverID                            int64
@@ -43,13 +47,11 @@ func Test_Unicast(t *testing.T) {
 			expectedErr: "call_error",
 		},
 		{
-			name:       "Unicast serverSession_not_found",
-			serverID:   1,
-			serverArgs: []interface{}{"arg1", "arg2"},
-			mockRetrieveServerSessionByServerID: func(hubSessionKey string, serverID int64) *ServerSession {
-				return nil
-			},
-			expectedErr: "Authentication error: provided session key is invalid",
+			name:                                "Unicast serverSession_not_found",
+			serverID:                            1,
+			serverArgs:                          []interface{}{"arg1", "arg2"},
+			mockRetrieveServerSessionByServerID: mockRetrieveServerSessionByServerIDNotFound,
+			expectedErr:                         "Authentication error: provided session key is invalid",
 		},
 	}
 
@@ -58,18 +60,18 @@ func Test_Unicast(t *testing.T) {
 			mockSession := new(mockSession)
 			mockSession.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
 
-			mockUyuniServerCallExecutor := new(mockUyuniServerCallExecutor)
-			mockUyuniServerCallExecutor.mockExecuteCall = tc.mockExecuteCall
+			mockUyuniCallExecutor := new(mockUyuniCallExecutor)
+			mockUyuniCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			unicaster := NewUnicaster(mockUyuniServerCallExecutor, mockSession)
+			unicaster := NewUnicaster(mockUyuniCallExecutor, mockSession)
 
-			response, err := unicaster.Unicast(&UnicastRequest{"hubSessionKey", "call", tc.serverID, tc.serverArgs})
+			response, err := unicaster.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
 
 			if err != nil && tc.expectedErr != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
 			if err == nil && !reflect.DeepEqual(response, tc.expectedResponse) {
-				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedResponse)
+				t.Fatalf("Expected and actual values don't match, Expected is: %v", tc.expectedResponse)
 			}
 		})
 	}

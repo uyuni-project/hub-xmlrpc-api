@@ -6,25 +6,18 @@ import (
 	"testing"
 )
 
-type mockUyuniHubCallExecutor struct {
-	mockExecuteCall func(call string, args []interface{}) (response interface{}, err error)
-}
-
-func (m *mockUyuniHubCallExecutor) ExecuteCall(call string, args []interface{}) (interface{}, error) {
-	return m.mockExecuteCall(call, args)
-}
 func Test_ProxyCallToHub(t *testing.T) {
 	tt := []struct {
 		name             string
 		args             []interface{}
-		mockExecuteCall  func(call string, args []interface{}) (response interface{}, err error)
+		mockExecuteCall  func(hubAPIEndpoint string, call string, args []interface{}) (response interface{}, err error)
 		expectedResponse interface{}
 		expectedErr      string
 	}{
 		{
 			name: "ProxyCallToHub call_successful",
 			args: []interface{}{"arg1", "arg2"},
-			mockExecuteCall: func(call string, args []interface{}) (response interface{}, err error) {
+			mockExecuteCall: func(hubAPIEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return "success_response", nil
 			},
 			expectedResponse: "success_response",
@@ -32,7 +25,7 @@ func Test_ProxyCallToHub(t *testing.T) {
 		{
 			name: "ProxyCallToHub call_error",
 			args: []interface{}{"arg1", "arg2"},
-			mockExecuteCall: func(call string, args []interface{}) (response interface{}, err error) {
+			mockExecuteCall: func(hubAPIEndpoint string, call string, args []interface{}) (response interface{}, err error) {
 				return nil, errors.New("call_error")
 			},
 			expectedErr: "call_error",
@@ -41,10 +34,10 @@ func Test_ProxyCallToHub(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mockUyuniHubCallExecutor := new(mockUyuniHubCallExecutor)
-			mockUyuniHubCallExecutor.mockExecuteCall = tc.mockExecuteCall
+			mockUyuniCallExecutor := new(mockUyuniCallExecutor)
+			mockUyuniCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			hubProxy := NewHubProxy(mockUyuniHubCallExecutor)
+			hubProxy := NewHubProxy("hub_API_endpoint", mockUyuniCallExecutor)
 
 			response, err := hubProxy.ProxyCallToHub("call", tc.args)
 
@@ -52,7 +45,7 @@ func Test_ProxyCallToHub(t *testing.T) {
 				t.Fatalf("Error during executing request: %v", err)
 			}
 			if err == nil && !reflect.DeepEqual(response, tc.expectedResponse) {
-				t.Fatalf("expected and actual don't match, Expected was: %v", tc.expectedResponse)
+				t.Fatalf("Expected and actual values don't match, Expected value is: %v", tc.expectedResponse)
 			}
 		})
 	}

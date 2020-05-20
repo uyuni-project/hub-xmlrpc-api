@@ -23,7 +23,6 @@ type AttachToServersRequest struct {
 }
 
 func (h *ServerAuthenticationController) AttachToServers(r *http.Request, args *AttachToServersRequest, reply *struct{ Data *MulticastResponse }) error {
-	//TODO: what to do with the response?
 	attachToServersResponse, err := h.serverAuthenticator.AttachToServers(args.HubSessionKey, args.ServerIDs, args.CredentialsByServer)
 	if err != nil {
 		log.Printf("Login error: %v", err)
