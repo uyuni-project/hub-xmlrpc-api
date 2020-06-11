@@ -41,7 +41,7 @@ Set the `HUB_CONFIG_FILE` environment variable to point to the configuration fil
 `hub-xmlrpc-api` is a daemon, currently to be launched from the command line.
 
 
-Once running, you can connect to the `hub-xmlrpc-api` at port 8888 via any XMLRPC compliant client libraries (see examples below).
+Once running, you can connect to the `hub-xmlrpc-api` at port 2830 via any XMLRPC compliant client libraries (see examples below).
 
 
 ### Namespaces
@@ -78,7 +78,7 @@ Hub supports 3 different authentication modes.
 import xmlrpclib
 import itertools
  
-HUB_URL = "http://localhost:8888/hub/rpc/api"
+HUB_URL = "http://localhost:2830/hub/rpc/api"
 HUB_LOGIN = "admin"
 HUB_PASSWORD = "admin"
  

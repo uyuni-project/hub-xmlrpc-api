@@ -251,7 +251,7 @@ func buildSuccessCodecRequestWithBody(body string) codec.CodecRequest {
 }
 
 func buildSuccessHTTPRequestWithBody(body string) *http.Request {
-	httpRequest := httptest.NewRequest(http.MethodPost, "http://localhost:8888/hub/rpc/api", strings.NewReader(body))
+	httpRequest := httptest.NewRequest(http.MethodPost, "http://localhost:2830/hub/rpc/api", strings.NewReader(body))
 	httpRequest.Header.Set("Content-Type", "text/xml")
 
 	return httpRequest
