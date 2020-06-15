@@ -2,7 +2,7 @@
 import xmlrpclib  
 import itertools
 
-HUB_URL = "http://localhost:8888/hub/rpc/api"
+HUB_URL = "http://localhost:2830/hub/rpc/api"
 HUB_LOGIN = "admin"
 HUB_PASSWORD = "admin"
 

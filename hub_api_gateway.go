@@ -66,8 +66,8 @@ func initServer() {
 	//init server
 	http.Handle("/hub/rpc/api", rpcServer)
 
-	log.Println("Starting XML-RPC server on localhost:8888/hub/rpc/api")
-	log.Fatal(http.ListenAndServe(":8888", nil))
+	log.Println("Starting XML-RPC server on localhost:2830/hub/rpc/api")
+	log.Fatal(http.ListenAndServe(":2830", nil))
 }
 
 func initCodec() *codec.Codec {
