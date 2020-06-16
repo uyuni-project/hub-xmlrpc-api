@@ -5,12 +5,10 @@ import (
 	"strings"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
-	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 )
 
-var MulticastRequestParser = parserToMulitcastRequest
-
-func parserToMulitcastRequest(request *codec.ServerRequest, output interface{}) error {
+func MulticastRequestParser(request *xmlrpc.ServerRequest, output interface{}) error {
 	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

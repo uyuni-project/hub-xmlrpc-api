@@ -9,9 +9,9 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
-	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/transformer"
+	codec "github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 	"github.com/uyuni-project/hub-xmlrpc-api/uyuni"
@@ -25,7 +25,7 @@ func initServer() {
 	rpcServer := rpc.NewServer()
 
 	//init config
-	conf := config.InitConfig()
+	conf := config.NewConfig()
 
 	//init xmlrpc client implementation
 	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)

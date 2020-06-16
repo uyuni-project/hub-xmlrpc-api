@@ -4,13 +4,11 @@ import (
 	"log"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
-	"github.com/uyuni-project/hub-xmlrpc-api/controller/codec"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
-var AttachToServersRequestParser = parseToAttachToServersRequest
-
-func parseToAttachToServersRequest(request *codec.ServerRequest, output interface{}) error {
+func AttachToServersRequestParser(request *xmlrpc.ServerRequest, output interface{}) error {
 	parsedRequest, ok := output.(*controller.AttachToServersRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")
