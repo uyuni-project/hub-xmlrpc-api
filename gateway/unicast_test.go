@@ -57,13 +57,13 @@ func Test_Unicast(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mockSession := new(mockSession)
-			mockSession.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
+			mockServerSessionRepository := new(mockServerSessionRepository)
+			mockServerSessionRepository.mockRetrieveServerSessionByServerID = tc.mockRetrieveServerSessionByServerID
 
 			mockUyuniCallExecutor := new(mockUyuniCallExecutor)
 			mockUyuniCallExecutor.mockExecuteCall = tc.mockExecuteCall
 
-			unicaster := NewUnicaster(mockUyuniCallExecutor, mockSession)
+			unicaster := NewUnicaster(mockUyuniCallExecutor, mockServerSessionRepository)
 
 			response, err := unicaster.Unicast("hubSessionKey", "call", tc.serverID, tc.serverArgs)
 

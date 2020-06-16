@@ -185,7 +185,7 @@ func Test_Multicast(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			mockSession := new(mockSession)
+			mockSession := new(mockHubSessionRepository)
 			mockSession.mockRetrieveHubSession = tc.mockRetrieveHubSession(tc.argsByServer)
 
 			mockUyuniCallExecutor := new(mockUyuniCallExecutor)
