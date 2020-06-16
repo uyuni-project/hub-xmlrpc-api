@@ -18,7 +18,7 @@ type Config struct {
 func NewConfig() *Config {
 
 	k.Load(confmap.Provider(map[string]interface{}{
-		"HUB_API_URL":         "http://localhost/rpc/api",
+		"HUB_API_URL":         "http://localhost:8001/rpc/api",
 		"HUB_CONNECT_TIMEOUT": 10,
 		"HUB_REQUEST_TIMEOUT": 10,
 	}, "."), nil)
