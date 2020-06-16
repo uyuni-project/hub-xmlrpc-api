@@ -40,7 +40,11 @@ func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) err
 		serverArgs[i] = list.(interface{})
 	}
 
-	method := removeNamespace(request.MethodName)
-	*parsedArgs = controller.UnicastRequest{method, hubSessionKey, serverID, serverArgs}
+	method, err := removeNamespace(request.MethodName)
+	if err != nil {
+		return err
+	}
+
+	*parsedArgs = controller.UnicastRequest{HubSessionKey: hubSessionKey, Call: method, ServerID: serverID, Args: serverArgs}
 	return nil
 }

@@ -42,7 +42,10 @@ func parserToMulitcastRequest(request *codec.ServerRequest, output interface{}) 
 		}
 	}
 
-	method := removeNamespace(request.MethodName)
+	method, err := removeNamespace(request.MethodName)
+	if err != nil {
+		return err
+	}
 
 	*parsedRequest = controller.MulticastRequest{method, hubSessionKey, serverIDs, argsByServer}
 	return nil
@@ -85,10 +88,15 @@ func resolveArgsByServer(serverIDs []int64, allServerArgs []interface{}) (map[in
 	return result, nil
 }
 
-func removeNamespace(method string) string {
+func removeNamespace(method string) (string, error) {
 	parts := strings.Split(method, ".")
+	if len(parts) <= 1 {
+		log.Printf("Namespace not found")
+		return "", controller.FaultDecode
+	}
+
 	slice := parts[1:len(parts)]
-	return strings.Join(slice, ".")
+	return strings.Join(slice, "."), nil
 }
 
 func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
