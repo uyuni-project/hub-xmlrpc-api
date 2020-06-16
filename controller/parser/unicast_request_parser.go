@@ -41,6 +41,6 @@ func parseToUnicastRequest(request *codec.ServerRequest, output interface{}) err
 	}
 
 	method := removeNamespace(request.MethodName)
-	*parsedArgs = controller.UnicastRequest{method, hubSessionKey, serverID, serverArgs}
+	*parsedArgs = controller.UnicastRequest{HubSessionKey: hubSessionKey, Call: method, ServerID: serverID, Args: serverArgs}
 	return nil
 }
