@@ -53,11 +53,11 @@ func (h *hubLoginer) LoginWithAutoconnectMode(username, password string) (*Login
 	if err != nil {
 		return nil, err
 	}
-	attachTServesResponse, err := h.serverAuthenticator.AttachToServers(hubSessionKey, userServerIDs, nil)
+	attachToServersResponse, err := h.serverAuthenticator.AttachToServers(hubSessionKey, userServerIDs, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &LoginWithAutoconnectModeResponse{hubSessionKey, attachTServesResponse}, nil
+	return &LoginWithAutoconnectModeResponse{hubSessionKey, attachToServersResponse}, nil
 }
 
 func (h *hubLoginer) loginToHub(username, password string, loginMode int) (string, error) {
