@@ -98,7 +98,7 @@ func Test_MulticastRequestParser(t *testing.T) {
 		{name: "MulticastRequestParser Success",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"hubSessionKey", []interface{}{int64(1), int64(2)}, []interface{}{"arg1_Server1", "arg1_Server2"}, []interface{}{"arg2_Server1", "arg2_Server2"}}},
 			structToHydrate: &controller.MulticastRequest{},
-			expectedStruct:  controller.MulticastRequest{Call: "method", HubSessionKey: "hubSessionKey", ArgsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1", "arg2_Server1"}, 2: []interface{}{"arg1_Server2", "arg2_Server2"}}}},
+			expectedStruct:  controller.MulticastRequest{Call: "method", HubSessionKey: "hubSessionKey", ServerIDs: []int64{1, 2}, ArgsByServer: map[int64][]interface{}{1: []interface{}{"arg1_Server1", "arg2_Server1"}, 2: []interface{}{"arg1_Server2", "arg2_Server2"}}}},
 		{name: "MulticastRequestParser no_serverID_passed Failed",
 			serverRequest:   &codec.ServerRequest{"method", []interface{}{"hubSessionKey", []interface{}{"serverSessionKey"}}},
 			structToHydrate: &controller.MulticastRequest{},
