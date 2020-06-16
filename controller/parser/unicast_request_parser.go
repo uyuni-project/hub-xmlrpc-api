@@ -7,9 +7,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 )
 
-var UnicastRequestParser = parseToUnicastRequest
-
-func parseToUnicastRequest(request *xmlrpc.ServerRequest, output interface{}) error {
+func UnicastRequestParser(request *xmlrpc.ServerRequest, output interface{}) error {
 	parsedArgs, ok := output.(*controller.UnicastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

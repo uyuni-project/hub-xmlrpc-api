@@ -8,9 +8,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 )
 
-var MulticastRequestParser = parserToMulitcastRequest
-
-func parserToMulitcastRequest(request *xmlrpc.ServerRequest, output interface{}) error {
+func MulticastRequestParser(request *xmlrpc.ServerRequest, output interface{}) error {
 	parsedRequest, ok := output.(*controller.MulticastRequest)
 	if !ok {
 		log.Printf("Error ocurred when parsing arguments")

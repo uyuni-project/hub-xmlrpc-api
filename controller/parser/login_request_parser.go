@@ -8,9 +8,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 )
 
-var LoginRequestParser = parseToLoginRequest
-
-func parseToLoginRequest(request *xmlrpc.ServerRequest, output interface{}) error {
+func LoginRequestParser(request *xmlrpc.ServerRequest, output interface{}) error {
 	val := reflect.ValueOf(output).Elem()
 	if val.Kind() != reflect.Struct {
 		log.Printf("Error ocurred when parsing arguments")
