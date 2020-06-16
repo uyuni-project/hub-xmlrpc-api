@@ -100,10 +100,6 @@ func removeNamespace(method string) (string, error) {
 }
 
 func areAllArgumentsOfSameLength(allArrays [][]interface{}) bool {
-	//TODO:
-	//if !areAllArgumentsOfSameLength(serverArgs) {
-	//	return FaultInvalidParams
-	//}
 	if len(allArrays) <= 1 {
 		return true
 	}
