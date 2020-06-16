@@ -2,6 +2,7 @@ package session
 
 import (
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
@@ -21,10 +22,11 @@ func TestSaveHubSession(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewHubSessionRepository()
+			var syncMap sync.Map
+			repo := NewInMemoryHubSessionRepository(&syncMap)
 
-			session.SaveHubSession(tc.hubSessionKey, tc.hubSession)
-			hubSession := session.RetrieveHubSession(tc.hubSessionKey)
+			repo.SaveHubSession(tc.hubSession)
+			hubSession := repo.RetrieveHubSession(tc.hubSessionKey)
 
 			if !reflect.DeepEqual(hubSession, tc.hubSession) {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.hubSession)
@@ -36,37 +38,38 @@ func TestSaveHubSession(t *testing.T) {
 func TestRetrieveHubSession(t *testing.T) {
 	tt := []struct {
 		name                   string
-		hubSessionKeyToSave    string
+		hubSessionToSave       *gateway.HubSession
 		hubSessionKeyToLookfor string
-		hubSession             *gateway.HubSession
+		expectedHubSession     *gateway.HubSession
 	}{
 		{name: "RetrieveHubSession Success",
-			hubSessionKeyToSave:    "sessionKey",
+			hubSessionToSave:       gateway.NewHubSession("sessionKey", "username", "password", 1),
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSession:             gateway.NewHubSession("username", "password", 1),
+			expectedHubSession:     gateway.NewHubSession("sessionKey", "username", "password", 1),
 		},
 		{name: "RetrieveHubSession inexistent_hubSession_key",
-			hubSessionKeyToSave:    "sessionKey",
+			hubSessionToSave:       gateway.NewHubSession("sessionKey", "username", "password", 1),
 			hubSessionKeyToLookfor: "inexistent_sessionKey",
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewSession()
+			var syncMap sync.Map
+			repo := NewInMemoryHubSessionRepository(&syncMap)
 
-			session.SaveHubSession(tc.hubSessionKeyToSave, tc.hubSession)
+			repo.SaveHubSession(tc.hubSessionToSave)
 
-			hubSession := session.RetrieveHubSession(tc.hubSessionKeyToLookfor)
+			hubSession := repo.RetrieveHubSession(tc.hubSessionKeyToLookfor)
 
-			if !reflect.DeepEqual(hubSession, tc.hubSession) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.hubSession)
+			if !reflect.DeepEqual(hubSession, tc.expectedHubSession) {
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", tc.expectedHubSession, hubSession)
 			}
 		})
 	}
 }
 
-func TestSaveServerSession(t *testing.T) {
+func TestSaveServerSessions(t *testing.T) {
 	tt := []struct {
 		name          string
 		hubSessionKey string
@@ -76,30 +79,28 @@ func TestSaveServerSession(t *testing.T) {
 	}{
 		{name: "SaveServerSession Success",
 			hubSessionKey: "sessionKey",
-			hubSession:    gateway.NewHubSession("username", "password", 1),
+			hubSession:    gateway.NewHubSession("sessionKey", "username", "password", 1),
 			serverID:      1234,
-			serverSession: gateway.NewServerSession("url", "serverSessionKey"),
+			serverSession: gateway.NewServerSession(1234, "url", "serverSessionKey", "sessionKey"),
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewSession()
+			var syncMap sync.Map
+			hubRepo := NewInMemoryHubSessionRepository(&syncMap)
+			hubRepo.SaveHubSession(tc.hubSession)
 
-			session.SaveHubSession(tc.hubSessionKey, tc.hubSession)
+			repo := NewInMemoryServerSessionRepository(&syncMap)
 
-			hubSession := session.RetrieveHubSession(tc.hubSessionKey)
+			expectedServerSessions := map[int64]*gateway.ServerSession{tc.serverID: tc.serverSession}
 
-			if !reflect.DeepEqual(hubSession, tc.hubSession) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.hubSessionKey)
-			}
+			repo.SaveServerSessions(tc.hubSessionKey, expectedServerSessions)
 
-			session.SaveServerSession(tc.hubSessionKey, tc.serverID, tc.serverSession)
+			serverSessions := repo.RetrieveServerSessions(tc.hubSessionKey)
 
-			serverSession := session.RetrieveServerSessionByServerID(tc.hubSessionKey, tc.serverID)
-
-			if !reflect.DeepEqual(serverSession, tc.serverSession) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.serverSession)
+			if !reflect.DeepEqual(serverSessions, expectedServerSessions) {
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", expectedServerSessions, serverSessions)
 			}
 		})
 	}
@@ -119,43 +120,46 @@ func TestRetrieveServerSessionByServerID(t *testing.T) {
 		{name: "RetrieveServerSessionByServerID Success",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("sessionKey", "username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      1234,
-			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
-			expectedServerSession:  gateway.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession(1234, "url", "serverSessionKey", "sessionKey"),
+			expectedServerSession:  gateway.NewServerSession(1234, "url", "serverSessionKey", "sessionKey"),
 		},
 		{name: "RetrieveServerSessionByServerID inexistent_hubSession_key",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "inexistent_sessionKey",
-			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("sessionKey", "username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      1234,
-			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession(1234, "url", "serverSessionKey", "sessionKey"),
 			expectedServerSession:  nil,
 		},
 		{name: "RetrieveServerSessionByServerID inexistent_serverID",
 			hubSessionKeyToSave:    "sessionKey",
 			hubSessionKeyToLookfor: "sessionKey",
-			hubSessionToSave:       gateway.NewHubSession("username", "password", 1),
+			hubSessionToSave:       gateway.NewHubSession("sessionKey", "username", "password", 1),
 			serverIDToSave:         1234,
 			serverIDToLookfor:      -1,
-			serverSessionToSave:    gateway.NewServerSession("url", "serverSessionKey"),
+			serverSessionToSave:    gateway.NewServerSession(1234, "url", "serverSessionKey", "sessionKey"),
 			expectedServerSession:  nil,
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewSession()
+			var syncMap sync.Map
+			hubRepo := NewInMemoryHubSessionRepository(&syncMap)
+			hubRepo.SaveHubSession(tc.hubSessionToSave)
 
-			session.SaveHubSession(tc.hubSessionKeyToSave, tc.hubSessionToSave)
-			session.SaveServerSession(tc.hubSessionKeyToSave, tc.serverIDToSave, tc.serverSessionToSave)
+			repo := NewInMemoryServerSessionRepository(&syncMap)
 
-			serverSession := session.RetrieveServerSessionByServerID(tc.hubSessionKeyToLookfor, tc.serverIDToLookfor)
+			repo.SaveServerSessions(tc.hubSessionKeyToSave, map[int64]*gateway.ServerSession{tc.serverIDToSave: tc.serverSessionToSave})
+
+			serverSession := repo.RetrieveServerSessionByServerID(tc.hubSessionKeyToLookfor, tc.serverIDToLookfor)
 
 			if !reflect.DeepEqual(serverSession, tc.expectedServerSession) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedServerSession)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", tc.expectedServerSession, serverSession)
 			}
 		})
 	}
@@ -171,28 +175,28 @@ func TestRemoveHubSession(t *testing.T) {
 		{name: "RemoveHubSession Success",
 			hubSessionKeyToSave:   "sessionKey",
 			hubSessionKeyToRemove: "sessionKey",
-			hubSession:            gateway.NewHubSession("username", "password", 1),
+			hubSession:            gateway.NewHubSession("sessionKey", "username", "password", 1),
 		},
 	}
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			session := NewSession()
+			var syncMap sync.Map
+			repo := NewInMemoryHubSessionRepository(&syncMap)
 
-			session.SaveHubSession(tc.hubSessionKeyToSave, tc.hubSession)
-
-			hubSession := session.RetrieveHubSession(tc.hubSessionKeyToRemove)
+			repo.SaveHubSession(tc.hubSession)
+			hubSession := repo.RetrieveHubSession(tc.hubSessionKeyToSave)
 
 			if !reflect.DeepEqual(hubSession, tc.hubSession) {
 				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.hubSession)
 			}
 
-			session.RemoveHubSession(tc.hubSessionKeyToRemove)
+			repo.RemoveHubSession(tc.hubSessionKeyToRemove)
 
-			hubSession = session.RetrieveHubSession(tc.hubSessionKeyToRemove)
+			hubSession = repo.RetrieveHubSession(tc.hubSessionKeyToRemove)
 
 			if hubSession != nil {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", nil)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", nil, hubSession)
 			}
 		})
 	}
