@@ -12,6 +12,8 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
+// implements a Gorilla XMLRPC Codec, see https://www.gorillatoolkit.org/pkg/rpc#overview
+
 type Codec struct {
 	mappings                 map[string]string
 	defaultMethodByNamespace map[string]string
