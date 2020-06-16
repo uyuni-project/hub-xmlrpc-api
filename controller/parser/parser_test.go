@@ -48,7 +48,7 @@ func Test_LoginRequestParser(t *testing.T) {
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", &tc.expectedStruct, tc.structToHydrate)
 			}
 		})
 	}
@@ -81,7 +81,7 @@ func Test_ProxyCallToHubRequestParser(t *testing.T) {
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", &tc.expectedStruct, tc.structToHydrate)
 			}
 		})
 	}
@@ -129,7 +129,7 @@ func Test_MulticastRequestParser(t *testing.T) {
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", &tc.expectedStruct, tc.structToHydrate)
 			}
 		})
 	}
@@ -177,7 +177,7 @@ func Test_UnicastRequestParser(t *testing.T) {
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedStruct)
+				t.Fatalf("expected and actual doesn't match. Expected was:\n%v\nActual is:\n%v", &tc.expectedStruct, tc.structToHydrate)
 			}
 		})
 	}
