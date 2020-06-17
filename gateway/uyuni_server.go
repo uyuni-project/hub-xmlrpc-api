@@ -5,10 +5,15 @@ type UyuniAuthenticator interface {
 	Logout(endpoint, sessionKey string) error
 }
 
+type RetrieveServerAPIEndpointsResponse struct {
+	SuccessfulResponses map[int64]string
+	FailedResponses     map[int64]string
+}
+
 type UyuniTopologyInfoRetriever interface {
 	ListServerIDs(endpoint, sessionKey string) ([]int64, error)
 	RetrieveUserServerIDs(endpoint, sessionKey, username string) ([]int64, error)
-	RetrieveServerAPIEndpoints(endpoint, sessionKey string, serverIDs []int64) (map[int64]string, error)
+	RetrieveServerAPIEndpoints(endpoint, sessionKey string, serverIDs []int64) (*RetrieveServerAPIEndpointsResponse, error)
 }
 
 type UyuniCallExecutor interface {
