@@ -21,7 +21,7 @@ Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni 
 
 **If you are installing `hub-xmlrpc-api` on the Hub** then no further configuration is necessary. The daemon can be started via systemd as a `hub-xmlrpc-api.service` file is provided by the package.
 
-**If you are installing `hub-xmlrpc-api` on a sepeate host** then you should make sure that the URL to the Hub XMLRPC API is correctly configured in the `/etc/hub/hub.conf` file.
+**If you are installing `hub-xmlrpc-api` on a separate host** then you should make sure that the URL to the Hub XMLRPC API is correctly configured in the `/etc/hub/hub.conf` file.
 
 ## Additional configuration
 
@@ -117,4 +117,3 @@ See the list of [contributors](https://github.com/uyuni-project/hub-xmlrpc-api/c
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
