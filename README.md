@@ -13,7 +13,7 @@ Servers are registered and can be managed from the Hub just like normal SUSE Man
  - two or more peripheral Servers registered to the Hub as Salt clients
  - any number of end clients registered to peripheral Servers
  - a host that can connect to all the peripheral Server's XMLRPC APIs (it can be the Hub itself)
- - crdentials to all Server XMLRPC APIs, including the Hub's
+ - credentials to all Server XMLRPC APIs, including the Hub's
 
 ### Installation
 
@@ -117,5 +117,4 @@ See the list of [contributors](https://github.com/uyuni-project/hub-xmlrpc-api/c
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
 
