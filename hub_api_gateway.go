@@ -11,7 +11,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/parser"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/transformer"
-	codec "github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
+	"github.com/uyuni-project/hub-xmlrpc-api/controller/xmlrpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 	"github.com/uyuni-project/hub-xmlrpc-api/uyuni"
@@ -70,8 +70,8 @@ func initServer() {
 	log.Fatal(http.ListenAndServe(":2830", nil))
 }
 
-func initCodec() *codec.Codec {
-	var codec = codec.NewCodec()
+func initCodec() *xmlrpc.Codec {
+	var codec = xmlrpc.NewCodec()
 
 	codec.RegisterMapping("hub.login", "HubLoginController.Login", parser.LoginRequestParser)
 	codec.RegisterMapping("hub.loginWithAutoconnectMode", "HubLoginController.LoginWithAutoconnectMode", parser.LoginRequestParser)
