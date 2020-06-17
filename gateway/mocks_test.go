@@ -48,7 +48,7 @@ func (m *mockUyuniAuthenticator) Logout(endpoint, sessionKey string) error {
 type mockUyuniTopologyInfoRetriever struct {
 	mockListServerIDs              func(endpoint, sessionKey string) ([]int64, error)
 	mockRetrieveUserServerIDs      func(endpoint, sessionKey, username string) ([]int64, error)
-	mockRetrieveServerAPIEndpoints func(endpoint, sessionKey string, serverIDs []int64) (map[int64]string, error)
+	mockRetrieveServerAPIEndpoints func(endpoint, sessionKey string, serverIDs []int64) (*RetrieveServerAPIEndpointsResponse, error)
 }
 
 func (m *mockUyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) ([]int64, error) {
@@ -59,7 +59,7 @@ func (m *mockUyuniTopologyInfoRetriever) RetrieveUserServerIDs(endpoint, session
 	return m.mockRetrieveUserServerIDs(endpoint, sessionKey, username)
 }
 
-func (m *mockUyuniTopologyInfoRetriever) RetrieveServerAPIEndpoints(endpoint, sessionKey string, serverIDs []int64) (map[int64]string, error) {
+func (m *mockUyuniTopologyInfoRetriever) RetrieveServerAPIEndpoints(endpoint, sessionKey string, serverIDs []int64) (*RetrieveServerAPIEndpointsResponse, error) {
 	return m.mockRetrieveServerAPIEndpoints(endpoint, sessionKey, serverIDs)
 }
 

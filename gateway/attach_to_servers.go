@@ -40,12 +40,18 @@ func (a *serverAuthenticator) AttachToServers(hubSessionKey string, serverIDs []
 }
 
 func (a *serverAuthenticator) attachServersToHubSession(serverIDs []int64, credentialsByServer map[int64]*Credentials, hubSessionKey string) (*MulticastResponse, error) {
-	endpointByServer, err := a.uyuniTopologyInfoRetriever.RetrieveServerAPIEndpoints(a.hubAPIEndpoint, hubSessionKey, serverIDs)
+	retrieveServerAPIResponse, err := a.uyuniTopologyInfoRetriever.RetrieveServerAPIEndpoints(a.hubAPIEndpoint, hubSessionKey, serverIDs)
 	if err != nil {
-		//TODO: what to do with failing servers?
+		return nil, err
 	}
-	multicastCallRequest := a.generateLoginMuticastCallRequest(credentialsByServer, endpointByServer)
+	multicastCallRequest := a.generateLoginMuticastCallRequest(credentialsByServer, retrieveServerAPIResponse.SuccessfulResponses)
 	loginResponse := executeCallOnServers(multicastCallRequest)
+
+	failedResponses := loginResponse.FailedResponses
+	for serverID, errorMessage := range retrieveServerAPIResponse.FailedResponses {
+		failedResponses[serverID] = ServerFailedResponse{serverID, a.hubAPIEndpoint, errorMessage}
+	}
+	loginResponse.FailedResponses = failedResponses
 	a.saveServerSessions(hubSessionKey, loginResponse)
 	return loginResponse, nil
 }
@@ -67,7 +73,6 @@ func (a *serverAuthenticator) saveServerSessions(hubSessionKey string, loginResp
 	for serverID, response := range loginResponses.SuccessfulResponses {
 		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, response.Response.(string), hubSessionKey}
 	}
-	// TODO:
 	//save for failed as well
 	for serverID, response := range loginResponses.FailedResponses {
 		serverSessions[serverID] = &ServerSession{serverID, response.endpoint, "login-error", hubSessionKey}
