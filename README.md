@@ -30,7 +30,7 @@ Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni 
  - `HUB_CONNECT_TIMEOUT`: maximum number of seconds to wait for a response when connecting to a Server
  - `HUB_REQUEST_TIMEOUT`: maximum numbr of seconds to wait for a response when calling a Server method
 
- Defaults values should suffice in most settings.
+ Default values should suffice in most settings.
 
 ## Usage
 
