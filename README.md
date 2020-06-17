@@ -34,7 +34,7 @@ Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni 
 
 ## Usage
 
-Once the `hub-xmlrpc-api` service is running, you can connect to it at port 2830 via any XMLRPC compliant client libraries (see examples below).
+Once the `hub-xmlrpc-api` service is running, you can connect to it at port 2830 via any XMLRPC compliant client library (see examples below).
 
 
 ### Namespaces
