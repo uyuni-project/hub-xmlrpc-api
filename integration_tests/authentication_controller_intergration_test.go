@@ -34,7 +34,7 @@ func TestLogin(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
@@ -83,7 +83,7 @@ func TestLoginAutoconnect(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
@@ -143,7 +143,7 @@ func TestLoginWithAuthRelayMode(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
@@ -190,7 +190,7 @@ func TestAttachToServers(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
@@ -240,7 +240,7 @@ func TestIsHubSessionValid(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 
@@ -283,7 +283,7 @@ func TestListServerIds(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 

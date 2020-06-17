@@ -39,7 +39,7 @@ func TestUniCastDefaultMethod(t *testing.T) {
 			xmlBody := fmt.Sprintf(xmlInput, tc.name)
 
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 

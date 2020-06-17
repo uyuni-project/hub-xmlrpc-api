@@ -12,36 +12,29 @@ Servers are registered and can be managed from the Hub just like normal SUSE Man
  - one central SUSE Manager/Uyuni Server (hereinafter: "Hub")
  - two or more peripheral Servers registered to the Hub as Salt clients
  - any number of end clients registered to peripheral Servers
-
-You will need credentials to all Server XMLRPC APIs, including the Hub's.
+ - a host that can connect to all the peripheral Server's XMLRPC APIs (it can be the Hub itself)
+ - credentials to all Server XMLRPC APIs, including the Hub's
 
 ### Installation
 
 Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni repos, either on the Hub itself or on a host that has access to all Servers' XMLRPC APIs.
 
-Configuration of `hub-xmlrpc-api` is specified in a JSON file like the following:
+**If you are installing `hub-xmlrpc-api` on the Hub** then no further configuration is necessary. The daemon can be started via systemd as a `hub-xmlrpc-api.service` file is provided by the package.
 
-```json
-{
-   "type": "json",
-    "hub": {
-       "manager_api_url": "http://localhost/rpc/api"
-   },
-    "connect_timeout": 10,
-    "read_write_timeout": 10,
-   }
- ```
+**If you are installing `hub-xmlrpc-api` on a separate host** then you should make sure that the URL to the Hub XMLRPC API is correctly configured in the `/etc/hub/hub.conf` file.
 
-Replace `localhost` in `http://localhost/rpc/api` above with the Hub's FQDN if necessary.
+## Additional configuration
 
-Set the `HUB_CONFIG_FILE` environment variable to point to the configuration file.
+`/etc/hub/hub.conf` contains the following configuration parameters:
+ - `HUB_API_URL`: URL to the Hub XMLRPC API endpoint
+ - `HUB_CONNECT_TIMEOUT`: maximum number of seconds to wait for a response when connecting to a Server
+ - `HUB_REQUEST_TIMEOUT`: maximum numbr of seconds to wait for a response when calling a Server method
+
+ Default values should suffice in most settings.
 
 ## Usage
 
-`hub-xmlrpc-api` is a daemon, currently to be launched from the command line.
-
-
-Once running, you can connect to the `hub-xmlrpc-api` at port 2830 via any XMLRPC compliant client libraries (see examples below).
+Once the `hub-xmlrpc-api` service is running, you can connect to it at port 2830 via any XMLRPC compliant client library (see examples below).
 
 
 ### Namespaces
@@ -124,5 +117,3 @@ See the list of [contributors](https://github.com/uyuni-project/hub-xmlrpc-api/c
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
-
-

@@ -28,7 +28,7 @@ func initServer() {
 	conf := config.NewConfig()
 
 	//init xmlrpc client implementation
-	client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+	client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 
 	//init uyuni adapters
 	uyuniCallExecutor := uyuni.NewUyuniCallExecutor(client)
@@ -41,12 +41,12 @@ func initServer() {
 	serverSessionRepository := session.NewInMemoryServerSessionRepository(&syncMap)
 
 	//init gateway
-	serverAuthenticator := gateway.NewServerAuthenticator(conf.Hub.SUMA_API_URL, uyuniAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository, serverSessionRepository)
-	hubLoginer := gateway.NewHubLoginer(conf.Hub.SUMA_API_URL, uyuniAuthenticator, serverAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository)
-	hubLogouter := gateway.NewHubLogouter(conf.Hub.SUMA_API_URL, uyuniAuthenticator, hubSessionRepository)
+	serverAuthenticator := gateway.NewServerAuthenticator(conf.HubAPIURL, uyuniAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository, serverSessionRepository)
+	hubLoginer := gateway.NewHubLoginer(conf.HubAPIURL, uyuniAuthenticator, serverAuthenticator, uyuniTopologyInfoRetriever, hubSessionRepository)
+	hubLogouter := gateway.NewHubLogouter(conf.HubAPIURL, uyuniAuthenticator, hubSessionRepository)
 
-	hubProxy := gateway.NewHubProxy(conf.Hub.SUMA_API_URL, uyuniCallExecutor)
-	hubTopologyInfoRetriever := gateway.NewTopologyInfoRetriever(conf.Hub.SUMA_API_URL, uyuniTopologyInfoRetriever)
+	hubProxy := gateway.NewHubProxy(conf.HubAPIURL, uyuniCallExecutor)
+	hubTopologyInfoRetriever := gateway.NewTopologyInfoRetriever(conf.HubAPIURL, uyuniTopologyInfoRetriever)
 
 	multicaster := gateway.NewMulticaster(uyuniCallExecutor, hubSessionRepository)
 	unicaster := gateway.NewUnicaster(uyuniCallExecutor, serverSessionRepository)

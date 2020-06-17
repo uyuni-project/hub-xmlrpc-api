@@ -10,7 +10,7 @@ func TestExecuteCall(t *testing.T) {
 	tt := []struct {
 		name             string
 		connectTimeout   int
-		readWriteTimeout int
+		requestTimeout   int
 		url              string
 		methodName       string
 		args             []interface{}
@@ -18,32 +18,32 @@ func TestExecuteCall(t *testing.T) {
 		expectedError    string
 	}{
 		{name: "ExecuteCall Success",
-			connectTimeout:   1,
-			readWriteTimeout: 1,
-			url:              "http://localhost:8001/hub/rpc/api",
-			methodName:       "auth.login",
-			args:             []interface{}{"admin", "admin"},
+			connectTimeout: 1,
+			requestTimeout: 1,
+			url:            "http://localhost:8001/hub/rpc/api",
+			methodName:     "auth.login",
+			args:           []interface{}{"admin", "admin"},
 		},
 		{name: "ExecuteCall wrong_parameters Failed",
-			connectTimeout:   1,
-			readWriteTimeout: 1,
-			url:              "http://localhost:8001/hub/rpc/api",
-			methodName:       "methodName",
-			args:             []interface{}{"wrong_parameter", "wrong_parameter"},
+			connectTimeout: 1,
+			requestTimeout: 1,
+			url:            "http://localhost:8001/hub/rpc/api",
+			methodName:     "methodName",
+			args:           []interface{}{"wrong_parameter", "wrong_parameter"},
 		},
 		{name: "ExecuteCall inexistent_URL Failed",
-			connectTimeout:   1,
-			readWriteTimeout: 1,
-			url:              "http://localhost:8001/hub/rpc/api",
-			methodName:       "methodName",
-			args:             []interface{}{"admin", "admin"},
+			connectTimeout: 1,
+			requestTimeout: 1,
+			url:            "http://localhost:8001/hub/rpc/api",
+			methodName:     "methodName",
+			args:           []interface{}{"admin", "admin"},
 		},
 		{name: "ExecuteCall inexistent_methodName Failed",
-			connectTimeout:   1,
-			readWriteTimeout: 1,
-			url:              "http://unknown_URL",
-			methodName:       "unknown_method",
-			args:             []interface{}{"admin", "admin"},
+			connectTimeout: 1,
+			requestTimeout: 1,
+			url:            "http://unknown_URL",
+			methodName:     "unknown_method",
+			args:           []interface{}{"admin", "admin"},
 		},
 	}
 
@@ -52,7 +52,7 @@ func TestExecuteCall(t *testing.T) {
 			//init server
 
 			//init client
-			client := NewClient(tc.connectTimeout, tc.readWriteTimeout)
+			client := NewClient(tc.connectTimeout, tc.requestTimeout)
 
 			response, err := client.ExecuteCall(tc.url, tc.methodName, tc.args)
 

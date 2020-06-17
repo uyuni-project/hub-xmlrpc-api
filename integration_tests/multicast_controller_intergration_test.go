@@ -25,7 +25,7 @@ func Test_MulticastService_DefaultMethod(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
 			conf := config.InitializeConfig()
-			client := client.NewClient(conf.ConnectTimeout, conf.ReadWriteTimeout)
+			client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
 			session := session.NewSession()
 			hub := server.NewHubService(client, session, conf.Hub.SUMA_API_URL)
 			const xmlInput = `

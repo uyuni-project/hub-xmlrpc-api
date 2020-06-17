@@ -9,15 +9,15 @@ import (
 )
 
 type Client struct {
-	connectTimeout, readWriteTimeout int
+	connectTimeout, requestTimeout int
 }
 
-func NewClient(connectTimeout, readWriteTimeout int) *Client {
-	return &Client{connectTimeout: connectTimeout, readWriteTimeout: readWriteTimeout}
+func NewClient(connectTimeout, requestTimeout int) *Client {
+	return &Client{connectTimeout: connectTimeout, requestTimeout: requestTimeout}
 }
 
 func (c *Client) ExecuteCall(endpoint string, call string, args []interface{}) (response interface{}, err error) {
-	client, err := getClientWithTimeout(endpoint, c.connectTimeout, c.readWriteTimeout)
+	client, err := getClientWithTimeout(endpoint, c.connectTimeout, c.requestTimeout)
 	if err != nil {
 		return nil, err
 	}
@@ -26,20 +26,20 @@ func (c *Client) ExecuteCall(endpoint string, call string, args []interface{}) (
 	return response, err
 }
 
-func timeoutDialer(connectTimeout, readWriteTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
+func timeoutDialer(connectTimeout, requestTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
 	return func(netw, addr string) (net.Conn, error) {
 		conn, err := net.DialTimeout(netw, addr, connectTimeout)
 		if err != nil {
 			return nil, err
 		}
-		conn.SetDeadline(time.Now().Add(readWriteTimeout))
+		conn.SetDeadline(time.Now().Add(requestTimeout))
 		return conn, nil
 	}
 }
 
-func getClientWithTimeout(url string, connectTimeout, readWriteTimeout int) (*xmlrpc.Client, error) {
+func getClientWithTimeout(url string, connectTimeout, requestTimeout int) (*xmlrpc.Client, error) {
 	transport := http.Transport{
-		Dial: timeoutDialer(time.Duration(connectTimeout)*time.Second, time.Duration(readWriteTimeout)*time.Second),
+		Dial: timeoutDialer(time.Duration(connectTimeout)*time.Second, time.Duration(requestTimeout)*time.Second),
 	}
 	return xmlrpc.NewClient(url, &transport)
 }

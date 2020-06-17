@@ -1,5 +1,5 @@
 [Unit]
-Description=The Hub XMLRPC API helps to operate SUSE Manager or Uyuni infrastructures with one Server, called a Hub, managing several Servers.
+Description=The Hub XMLRPC API
 
 [Service]
 Type=simple
@@ -10,7 +10,6 @@ StandardOutput=syslog
 StandardError=syslog
 SyslogIdentifier=hub-xmlrpc-api
 ExecStart=/usr/bin/hub-xmlrpc-api
-
 
 [Install]
 WantedBy=multi-user.target

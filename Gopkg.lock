@@ -2,14 +2,6 @@
 
 
 [[projects]]
-  digest = "1:abeb38ade3f32a92943e5be54f55ed6d6e3b6602761d74b4aab4c9dd45c18abd"
-  name = "github.com/fsnotify/fsnotify"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
-  version = "v1.4.7"
-
-[[projects]]
   digest = "1:f925e333cd264e456d45428cb2e7d6b37dca32f1228864e1a7a34bfbae16020a"
   name = "github.com/gorilla/rpc"
   packages = ["."]
@@ -18,13 +10,13 @@
   version = "v1.2.0"
 
 [[projects]]
-  digest = "1:409dc59de50e0a6ba3da127a748f586e24da4b7b98db958aaae3ad692829cc7d"
+  digest = "1:71f4ec1a220e36400233ec407b74231718d0df1183d3031156e8e042fb7b3874"
   name = "github.com/knadh/koanf"
   packages = [
     ".",
     "maps",
-    "parsers/json",
-    "providers/file",
+    "providers/confmap",
+    "providers/env",
   ]
   pruneopts = "UT"
   revision = "a1272d0c07ad8ab89903a1394b97f20b5e8df35c"
@@ -46,22 +38,14 @@
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
 
-[[projects]]
-  branch = "master"
-  digest = "1:4da420ceda5f68e8d748aa2169d0ed44ffadb1bbd6537cf778a49563104189b8"
-  name = "golang.org/x/sys"
-  packages = ["unix"]
-  pruneopts = "UT"
-  revision = "ce4227a45e2eb77e5c847278dcc6a626742e2945"
-
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
     "github.com/gorilla/rpc",
     "github.com/knadh/koanf",
-    "github.com/knadh/koanf/parsers/json",
-    "github.com/knadh/koanf/providers/file",
+    "github.com/knadh/koanf/providers/confmap",
+    "github.com/knadh/koanf/providers/env",
     "github.com/kolo/xmlrpc",
   ]
   solver-name = "gps-cdcl"
