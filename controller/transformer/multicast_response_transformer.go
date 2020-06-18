@@ -5,9 +5,8 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
 
-var MulticastResponseTransformer = transformToMulticastResponse
-
-func transformToMulticastResponse(multicastResponse *gateway.MulticastResponse) *controller.MulticastResponse {
+// MulticastResponseTransformer turns a multicast response from the gateway to the controller format
+func MulticastResponseTransformer(multicastResponse *gateway.MulticastResponse) *controller.MulticastResponse {
 	return &controller.MulticastResponse{
 		transformToSuccessfulResponses(multicastResponse.SuccessfulResponses),
 		transformToFailedResponses(multicastResponse.FailedResponses),
