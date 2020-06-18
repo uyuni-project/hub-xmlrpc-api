@@ -1,8 +1,0 @@
-{
-    "type": "json",
-     "hub": {
-        "manager_api_url": "http://localhost:8001/hub/rpc/api"
-     },
-    "connect_timeout": 10,
-    "read_write_timeout": 10
-}
