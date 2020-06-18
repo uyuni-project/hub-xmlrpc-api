@@ -1,0 +1,1 @@
+Implementation of backing storage for session data.

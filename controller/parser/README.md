@@ -1,0 +1,1 @@
+Parsers validate parameters to individual XMLRPC methods/namespaces supported by this app, each being implemented by the Controller with the same name.

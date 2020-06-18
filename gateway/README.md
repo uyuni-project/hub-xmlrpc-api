@@ -1,0 +1,1 @@
+Functions in this package implement supported XMLRPC methods/namespaces, and they are normally called by Controllers.
