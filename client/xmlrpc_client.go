@@ -1,6 +1,8 @@
 package client
 
 import (
+	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"time"
@@ -26,8 +28,8 @@ func (c *Client) ExecuteCall(endpoint string, call string, args []interface{}) (
 	return response, err
 }
 
-func timeoutDialer(connectTimeout, requestTimeout time.Duration) func(net, addr string) (c net.Conn, err error) {
-	return func(netw, addr string) (net.Conn, error) {
+func timeoutDialer(connectTimeout, requestTimeout time.Duration) func(ctx context.Context, net, addr string) (c net.Conn, err error) {
+	return func(ctx context.Context, netw, addr string) (net.Conn, error) {
 		conn, err := net.DialTimeout(netw, addr, connectTimeout)
 		if err != nil {
 			return nil, err
@@ -39,7 +41,8 @@ func timeoutDialer(connectTimeout, requestTimeout time.Duration) func(net, addr 
 
 func getClientWithTimeout(url string, connectTimeout, requestTimeout int) (*xmlrpc.Client, error) {
 	transport := http.Transport{
-		Dial: timeoutDialer(time.Duration(connectTimeout)*time.Second, time.Duration(requestTimeout)*time.Second),
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DialContext:     timeoutDialer(time.Duration(connectTimeout)*time.Second, time.Duration(requestTimeout)*time.Second),
 	}
 	return xmlrpc.NewClient(url, &transport)
 }
