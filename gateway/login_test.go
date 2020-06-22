@@ -36,7 +36,8 @@ func Test_Login(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			mockHubSessionRepository := new(mockHubSessionRepository)
-			mockHubSessionRepository.mockSaveHubSession = func(hubSession *HubSession) {}
+			savedOnSession := false
+			mockHubSessionRepository.mockSaveHubSession = func(hubSession *HubSession) { savedOnSession = true }
 
 			mockUyuniAuthenticator := new(mockUyuniAuthenticator)
 			mockUyuniAuthenticator.mockLogin = tc.mockLogin(tc.expectedHubSessionKey)
@@ -52,6 +53,9 @@ func Test_Login(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(hubSessionKey, tc.expectedHubSessionKey) {
 				t.Fatalf("Expected and actual values don't match, Expected value is: %v", tc.expectedHubSessionKey)
+			}
+			if err == nil && !savedOnSession {
+				t.Fatalf("HubSession was not saved as expected")
 			}
 		})
 	}
@@ -128,7 +132,8 @@ func Test_LoginWithAutoconnectMode(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			mockHubSessionRepository := new(mockHubSessionRepository)
-			mockHubSessionRepository.mockSaveHubSession = func(hubSession *HubSession) {}
+			savedOnSession := false
+			mockHubSessionRepository.mockSaveHubSession = func(hubSession *HubSession) { savedOnSession = true }
 
 			mockUyuniAuthenticator := new(mockUyuniAuthenticator)
 			mockUyuniAuthenticator.mockLogin = tc.mockLogin(tc.hubSessionKey)
@@ -146,6 +151,9 @@ func Test_LoginWithAutoconnectMode(t *testing.T) {
 			}
 			if err == nil && !reflect.DeepEqual(loginWithAutoconnectModeResponse, tc.expectedLoginWithAutoconnectModeResponse) {
 				t.Fatalf("Expected and actual values don't match, Expected value is: %v", tc.expectedLoginWithAutoconnectModeResponse)
+			}
+			if err == nil && !savedOnSession {
+				t.Fatalf("HubSession was not saved as expected")
 			}
 		})
 	}
