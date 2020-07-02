@@ -6,67 +6,68 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
-// func init() {
-// 	main.main()
-// 	cmd := exec.Command("go", "run", "/home/marcelo/go/src/github.com/uyuni-project/hub-xmlrpc-api/hub_api_gateway.go")
-// 	_, err := cmd.Output()
-// 	if err != nil {
-// 		log.Fatalf("cmd.Run() failed with %s\n", err)
-// 	}
-// }
 func Test_Multicast(t *testing.T) {
 	tt := []struct {
-		name, username, password, call string
-		expectedError                  string
+		name, call               string
+		loginCredentials         struct{ username, password string }
+		analizeMulticastResponse func(multicastResponse interface{}) bool
+		expectedError            string
 	}{
 		{
-			name:     "multicast.system.listSystems",
-			call:     "multicast.system.listSystems",
-			username: "admin",
-			password: "admin",
+			name:                     "multicast.system.listSystems should succeed",
+			call:                     "multicast.system.listSystems",
+			loginCredentials:         struct{ username, password string }{"admin", "admin"},
+			analizeMulticastResponse: analizeListSystemsMulticastResponse,
+		},
+		{
+			name:                     "unkown method should fail",
+			call:                     "multicast.unkown.unkown",
+			loginCredentials:         struct{ username, password string }{"admin", "admin"},
+			analizeMulticastResponse: analizeUnkonwMethodMulticastResponse,
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
-			peripheralServers := peripheralServers()
-			initInfrastructure(peripheralServers, 8001, "admin", "admin")
-			gatewayServerURL := "http://localhost:2830/hub/rpc/api"
 			client := client.NewClient(10, 10)
 			//login
-			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{"admin", "admin"})
+			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
 			hubSessionKey := loginResponse.(map[string]interface{})["SessionKey"].(string)
-			serverIDsSlice := loginResponse.(map[string]interface{})["Successful"].(map[string]interface{})["ServerIds"].([]interface{})
-
-			loggedInServerIDs := make([]int64, 0, len(serverIDsSlice))
-			for _, serverID := range serverIDsSlice {
-				loggedInServerIDs = append(loggedInServerIDs, serverID.(int64))
-			}
+			loggedInServerIDs := getLoggedInServerIDsFromLoginResponse(loginResponse)
 			//execute multicast call
-			multicastResponse, err := client.ExecuteCall(gatewayServerURL, "multicast.system.listSystems", []interface{}{hubSessionKey, loggedInServerIDs})
+			multicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, loggedInServerIDs})
 			if err != nil && tc.expectedError != err.Error() {
 				t.Fatalf("Error during executing request: %v", err)
 			}
-			if err == nil && !analizeListSystemsResponse(peripheralServers, multicastResponse) {
-				t.Fatalf("Expected and actual values don't match. Actual value is: %v, expected value is: %v", multicastResponse, peripheralServers)
+			if err == nil && !tc.analizeMulticastResponse(multicastResponse) {
+				t.Fatalf("Expected and actual values don't match. Actual value is: %v", multicastResponse)
 			}
 		})
 	}
 }
 
-func analizeListSystemsResponse(peripheralServers map[int64]SystemInfo, listSystemsResponse interface{}) bool {
-	failedServersResponses := listSystemsResponse.(map[string]interface{})["Failed"].(map[string]interface{})["Responses"].([]interface{})
-	failedServerIDs := listSystemsResponse.(map[string]interface{})["Failed"].(map[string]interface{})["ServerIds"].([]interface{})
+func getLoggedInServerIDsFromLoginResponse(loginResponse interface{}) []int64 {
+	serverIDsSlice := loginResponse.(map[string]interface{})["Successful"].(map[string]interface{})["ServerIds"].([]interface{})
+	loggedInServerIDs := make([]int64, 0, len(serverIDsSlice))
+	for _, serverID := range serverIDsSlice {
+		loggedInServerIDs = append(loggedInServerIDs, serverID.(int64))
+	}
+	return loggedInServerIDs
+}
+
+func analizeListSystemsMulticastResponse(multicastResponse interface{}) bool {
+	failedServersResponses := multicastResponse.(map[string]interface{})["Failed"].(map[string]interface{})["Responses"].([]interface{})
+	failedServerIDs := multicastResponse.(map[string]interface{})["Failed"].(map[string]interface{})["ServerIds"].([]interface{})
 
 	if len(failedServersResponses) != 0 || len(failedServerIDs) != 0 {
 		return false
 	}
 
-	successfulServerResponses := listSystemsResponse.(map[string]interface{})["Successful"].(map[string]interface{})["Responses"].([]interface{})
-	successfulServerIDs := listSystemsResponse.(map[string]interface{})["Successful"].(map[string]interface{})["ServerIds"].([]interface{})
+	successfulServerResponses := multicastResponse.(map[string]interface{})["Successful"].(map[string]interface{})["Responses"].([]interface{})
+	successfulServerIDs := multicastResponse.(map[string]interface{})["Successful"].(map[string]interface{})["ServerIds"].([]interface{})
 
 	if len(successfulServerIDs) != len(peripheralServers) || len(successfulServerResponses) != len(peripheralServers) {
 		return false
@@ -96,47 +97,29 @@ func compareMinion(systemInfo SystemInfo, systemMap map[string]interface{}) bool
 	return true
 }
 
-func peripheralServers() map[int64]SystemInfo {
-	var minion1ForServer1 = SystemInfo{
-		id:   1000010000,
-		name: "peripheral-server-1000010000-minion-1",
-	}
-	var minion2ForServer1 = SystemInfo{
-		id:   1000010001,
-		name: "peripheral-server-1000010000-minion-2",
-	}
-	var peripheralServer1 = SystemInfo{
-		id:   1000010000,
-		name: "peripheral-server-1000010000",
-		fqdn: "localhost:8002",
-		minions: map[int64]SystemInfo{
-			minion1ForServer1.id: minion1ForServer1,
-			minion2ForServer1.id: minion2ForServer1,
-		},
-		port: 8002,
+func analizeUnkonwMethodMulticastResponse(multicastResponse interface{}) bool {
+	successfulServerResponses := multicastResponse.(map[string]interface{})["Successful"].(map[string]interface{})["Responses"].([]interface{})
+	successfulServerIDs := multicastResponse.(map[string]interface{})["Successful"].(map[string]interface{})["ServerIds"].([]interface{})
+
+	if len(successfulServerResponses) != 0 || len(successfulServerIDs) != 0 {
+		return false
 	}
 
-	var minion1ForServer2 = SystemInfo{
-		id:   1000010000,
-		name: "peripheral-server-1000010001-minion-1",
-	}
-	var minion2ForServer2 = SystemInfo{
-		id:   1000010001,
-		name: "peripheral-server-1000010001-minion-2",
-	}
-	var peripheralServer2 = SystemInfo{
-		id:   1000010001,
-		name: "peripheral-server-1000010001",
-		fqdn: "localhost:8003",
-		minions: map[int64]SystemInfo{
-			minion1ForServer2.id: minion1ForServer2,
-			minion2ForServer2.id: minion2ForServer2,
-		},
-		port: 8003,
-	}
+	failedServerResponses := multicastResponse.(map[string]interface{})["Failed"].(map[string]interface{})["Responses"].([]interface{})
+	failedServerIDs := multicastResponse.(map[string]interface{})["Failed"].(map[string]interface{})["ServerIds"].([]interface{})
 
-	return map[int64]SystemInfo{
-		peripheralServer1.id: peripheralServer1,
-		peripheralServer2.id: peripheralServer2,
+	if len(failedServerIDs) != len(peripheralServers) || len(failedServerResponses) != len(peripheralServers) {
+		return false
 	}
+	for _, serverID := range failedServerIDs {
+		if _, ok := peripheralServers[serverID.(int64)]; !ok {
+			return false
+		}
+		for _, failedServerResponse := range failedServerResponses {
+			if "request error: bad status code - 400" != failedServerResponse.(string) {
+				return false
+			}
+		}
+	}
+	return true
 }
