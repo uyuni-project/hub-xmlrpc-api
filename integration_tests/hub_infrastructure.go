@@ -128,6 +128,7 @@ func initServer(port int64, uyuniServer *UyuniServer) {
 			Handler: mux,
 		}
 		log.Fatal(server.ListenAndServe())
+		defer server.Close()
 	}()
 }
 
