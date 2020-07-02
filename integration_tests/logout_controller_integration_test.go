@@ -37,13 +37,13 @@ func Test_Logout(t *testing.T) {
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.login", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error executing login: %v", err)
+				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(string)
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", tc.logoutParametersResolver(hubSessionKey))
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
-				t.Fatalf("Error executing logout: %v", err)
+				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})
 	}

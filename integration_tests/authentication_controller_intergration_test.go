@@ -7,7 +7,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
 )
 
-func TestLoginManual(t *testing.T) {
+func Test_LoginWithManualMode(t *testing.T) {
 
 	//config.InitializeConfig()
 	const errorMessage = "Either the password or username is incorrect"
@@ -47,7 +47,7 @@ func TestLoginManual(t *testing.T) {
 
 }
 
-func TestLoginAutoConnect(t *testing.T) {
+func Test_LoginWithAutoconnectMode(t *testing.T) {
 
 	//config.InitializeConfig()
 	const errorMessage = "Either the password or username is incorrect"
@@ -77,13 +77,13 @@ func TestLoginAutoConnect(t *testing.T) {
 				if len(strings.TrimSpace(hubSessionKey)) == 0 {
 					t.Fatalf("Unexpected Result: empty session key was returned.")
 				}
-				validatePrephiralServersResponse(t, loginResponse)
+				validatePeripheralServersResponse(t, loginResponse)
 			}
 		})
 	}
 
 }
-func TestLoginRelayMode(t *testing.T) {
+func Test_LoginWithAuthRelayMode(t *testing.T) {
 
 	const errorMessage = "Either the password or username is incorrect"
 	tt := []struct {
@@ -121,7 +121,7 @@ func TestLoginRelayMode(t *testing.T) {
 
 }
 
-func TestAttachToServers(t *testing.T) {
+func Test_AttachToServers(t *testing.T) {
 	const errorMessage = "Either the password or username is incorrect"
 	tt := []struct {
 		name          string
@@ -163,14 +163,14 @@ func TestAttachToServers(t *testing.T) {
 					return
 
 				}
-				validatePrephiralServersResponse(t, attachToServerResponse)
+				validatePeripheralServersResponse(t, attachToServerResponse)
 			}
 		})
 	}
 
 }
 
-func validatePrephiralServersResponse(t *testing.T, authResponse interface{}) {
+func validatePeripheralServersResponse(t *testing.T, authResponse interface{}) {
 	loginResponseMap := authResponse.(map[string]interface{})
 	succeededServers := loginResponseMap["Successful"].(map[string]interface{})
 	failedServers := loginResponseMap["Failed"].(map[string]interface{})
@@ -193,6 +193,5 @@ func validatePrephiralServersResponse(t *testing.T, authResponse interface{}) {
 		if len(strings.TrimSpace(skey.(string))) == 0 {
 			t.Fatalf("Unexpected Result: session key was empty.")
 		}
-
 	}
 }
