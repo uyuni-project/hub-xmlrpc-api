@@ -1,6 +1,8 @@
 package integration_tests
 
 import (
+	"os"
+
 	"github.com/uyuni-project/hub-xmlrpc-api/initialization"
 )
 
@@ -55,6 +57,7 @@ var (
 )
 
 func init() {
+	os.Setenv("HUB_API_URL", "http://localhost:8001/rpc/api")
 	go func() {
 		initialization.InitServer()
 	}()
