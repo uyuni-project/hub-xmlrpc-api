@@ -8,22 +8,22 @@ import (
 
 func Test_Multicast(t *testing.T) {
 	tt := []struct {
-		name, call               string
-		loginCredentials         struct{ username, password string }
-		analizeMulticastResponse func(multicastResponse interface{}) bool
-		expectedError            string
+		name, call                string
+		loginCredentials          struct{ username, password string }
+		multicastResponseAnalizer func(multicastResponse interface{}) bool
+		expectedError             string
 	}{
 		{
-			name:                     "multicast.system.listSystems should succeed",
-			call:                     "multicast.system.listSystems",
-			loginCredentials:         struct{ username, password string }{"admin", "admin"},
-			analizeMulticastResponse: analizeListSystemsMulticastResponse,
+			name:                      "multicast.system.listSystems should succeed",
+			call:                      "multicast.system.listSystems",
+			loginCredentials:          struct{ username, password string }{"admin", "admin"},
+			multicastResponseAnalizer: analizeListSystemsMulticastResponse,
 		},
 		{
-			name:                     "unkown method should fail",
-			call:                     "multicast.unkown.unkown",
-			loginCredentials:         struct{ username, password string }{"admin", "admin"},
-			analizeMulticastResponse: analizeUnkonwMethodMulticastResponse,
+			name:                      "unkown method should fail",
+			call:                      "multicast.unkown.unkown",
+			loginCredentials:          struct{ username, password string }{"admin", "admin"},
+			multicastResponseAnalizer: analizeUnkonwMethodMulticastResponse,
 		},
 	}
 	for _, tc := range tt {
@@ -33,17 +33,22 @@ func Test_Multicast(t *testing.T) {
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing request: %v", err)
+				t.Fatalf("Error during executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(map[string]interface{})["SessionKey"].(string)
 			loggedInServerIDs := getLoggedInServerIDsFromLoginResponse(loginResponse)
 			//execute multicast call
 			multicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, loggedInServerIDs})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing request: %v", err)
+				t.Fatalf("Error during executing multicast call: %v", err)
 			}
-			if err == nil && !tc.analizeMulticastResponse(multicastResponse) {
-				t.Fatalf("Expected and actual values don't match. Actual value is: %v", multicastResponse)
+			if err == nil && !tc.multicastResponseAnalizer(multicastResponse) {
+				t.Fatalf("Expected multicast and actual values don't match. Actual response is: %v", multicastResponse)
+			}
+			//logout
+			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
+			if err != nil && tc.expectedError != err.Error() {
+				t.Fatalf("Error during executing logout: %v", err)
 			}
 		})
 	}
