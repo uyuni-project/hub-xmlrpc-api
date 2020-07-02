@@ -1,5 +1,9 @@
 package integration_tests
 
+import (
+	"github.com/uyuni-project/hub-xmlrpc-api/initialization"
+)
+
 var (
 	//Hub API Gateway server URL
 	gatewayServerURL = "http://localhost:2830/hub/rpc/api"
@@ -51,11 +55,8 @@ var (
 )
 
 func init() {
-	// main.main()
-	// cmd := exec.Command("go", "run", "/home/marcelo/go/src/github.com/uyuni-project/hub-xmlrpc-api/hub_api_gateway.go")
-	// _, err := cmd.Output()
-	// if err != nil {
-	// 	log.Fatalf("cmd.Run() failed with %s\n", err)
-	// }
+	go func() {
+		initialization.InitServer()
+	}()
 	initInfrastructure(peripheralServers, 8001, "admin", "admin")
 }
