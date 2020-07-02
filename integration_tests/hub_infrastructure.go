@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"github.com/gorilla/rpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
@@ -13,95 +12,15 @@ import (
 )
 
 func initInfrastructure(peripheralServersByID map[int64]SystemInfo, port int64, username, password string) {
-	initHub(peripheralServersByID, port, username, password)
-	initPeripheralServers(peripheralServersByID)
+	initUyuniServer(peripheralServersByID, port, username, password, "hub")
+	for _, peripheralServer := range peripheralServersByID {
+		initUyuniServer(peripheralServer.minions, peripheralServer.port, username, password, peripheralServer.name)
+	}
 }
 
-func initHub(peripheralServersByID map[int64]SystemInfo, port int64, username, password string) {
-	sessionKey := "300x2413800c14c02928568674dad9e71e0f061e2920be1d7c6542683d78de524bd4"
-	hub := new(UyuniServer)
-	hub.mockLogin = func(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
-		log.Println("Hub -> auth.login", args.Username)
-		if args.Username == username && args.Password == password {
-			reply.Data = sessionKey
-		} else {
-			return controller.FaultInvalidCredentials
-		}
-		return nil
-	}
-	hub.mockLogout = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
-		log.Println("Hub -> auth.logout")
-		return nil
-	}
-	hub.mockListSystems = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
-		log.Println("Hub -> System.ListSystems", args.SessionKey)
-		if args.SessionKey == sessionKey {
-			peripheralServers := make([]SystemInfoResponse, 0, len(peripheralServersByID))
-			for _, peripheralServer := range peripheralServersByID {
-				peripheralServers = append(peripheralServers, SystemInfoResponse{peripheralServer.id, peripheralServer.name})
-			}
-			reply.Data = peripheralServers
-		}
-		return nil
-	}
-	hub.mockListUserSystems = func(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error {
-		log.Println("Hub -> System.ListUserSystems", args.Username)
-		if args.SessionKey == sessionKey && args.Username == username {
-			peripheralServers := make([]SystemInfoResponse, 0, len(peripheralServersByID))
-			for _, peripheralServer := range peripheralServersByID {
-				peripheralServers = append(peripheralServers, SystemInfoResponse{peripheralServer.id, peripheralServer.name})
-			}
-			reply.Data = peripheralServers
-		}
-		return nil
-	}
-	hub.mockListFqdns = func(r *http.Request, args *struct {
-		SessionKey string
-		ServerId   int64
-	}, reply *struct{ Data []string }) error {
-		log.Println("Hub -> System.ListFqdns", args.ServerId)
-		if args.SessionKey == sessionKey {
-			reply.Data = []string{peripheralServersByID[args.ServerId].fqdn}
-		}
-		return nil
-	}
-	initServer(port, hub)
-}
-
-func initPeripheralServers(peripheralServersByID map[int64]SystemInfo) {
-	for serverID, peripheralServer := range peripheralServersByID {
-		serverIDstr := strconv.FormatInt(serverID, 10)
-		minions := make([]SystemInfoResponse, 0, len(peripheralServer.minions))
-		for _, minion := range peripheralServer.minions {
-			minions = append(minions, SystemInfoResponse{minion.id, minion.name})
-		}
-		server := new(UyuniServer)
-		sessionKey := "300x2413800c14c02928568674dad9e71e0f061e2920be1d7c6542683d78de524bd" + serverIDstr
-		server.mockLogin = func(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
-			log.Println("Server"+serverIDstr+" -> auth.login", args.Username)
-			reply.Data = sessionKey
-			return nil
-		}
-		server.mockLogout = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
-			log.Println("Server -> auth.logout")
-			return nil
-		}
-		server.mockListSystems = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
-			log.Println("Server"+serverIDstr+" -> System.ListSystems", args.SessionKey)
-			if args.SessionKey == sessionKey {
-				reply.Data = minions
-			}
-			return nil
-		}
-		server.mockListUserSystems = func(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error {
-			log.Println("Server"+serverIDstr+" -> System.ListUserSystems", args.Username)
-			if args.SessionKey == sessionKey && args.Username == "admin" {
-				reply.Data = minions
-			}
-			return nil
-		}
-		initServer(peripheralServer.port, server)
-	}
+func initUyuniServer(minionsByID map[int64]SystemInfo, port int64, username, password, serverName string) {
+	sessionKey := "300x2413800c14c02928568674dad9e71e0f061e2920be1d7c6542683d78de524bd4" + serverName
+	initServer(port, &UyuniServer{serverName, username, password, sessionKey, minionsByID})
 }
 
 func initServer(port int64, uyuniServer *UyuniServer) {
@@ -133,14 +52,8 @@ func initServer(port int64, uyuniServer *UyuniServer) {
 }
 
 type UyuniServer struct {
-	mockLogin           func(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error
-	mockLogout          func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error
-	mockListUserSystems func(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error
-	mockListSystems     func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error
-	mockListFqdns       func(r *http.Request, args *struct {
-		SessionKey string
-		ServerId   int64
-	}, reply *struct{ Data []string }) error
+	serverName, username, password, sessionKey string
+	minionsByID                                map[int64]SystemInfo
 }
 
 type SystemInfo struct {
@@ -157,24 +70,51 @@ type SystemInfoResponse struct {
 }
 
 func (h *UyuniServer) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
-	return h.mockLogin(r, args, reply)
+	log.Println(h.serverName+" -> auth.login", args.Username)
+	if args.Username == h.username && args.Password == h.password {
+		reply.Data = h.sessionKey
+	} else {
+		return controller.FaultInvalidCredentials
+	}
+	return nil
 }
 
 func (h *UyuniServer) Logout(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
-	return h.mockLogout(r, args, reply)
+	log.Println(h.serverName + " -> auth.logout")
+	return nil
 }
 
-func (h *UyuniServer) ListUserSystems(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error {
-	return h.mockListUserSystems(r, args, reply)
+func (u *UyuniServer) ListUserSystems(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error {
+	log.Println(u.serverName+" -> System.ListUserSystems", args.Username)
+	if args.SessionKey == u.sessionKey && args.Username == u.username {
+		minions := make([]SystemInfoResponse, 0, len(u.minionsByID))
+		for _, minion := range u.minionsByID {
+			minions = append(minions, SystemInfoResponse{minion.id, minion.name})
+		}
+		reply.Data = minions
+	}
+	return nil
 }
 
-func (h *UyuniServer) ListSystems(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
-	return h.mockListSystems(r, args, reply)
+func (u *UyuniServer) ListSystems(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
+	log.Println(u.serverName+" -> System.ListSystems", args.SessionKey)
+	if args.SessionKey == u.sessionKey {
+		minions := make([]SystemInfoResponse, 0, len(u.minionsByID))
+		for _, minion := range u.minionsByID {
+			minions = append(minions, SystemInfoResponse{minion.id, minion.name})
+		}
+		reply.Data = minions
+	}
+	return nil
 }
 
-func (h *UyuniServer) ListFqdns(r *http.Request, args *struct {
+func (u *UyuniServer) ListFqdns(r *http.Request, args *struct {
 	SessionKey string
 	ServerId   int64
 }, reply *struct{ Data []string }) error {
-	return h.mockListFqdns(r, args, reply)
+	log.Println(u.serverName+" -> System.ListFqdns", args.ServerId)
+	if args.SessionKey == u.sessionKey {
+		reply.Data = []string{u.minionsByID[args.ServerId].fqdn}
+	}
+	return nil
 }
