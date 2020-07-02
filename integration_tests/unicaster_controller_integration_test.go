@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/client"
@@ -8,69 +9,67 @@ import (
 
 func Test_Unicast(t *testing.T) {
 	tt := []struct {
-		name, call             string
-		loginCredentials       struct{ username, password string }
-		analizeUnicastResponse func(unicastResponse interface{}) bool
-		expectedError          string
+		name, call              string
+		loginCredentials        struct{ username, password string }
+		unicastResponseAnalizer func(unicastResponse interface{}) bool
+		expectedError           string
 	}{
 		{
-			name:                   "unicast.system.listSystems should succeed",
-			call:                   "unicast.system.listSystems",
-			loginCredentials:       struct{ username, password string }{"admin", "admin"},
-			analizeUnicastResponse: analizeListSystemsUnicastResponse,
+			name:                    "unicast.system.listSystems should succeed",
+			call:                    "unicast.system.listSystems",
+			loginCredentials:        struct{ username, password string }{"admin", "admin"},
+			unicastResponseAnalizer: analizeListSystemsUnicastResponse,
 		},
 		{
-			name:                   "unkown method should fail",
-			call:                   "unicast.unkown.unkown",
-			loginCredentials:       struct{ username, password string }{"admin", "admin"},
-			analizeUnicastResponse: analizeUnkonwMethodUnicastResponse,
+			name:             "unkown method should fail",
+			call:             "unicast.unkown.unkown",
+			loginCredentials: struct{ username, password string }{"admin", "admin"},
+			expectedError:    "request error: bad status code - 400",
 		},
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
 			client := client.NewClient(10, 10)
-			//login
-			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
+			//login to Hub server
+			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAuthRelayMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing request: %v", err)
+				t.Fatalf("Error during executing login: %v", err)
 			}
-			hubSessionKey := loginResponse.(map[string]interface{})["SessionKey"].(string)
-			loggedInServerIDs := getLoggedInServerIDsFromLoginResponse(loginResponse)
-			//execute unicast call
-			unicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, loggedInServerIDs[0]})
+			hubSessionKey := loginResponse.(string)
+			//login to peripheral server 1
+			_, err = client.ExecuteCall(gatewayServerURL, "hub.attachToServers", []interface{}{hubSessionKey, []interface{}{peripheralServer1.id}})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing request: %v", err)
+				t.Fatalf("Error during executing attachToServers: %v", err)
 			}
-			if err == nil && !tc.analizeUnicastResponse(unicastResponse) {
+			//execute unicast call for peripheral server 1
+			unicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, peripheralServer1.id})
+			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
+				t.Fatalf("Error during executing unicast call: %v", err)
+			}
+			if err == nil && !tc.unicastResponseAnalizer(unicastResponse) {
 				t.Fatalf("Expected and actual values don't match. Actual value is: %v", unicastResponse)
+			}
+			//logout
+			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
+			if err != nil && tc.expectedError != err.Error() {
+				t.Fatalf("Error during executing logout: %v", err)
 			}
 		})
 	}
 }
 
 func analizeListSystemsUnicastResponse(unicastResponse interface{}) bool {
-	// [map[id:1000010001 name:peripheral-server-1000010001-minion-2] map[id:1000010000 name:peripheral-server-1000010001-minion-1]]
-	// systems := unicastResponse.([]interface{})
-
-	// if len(systems) != 2 {
-	// 	return false
-	// }
-	// for i, minionID := range systems {
-	// 	if _, ok := peripheralServers[serverID.(int64)]; !ok {
-	// 		return false
-	// 	}
-	// 	systems := successfulServerResponses[i].([]interface{})
-	// 	for _, system := range systems {
-	// 		systemMap := system.(map[string]interface{})
-	// 		if !compareMinion(peripheralServers[serverID.(int64)].minions[systemMap["id"].(int64)], systemMap) {
-	// 			return false
-	// 		}
-	// 	}
-	// }
-	return false
-}
-
-func analizeUnkonwMethodUnicastResponse(unicastResponse interface{}) bool {
-	return false
+	minions := unicastResponse.([]interface{})
+	if len(minions) != len(peripheralServer1.minions) {
+		return false
+	}
+	for _, minion := range minions {
+		minionMap := minion.(map[string]interface{})
+		minionID := minionMap["id"].(int64)
+		if !compareMinion(peripheralServer1.minions[minionID], minionMap) {
+			return false
+		}
+	}
+	return true
 }

@@ -29,6 +29,10 @@ func initHub(peripheralServersByID map[int64]SystemInfo, port int64, username, p
 		}
 		return nil
 	}
+	hub.mockLogout = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
+		log.Println("Hub -> auth.logout")
+		return nil
+	}
 	hub.mockListSystems = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
 		log.Println("Hub -> System.ListSystems", args.SessionKey)
 		if args.SessionKey == sessionKey {
@@ -78,6 +82,10 @@ func initPeripheralServers(peripheralServersByID map[int64]SystemInfo) {
 			reply.Data = sessionKey
 			return nil
 		}
+		server.mockLogout = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
+			log.Println("Server -> auth.logout")
+			return nil
+		}
 		server.mockListSystems = func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
 			log.Println("Server"+serverIDstr+" -> System.ListSystems", args.SessionKey)
 			if args.SessionKey == sessionKey {
@@ -102,6 +110,7 @@ func initServer(port int64, uyuniServer *UyuniServer) {
 		var codec = xmlrpc.NewCodec()
 
 		codec.RegisterMapping("auth.login", "UyuniServer.Login", parser.LoginRequestParser)
+		codec.RegisterMapping("auth.logout", "UyuniServer.Logout", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listSystems", "UyuniServer.ListSystems", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listUserSystems", "UyuniServer.ListUserSystems", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listFqdns", "UyuniServer.ListFqdns", parser.LoginRequestParser)
@@ -124,6 +133,7 @@ func initServer(port int64, uyuniServer *UyuniServer) {
 
 type UyuniServer struct {
 	mockLogin           func(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error
+	mockLogout          func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error
 	mockListUserSystems func(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error
 	mockListSystems     func(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error
 	mockListFqdns       func(r *http.Request, args *struct {
@@ -147,6 +157,10 @@ type SystemInfoResponse struct {
 
 func (h *UyuniServer) Login(r *http.Request, args *struct{ Username, Password string }, reply *struct{ Data string }) error {
 	return h.mockLogin(r, args, reply)
+}
+
+func (h *UyuniServer) Logout(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data string }) error {
+	return h.mockLogout(r, args, reply)
 }
 
 func (h *UyuniServer) ListUserSystems(r *http.Request, args *struct{ SessionKey, Username string }, reply *struct{ Data []SystemInfoResponse }) error {
