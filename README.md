@@ -102,7 +102,7 @@ for system in itertools.chain.from_iterable(systemsPerServer):
   print system.get('name')
 
 #logout
-client.auth.logout(hubSessionKey)
+client.hub.logout(hubSessionKey)
 ```
 
 

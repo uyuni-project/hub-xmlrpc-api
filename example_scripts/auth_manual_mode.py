@@ -27,4 +27,4 @@ for system in itertools.chain.from_iterable(successfulResponses):
     print(system)
 
 #logout
-client.auth.logout(hubSessionKey)
+client.hub.logout(hubSessionKey)
