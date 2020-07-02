@@ -33,22 +33,22 @@ func Test_Multicast(t *testing.T) {
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing login: %v", err)
+				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(map[string]interface{})["SessionKey"].(string)
 			loggedInServerIDs := getLoggedInServerIDsFromLoginResponse(loginResponse)
 			//execute multicast call
 			multicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, loggedInServerIDs})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing multicast call: %v", err)
+				t.Fatalf("Error occurred when executing multicast call: %v", err)
 			}
 			if err == nil && !tc.multicastResponseAnalizer(multicastResponse) {
-				t.Fatalf("Expected multicast and actual values don't match. Actual response is: %v", multicastResponse)
+				t.Fatalf("Expected and actual multicast responses don't match. Actual response is: %v", multicastResponse)
 			}
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing logout: %v", err)
+				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})
 	}

@@ -34,13 +34,13 @@ func Test_ProxyCallToHub(t *testing.T) {
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.login", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing login: %v", err)
+				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(string)
 			//execute call
 			callResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey})
 			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
-				t.Fatalf("Error during executing call: %v", err)
+				t.Fatalf("Error occurred when executing call: %v", err)
 			}
 			if err == nil && !tc.proxyCallToHubResponseAnalizer(callResponse) {
 				t.Fatalf("Expected and actual responses don't match. Actual response is: %v", callResponse)
@@ -48,7 +48,7 @@ func Test_ProxyCallToHub(t *testing.T) {
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
 			if err != nil && tc.expectedError != err.Error() {
-				t.Fatalf("Error during executing logout: %v", err)
+				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})
 	}
