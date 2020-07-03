@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/kolo/xmlrpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
+	xmlrpc "github.com/uyuni-project/xmlrpc-public-methods"
 )
 
 func encodeResponseToXML(response interface{}) ([]byte, error) {

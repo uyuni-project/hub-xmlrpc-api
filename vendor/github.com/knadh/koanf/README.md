@@ -1,4 +1,4 @@
-![koanf](https://user-images.githubusercontent.com/547147/59548139-fb2dd880-8f67-11e9-9af5-2fe2629a8fa6.png)
+![koanf](https://user-images.githubusercontent.com/547147/72681838-6981dd00-3aed-11ea-8f5d-310816c70c08.png)
 
 **koanf** (pronounced _conf_; a play on the Japanese _Koan_) is a library for reading configuration from different sources in different formats in Go applications. It is a cleaner, lighter [alternative to spf13/viper](#alternative-to-viper) with better abstractions and extensibility and fewer dependencies.
 
@@ -18,7 +18,7 @@ koanf comes with built in support for reading configuration from files, command 
 - [Reading from command line](#reading-from-command-line)
 - [Reading environment variables](#reading-environment-variables)
 - [Reading raw bytes](#reading-raw-bytes)
-- [Unmarshalling](#unmarshalling)
+- [Unmarshalling and marshalling](#unmarshalling-and-marshalling)
 - [Unmarshalling with flat paths](#unmarshalling-with-flat-paths)
 - [Setting default values](#setting-default-values)
 - [Order of merge and key case senstivity](#order-of-merge-and-key-case-senstivity)
@@ -228,6 +228,21 @@ func main() {
 }
 ```
 
+### Reading from an S3 bucket
+
+```go
+// Load JSON config from s3.
+if err := k.Load(s3.Provider(s3.Config{
+	AccessKey: os.Getenv("AWS_S3_ACCESS_KEY"),
+	SecretKey: os.Getenv("AWS_S3_SECRET_KEY"),
+	Region:    os.Getenv("AWS_S3_REGION"),
+	Bucket:    os.Getenv("AWS_S3_BUCKET"),
+	ObjectKey: "dir/config.json",
+}), json.Parser()); err != nil {
+	log.Fatalf("error loading config: %v", err)
+}
+```
+
 ### Reading raw bytes
 
 The bundled `rawbytes` Provider can be used to read arbitrary bytes from a source, like a database or an HTTP call.
@@ -253,53 +268,59 @@ func main() {
 }
 ```
 
-### Unmarshalling
+### Unmarshalling and marshalling
+`Parser`s can be used to unmarshal and scan the values in a Koanf instance into a struct based on the field tags, and also to marshal a Koanf instance back into serialized bytes, for example, back to JSON or YAML, to write back to files.
 
 ```go
-Unmarshalling is useful when you want to copy a nested config map into a struct (like unmarshalling JSON) instead of accessing individual config values using gettor methods.
-
 package main
 
 import (
-"fmt"
-"log"
+	"fmt"
+	"log"
 
-    "github.com/knadh/koanf"
-    "github.com/knadh/koanf/parsers/json"
-    "github.com/knadh/koanf/providers/file"
-
+	"github.com/knadh/koanf"
+	"github.com/knadh/koanf/parsers/json"
+	"github.com/knadh/koanf/providers/file"
 )
 
 // Global koanf instance. Use . as the key path delimiter. This can be / or anything.
-var k = koanf.New(".")
+var (
+	k      = koanf.New(".")
+	parser = json.Parser()
+)
 
 func main() {
-// Load JSON config.
-if err := k.Load(file.Provider("mock/mock.json"), json.Parser()); err != nil {
-log.Fatalf("error loading config: %v", err)
-}
+	// Load JSON config.
+	if err := k.Load(file.Provider("mock/mock.json"), parser); err != nil {
+		log.Fatalf("error loading config: %v", err)
+	}
 
-    // Structure to unmarshal nested conf to.
-    type childStruct struct {
-    	Name       string            `koanf:"name"`
-    	Type       string            `koanf:"type"`
-    	Empty      map[string]string `koanf:"empty"`
-    	GrandChild struct {
-    		Ids []int `koanf:"ids"`
-    		On  bool  `koanf:"on"`
-    	} `koanf:"grandchild1"`
-    }
+	// Structure to unmarshal nested conf to.
+	type childStruct struct {
+		Name       string            `koanf:"name"`
+		Type       string            `koanf:"type"`
+		Empty      map[string]string `koanf:"empty"`
+		GrandChild struct {
+			Ids []int `koanf:"ids"`
+			On  bool  `koanf:"on"`
+		} `koanf:"grandchild1"`
+	}
 
-    var out childStruct
+	var out childStruct
 
-    // Quick unmarshal.
-    k.Unmarshal("parent1.child1", &out)
-    fmt.Println(out)
+	// Quick unmarshal.
+	k.Unmarshal("parent1.child1", &out)
+	fmt.Println(out)
 
-    // Unmarshal with advanced config.
-    out = childStruct{}
-    k.UnmarshalWithConf("parent1.child1", &out, koanf.UnmarshalConf{Tag: "koanf"})
-    fmt.Println(out)
+	// Unmarshal with advanced config.
+	out = childStruct{}
+	k.UnmarshalWithConf("parent1.child1", &out, koanf.UnmarshalConf{Tag: "koanf"})
+	fmt.Println(out)
+
+	// Marshal the instance back to JSON.
+	// The paser instance can be anything, eg: json.Paser(), yaml.Parser() etc.
+	b, _ := k.Marshal(parser)
+	fmt.Println(string(b))
 }
 ```
 
@@ -361,6 +382,9 @@ func main() {
 	fmt.Println(o2)
 }
 ```
+
+### Marshalling and writing config
+It is possible to marshal and serialize the conf map into TOML, YAML etc.
 
 ### Setting default values.
 
@@ -497,6 +521,7 @@ Writing Providers and Parsers are easy. See the bundled implementations in the `
 | providers/env       | `env.Provider(prefix, delim string, f func(s string) string)` | Takes an optional prefix to filter env variables by, an optional function that takes and returns a string to transform env variables, and returns a nested config map based on delim. |
 | providers/confmap   | `confmap.Provider(mp map[string]interface{}, delim string)`   | Takes a premade `map[string]interface{}` conf map. If delim is provided, the keys are assumed to be flattened, thus unflattened using delim.                                          |
 | providers/structs   | `structs.Provider(s interface{}, tag string)`                 | Takes a struct and struct tag.                                           |
+| providers/s3   | `s3.Provider(s3.S3Config{})`                 | Takes a s3 config struct.                                           |
 | providers/rawbytes  | `rawbytes.Provider(b []byte)`                                 | Takes a raw `[]byte` slice to be parsed with a koanf.Parser                                                                                                                           |
 
 ### Bundled parsers
@@ -540,11 +565,12 @@ Writing Providers and Parsers are easy. See the bundled implementations in the `
 | `Float64(path string) float64`               |                                                                                                                                                                                            |
 | `Float64s(path string) []float64`            |                                                                                                                                                                                            |
 | `Float64Map(path string) map[string]float64` |                                                                                                                                                                                            |
-| `Duration(path string) time.Duration`        | Returns the time.Duration value of the given key path if it’s numeric (attempts a parse+convert if string)                                                                                 |
+| `Duration(path string) time.Duration`        | Returns the time.Duration value of the given key path if it’s numeric (attempts a parse+convert if string) or a string representation like "3s".                                                                                  |
 | `Time(path, layout string) time.Time`        | Parses the string value of the the given key path with the given layout format and returns time.Time. If the key path is numeric, treats it as a UNIX timestamp and returns its time.Time. |
 | `String(path string) string`                 |                                                                                                                                                                                            |
 | `Strings(path string) []string`              |                                                                                                                                                                                            |
 | `StringMap(path string) map[string]string`   |                                                                                                                                                                                            |
+| `StringsMap(path string) map[string][]string`   |                                                                                                                                                                                            |
 | `Byte(path string) []byte`                   |                                                                                                                                                                                            |
 | `Bool(path string) bool`                     |                                                                                                                                                                                            |
 | `Bools(path string) []bool`                  |                                                                                                                                                                                            |

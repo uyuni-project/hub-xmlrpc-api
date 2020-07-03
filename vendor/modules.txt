@@ -1,0 +1,14 @@
+# github.com/gorilla/rpc v1.2.0
+## explicit
+github.com/gorilla/rpc
+# github.com/knadh/koanf v0.10.0
+## explicit
+github.com/knadh/koanf
+github.com/knadh/koanf/maps
+github.com/knadh/koanf/providers/confmap
+github.com/knadh/koanf/providers/env
+# github.com/mitchellh/mapstructure v1.2.2
+github.com/mitchellh/mapstructure
+# github.com/uyuni-project/xmlrpc-public-methods v0.0.0-20200703131959-598a46400cf5
+## explicit
+github.com/uyuni-project/xmlrpc-public-methods
