@@ -32,153 +32,12 @@ type TypeMismatchError string
 
 func (e TypeMismatchError) Error() string { return string(e) }
 
-type decoder struct {
+type Decoder struct {
 	*xml.Decoder
 }
 
-func UnmarshalMethodCall(data []byte, output interface{}) (err error) {
-	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
-
-	if CharsetReader != nil {
-		dec.CharsetReader = CharsetReader
-	}
-
-	val := reflect.ValueOf(output).Elem()
-
-	//init struct
-	pmap, fields, err := initStruct(val)
-	if err != nil {
-		return err
-	}
-
-	ismap := (fields == nil)
-
-	//process tokens
-	var token xml.Token
-	for {
-		if token, err = dec.Token(); err != nil {
-			return err
-		}
-
-		if t, ok := token.(xml.StartElement); ok {
-			if t.Name.Local == "methodName" {
-				if token, err = dec.Token(); err != nil {
-					return err
-				}
-
-				methodName := string([]byte(token.(xml.CharData)))
-				if !ismap {
-					fields["methodName"].Set(reflect.ValueOf(methodName))
-				} else {
-					pmap.SetMapIndex(reflect.ValueOf("methodName"), reflect.Indirect(reflect.ValueOf(methodName)))
-				}
-
-				var params interface{}
-				if !ismap {
-					params = fields["params"]
-				}
-
-				err = dec.unmarshalParameters(&params)
-				if err != nil {
-					return err
-				}
-				if !ismap {
-					fields["params"].Set(reflect.ValueOf(params))
-				} else {
-					pmap.SetMapIndex(reflect.ValueOf("params"), reflect.Indirect(reflect.ValueOf(params)))
-				}
-			}
-		} else if t, ok := token.(xml.EndElement); ok {
-			if t.Name.Local == "methodCall" {
-				if ismap {
-					val.Set(pmap)
-				}
-				break
-			}
-		}
-	}
-
-	// read until end of document
-	err = dec.Skip()
-	if err != nil && err != io.EOF {
-		return err
-	}
-	return nil
-}
-
-func initStruct(val reflect.Value) (pmap reflect.Value, fields map[string]reflect.Value, err error) {
-	ismap := false
-	valType := val.Type()
-
-	if err = checkType(val, reflect.Struct); err != nil {
-		if checkType(val, reflect.Map) == nil {
-			if valType.Key().Kind() != reflect.String {
-				return pmap, fields, fmt.Errorf("only maps with string key type can be unmarshalled")
-			}
-			ismap = true
-		} else if checkType(val, reflect.Interface) == nil && val.IsNil() {
-			var dummy map[string]interface{}
-			valType = reflect.TypeOf(dummy)
-			pmap = reflect.New(valType).Elem()
-			val.Set(pmap)
-			ismap = true
-		} else {
-			return pmap, fields, err
-		}
-	}
-
-	if !ismap {
-		fields = make(map[string]reflect.Value)
-
-		for i := 0; i < valType.NumField(); i++ {
-			field := valType.Field(i)
-			fieldVal := val.FieldByName(field.Name)
-
-			if fieldVal.CanSet() {
-				if fn := field.Tag.Get("xmlrpc"); fn != "" {
-					fields[fn] = fieldVal
-				} else {
-					fields[field.Name] = fieldVal
-				}
-			}
-		}
-	} else {
-		// Create initial empty map
-		pmap.Set(reflect.MakeMap(valType))
-	}
-	return pmap, fields, nil
-}
-
-func (dec *decoder) unmarshalParameters(output interface{}) (err error) {
-	slice := reflect.ValueOf([]interface{}{})
-
-	var token xml.Token
-	for {
-		if token, err = dec.Token(); err != nil {
-			return err
-		}
-
-		if t, ok := token.(xml.StartElement); ok {
-			if t.Name.Local == "value" {
-				v := reflect.New(slice.Type().Elem())
-				if err = dec.decodeValue(v); err != nil {
-					return err
-				}
-				slice = reflect.Append(slice, v.Elem())
-			}
-		} else if t, ok := token.(xml.EndElement); ok {
-			if t.Name.Local == "params" {
-				val := reflect.ValueOf(output).Elem()
-				val.Set(slice)
-				break
-			}
-		}
-	}
-	return nil
-}
-
 func unmarshal(data []byte, v interface{}) (err error) {
-	dec := &decoder{xml.NewDecoder(bytes.NewBuffer(data))}
+	dec := &Decoder{xml.NewDecoder(bytes.NewBuffer(data))}
 
 	if CharsetReader != nil {
 		dec.CharsetReader = CharsetReader
@@ -196,7 +55,7 @@ func unmarshal(data []byte, v interface{}) (err error) {
 				if val.Kind() != reflect.Ptr {
 					return errors.New("non-pointer value passed to unmarshal")
 				}
-				if err = dec.decodeValue(val.Elem()); err != nil {
+				if err = dec.DecodeValue(val.Elem()); err != nil {
 					return err
 				}
 
@@ -214,7 +73,7 @@ func unmarshal(data []byte, v interface{}) (err error) {
 	return nil
 }
 
-func (dec *decoder) decodeValue(val reflect.Value) error {
+func (dec *Decoder) DecodeValue(val reflect.Value) error {
 	var tok xml.Token
 	var err error
 
@@ -337,7 +196,7 @@ func (dec *decoder) decodeValue(val reflect.Value) error {
 							return err
 						}
 						if t, ok := tok.(xml.StartElement); ok && t.Name.Local == "value" {
-							if err = dec.decodeValue(fv); err != nil {
+							if err = dec.DecodeValue(fv); err != nil {
 								return err
 							}
 
@@ -404,12 +263,12 @@ func (dec *decoder) decodeValue(val reflect.Value) error {
 							if v.Kind() != reflect.Ptr {
 								return errors.New("error: cannot write to non-pointer array element")
 							}
-							if err = dec.decodeValue(v); err != nil {
+							if err = dec.DecodeValue(v); err != nil {
 								return err
 							}
 						} else {
 							v := reflect.New(slice.Type().Elem())
-							if err = dec.decodeValue(v); err != nil {
+							if err = dec.DecodeValue(v); err != nil {
 								return err
 							}
 							slice = reflect.Append(slice, v.Elem())
@@ -548,7 +407,7 @@ func (dec *decoder) decodeValue(val reflect.Value) error {
 	return nil
 }
 
-func (dec *decoder) readTag() (string, []byte, error) {
+func (dec *Decoder) readTag() (string, []byte, error) {
 	var tok xml.Token
 	var err error
 
@@ -572,7 +431,7 @@ func (dec *decoder) readTag() (string, []byte, error) {
 	return name, value, dec.Skip()
 }
 
-func (dec *decoder) readCharData() ([]byte, error) {
+func (dec *Decoder) readCharData() ([]byte, error) {
 	var tok xml.Token
 	var err error
 

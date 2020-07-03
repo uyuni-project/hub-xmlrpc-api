@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/rpc"
-	"github.com/kolo/xmlrpc"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 )
 
@@ -56,8 +55,8 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 
 	r.Body = ioutil.NopCloser(bytes.NewBuffer(rawxml))
 
-	var serverRequest ServerRequest
-	if err := xmlrpc.UnmarshalMethodCall(rawxml, &serverRequest); err != nil {
+	serverRequest, err := UnmarshalMethodCall(rawxml)
+	if err != nil {
 		return &CodecRequest{err: err}
 	}
 
@@ -65,7 +64,7 @@ func (c *Codec) NewRequest(r *http.Request) rpc.CodecRequest {
 	serviceMethod := c.resolveServiceMethod(userMethod)
 	parser := c.resolveParser(serviceMethod)
 
-	return &CodecRequest{request: &serverRequest, serviceMethod: serviceMethod, parser: parser}
+	return &CodecRequest{request: serverRequest, serviceMethod: serviceMethod, parser: parser}
 }
 
 func (c *Codec) resolveParser(requestMethod string) Parser {
@@ -96,8 +95,8 @@ func (c *Codec) getNamespace(requestMethod string) string {
 }
 
 type ServerRequest struct {
-	MethodName string        `xmlrpc:"methodName"`
-	Params     []interface{} `xmlrpc:"params"`
+	MethodName string
+	Params     []interface{}
 }
 
 type CodecRequest struct {
