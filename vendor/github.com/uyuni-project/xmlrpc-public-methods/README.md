@@ -1,5 +1,11 @@
 [![GoDoc](https://godoc.org/github.com/kolo/xmlrpc?status.svg)](https://godoc.org/github.com/kolo/xmlrpc)
 
+# kolo/xmlrpc with with 'decoder' and 'marshal' made public
+
+This is a fork of [kolo/xmlrpc](https://github.com/kolo/xmlrpc) with the purpose of making 'decoder' and 'marshall' methods public.
+
+Long term plan is to move to another library such as [alexejk/go-xmlrpc](https://github.com/alexejk/go-xmlrpc)
+
 ## Overview
 
 xmlrpc is an implementation of client side part of XMLRPC protocol in Go language.
@@ -44,11 +50,12 @@ Data types encoding rules:
 * xmlrpc.Base64 encoded to base64;
 * slice encoded to array;
 
-Structs decoded to struct by following rules:
+Structs encoded to struct by following rules:
 
 * all public field become struct members;
 * field name become member name;
 * if field has xmlrpc tag, its value become member name.
+* for fields tagged with `",omitempty"`, empty values are omitted;
 
 Server method can accept few arguments, to handle this case there is
 special approach to handle slice of empty interfaces (`[]interface{}`).

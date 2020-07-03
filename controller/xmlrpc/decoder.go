@@ -6,7 +6,7 @@ import (
 	"io"
 	"reflect"
 
-	"github.com/kolo/xmlrpc"
+	xmlrpc "github.com/uyuni-project/xmlrpc-public-methods"
 )
 
 type Decoder struct {
