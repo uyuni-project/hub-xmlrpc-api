@@ -105,6 +105,18 @@ for system in itertools.chain.from_iterable(systemsPerServer):
 client.hub.logout(hubSessionKey)
 ```
 
+## Building
+
+For a normal build, just run `go install` (you will need at least go 1.11).
+
+To rebuild the project's RPM package:
+
+ - branch this Open Build Service project: https://build.opensuse.org/package/show/systemsmanagement:Uyuni:Master/hub-xmlrpc-api
+ - grab the latest sources: possibly edit the _service file for the right revision, then `osc service disabledrun`
+ - run `osc build <distro>`
+
+Submit Requests are appreciated for changes related to packaging.
+
 
 ## Versioning
 
