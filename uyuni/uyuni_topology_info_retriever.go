@@ -16,10 +16,11 @@ const (
 
 type uyuniTopologyInfoRetriever struct {
 	uyuniCallExecutor *uyuniCallExecutor
+	useSSL            bool
 }
 
-func NewUyuniTopologyInfoRetriever(uyuniCallExecutor *uyuniCallExecutor) *uyuniTopologyInfoRetriever {
-	return &uyuniTopologyInfoRetriever{uyuniCallExecutor}
+func NewUyuniTopologyInfoRetriever(uyuniCallExecutor *uyuniCallExecutor, useSSL bool) *uyuniTopologyInfoRetriever {
+	return &uyuniTopologyInfoRetriever{uyuniCallExecutor, useSSL}
 }
 
 func (h *uyuniTopologyInfoRetriever) RetrieveUserServerIDs(endpoint, sessionKey, username string) ([]int64, error) {
@@ -74,10 +75,10 @@ func (h *uyuniTopologyInfoRetriever) retrieveServerAPIEndpoint(endpoint, session
 		log.Printf("Error ocurred when retrieving the system Fqdns for serverID: %v, error:%v", serverID, err)
 		return "", err
 	}
-	return parseFQDN(response)
+	return parseFQDN(response, h.useSSL)
 }
 
-func parseFQDN(fqdnResponse interface{}) (string, error) {
+func parseFQDN(fqdnResponse interface{}, useSSL bool) (string, error) {
 	fqdns, ok := fqdnResponse.([]interface{})
 	if !ok {
 		log.Printf("Error ocurred when parsing the FQDNs of peripheral servers")
@@ -92,5 +93,9 @@ func parseFQDN(fqdnResponse interface{}) (string, error) {
 		log.Printf("Error ocurred when parsing the FQDNs of peripheral servers")
 		return "", errors.New("Error ocurred when parsing the FQDNs of peripheral servers")
 	}
-	return "http://" + firstFqdn + "/rpc/api", nil
+	protocol := "http://"
+	if useSSL {
+		protocol = "https://"
+	}
+	return protocol + firstFqdn + "/rpc/api", nil
 }

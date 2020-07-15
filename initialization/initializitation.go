@@ -29,7 +29,7 @@ func InitServer() {
 	//init uyuni adapters
 	uyuniCallExecutor := uyuni.NewUyuniCallExecutor(client)
 	uyuniAuthenticator := uyuni.NewUyuniAuthenticator(uyuniCallExecutor)
-	uyuniTopologyInfoRetriever := uyuni.NewUyuniTopologyInfoRetriever(uyuniCallExecutor)
+	uyuniTopologyInfoRetriever := uyuni.NewUyuniTopologyInfoRetriever(uyuniCallExecutor, conf.UseSSL)
 
 	//init session storage
 	var syncMap sync.Map
