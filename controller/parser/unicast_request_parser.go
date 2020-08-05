@@ -34,8 +34,8 @@ func UnicastRequestParser(request *xmlrpc.ServerRequest, output interface{}) err
 
 	rest := args[2:len(args)]
 	serverArgs := make([]interface{}, len(rest))
-	for i, list := range rest {
-		serverArgs[i] = list.(interface{})
+	for i, arg := range rest {
+		serverArgs[i] = (interface{})(arg)
 	}
 
 	method, err := removeNamespace(request.MethodName)
