@@ -151,6 +151,10 @@ func Test_UnicastRequestParser(t *testing.T) {
 			serverRequest:   &xmlrpc.ServerRequest{"unicast.method", []interface{}{"sessionKey", int64(1), "arg1_Server1", "arg2_Server1"}},
 			structToHydrate: &controller.UnicastRequest{},
 			expectedStruct:  controller.UnicastRequest{Call: "method", HubSessionKey: "sessionKey", ServerID: int64(1), Args: []interface{}{"arg1_Server1", "arg2_Server1"}}},
+		{name: "UnicastRequestParser nil parameters should succeed",
+			serverRequest:   &xmlrpc.ServerRequest{"unicast.method", []interface{}{"sessionKey", int64(1), "arg1", nil}},
+			structToHydrate: &controller.UnicastRequest{},
+			expectedStruct:  controller.UnicastRequest{Call: "method", HubSessionKey: "sessionKey", ServerID: int64(1), Args: []interface{}{"arg1", nil}}},
 		{name: "UnicastRequestParser wrong_number_of_arguments Failed",
 			serverRequest:   &xmlrpc.ServerRequest{"unicast.method", []interface{}{"sessionKey"}},
 			structToHydrate: &controller.UnicastRequest{},
@@ -180,8 +184,8 @@ func Test_UnicastRequestParser(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			err := UnicastRequestParser(tc.serverRequest, tc.structToHydrate)
-			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
-				t.Fatalf("expected and actual doesn't match, Expected was: %v", tc.expectedError)
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
+				t.Fatalf("expected and actual errors don't match, Expected was: %v", tc.expectedError)
 			}
 
 			if err == nil && !reflect.DeepEqual(tc.structToHydrate, &tc.expectedStruct) {
