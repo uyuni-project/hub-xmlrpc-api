@@ -18,6 +18,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
 github.com/uyuni-project/xmlrpc-public-methods v0.0.0-20200703131959-598a46400cf5 h1:LuwkuY9SHhXy05uvHlgXdgCH4nbt8bWOoOdCFwwKrsA=
 github.com/uyuni-project/xmlrpc-public-methods v0.0.0-20200703131959-598a46400cf5/go.mod h1:hS7daAcI0sq8g9GWR4cffika5MG3ClsWjvc/XongvCU=
+github.com/uyuni-project/xmlrpc-public-methods v0.0.0-20200805144514-2ca831c526d1 h1:sFoztHlAAdPjwujDzYeuKQ9RWAmyHAt4xdma+NHNCA8=
+github.com/uyuni-project/xmlrpc-public-methods v0.0.0-20200805144514-2ca831c526d1/go.mod h1:hS7daAcI0sq8g9GWR4cffika5MG3ClsWjvc/XongvCU=
 golang.org/x/sys v0.0.0-20191005200804-aed5e4c7ecf9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200331124033-c3d80250170d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

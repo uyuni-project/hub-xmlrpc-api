@@ -18,7 +18,7 @@ type encodeFunc func(reflect.Value) ([]byte, error)
 
 func Marshal(v interface{}) ([]byte, error) {
 	if v == nil {
-		return []byte{}, nil
+		return []byte("<value/>"), nil
 	}
 
 	val := reflect.ValueOf(v)
