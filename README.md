@@ -29,12 +29,13 @@ Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni 
  - `HUB_API_URL`: URL to the Hub XMLRPC API endpoint
  - `HUB_CONNECT_TIMEOUT`: maximum number of seconds to wait for a response when connecting to a Server
  - `HUB_REQUEST_TIMEOUT`: maximum numbr of seconds to wait for a response when calling a Server method
- - `USE_SSL`: use https instead of plain http for communicating with peripheral Servers
+ - `HUB_CONNECT_USING_SSL`: use https instead of plain http for communicating with peripheral Servers
 
  Default values should suffice in most settings.
 
 ### Note
-In order to use https to connect to peripheral Servers, in addition to setting `USE_SSL` flag to true, SSL certificates for all the peripheral Servers need to be installed on the machine where the `hub-xmlrpc-api` service runs. This can be achieved by copying the `RHN-ORG-TRUSTED-SSL-CERT` certificate file from each peripheral Server's `pub` directory (`https://<server-url>/pub/`) to `/etc/pki/trust/anchors/` and then running the `update-ca-certificates` command.
+
+In order to use https to connect to peripheral Servers, in addition to setting `HUB_CONNECT_USING_SSL` flag to true, SSL certificates for all the peripheral Servers need to be installed on the machine where the `hub-xmlrpc-api` service runs. This can be achieved by copying the `RHN-ORG-TRUSTED-SSL-CERT` certificate file from each peripheral Server's `pub` directory (`https://<server-url>/pub/`) to `/etc/pki/trust/anchors/` and then running the `update-ca-certificates` command.
 
 
 ## Usage

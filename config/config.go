@@ -19,10 +19,10 @@ type Config struct {
 func NewConfig() *Config {
 
 	k.Load(confmap.Provider(map[string]interface{}{
-		"HUB_API_URL":         "http://localhost/rpc/api",
-		"HUB_CONNECT_TIMEOUT": 10,
-		"HUB_REQUEST_TIMEOUT": 10,
-		"USE_SSL":             false,
+		"HUB_API_URL":           "http://localhost/rpc/api",
+		"HUB_CONNECT_TIMEOUT":   10,
+		"HUB_REQUEST_TIMEOUT":   10,
+		"HUB_CONNECT_USING_SSL": false,
 	}, "."), nil)
 
 	k.Load(env.Provider("HUB_", ".", nil), nil)
@@ -31,6 +31,6 @@ func NewConfig() *Config {
 		HubAPIURL:      k.String("HUB_API_URL"),
 		ConnectTimeout: k.Int("HUB_CONNECT_TIMEOUT"),
 		RequestTimeout: k.Int("HUB_REQUEST_TIMEOUT"),
-		UseSSL:         k.Bool("USE_SSL"),
+		UseSSL:         k.Bool("HUB_CONNECT_USING_SSL"),
 	}
 }
