@@ -9,6 +9,7 @@ Servers are registered and can be managed from the Hub just like normal SUSE Man
 ## Getting Started
 
 ### Requirements
+
  - one central SUSE Manager/Uyuni Server (hereinafter: "Hub")
  - two or more peripheral Servers registered to the Hub as Salt clients
  - any number of end clients registered to peripheral Servers
@@ -31,7 +32,7 @@ Install the package `hub-xmlrpc-api`, available from SUSE Manager 4.1 and Uyuni 
  - `HUB_REQUEST_TIMEOUT`: maximum numbr of seconds to wait for a response when calling a Server method
  - `HUB_CONNECT_USING_SSL`: use https instead of plain http for communicating with peripheral Servers
 
- Default values should suffice in most settings.
+Default values should suffice in most settings.
 
 ### Note
 
