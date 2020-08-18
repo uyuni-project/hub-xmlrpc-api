@@ -3,7 +3,7 @@ package integration_tests
 import (
 	"testing"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/uyuni/client"
 )
 
 func Test_Multicast(t *testing.T) {

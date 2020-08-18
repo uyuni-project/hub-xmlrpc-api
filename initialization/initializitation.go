@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/gorilla/rpc"
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
 	"github.com/uyuni-project/hub-xmlrpc-api/config"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller"
 	"github.com/uyuni-project/hub-xmlrpc-api/controller/parser"
@@ -15,6 +14,7 @@ import (
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 	"github.com/uyuni-project/hub-xmlrpc-api/session"
 	"github.com/uyuni-project/hub-xmlrpc-api/uyuni"
+	"github.com/uyuni-project/hub-xmlrpc-api/uyuni/client"
 )
 
 func InitServer() {
@@ -47,7 +47,7 @@ func InitServer() {
 	multicaster := gateway.NewMulticaster(uyuniCallExecutor, hubSessionRepository)
 	unicaster := gateway.NewUnicaster(uyuniCallExecutor, serverSessionRepository)
 
-	//init controller
+	//init controllers
 	xmlrpcCodec := initCodec()
 	rpcServer.RegisterCodec(xmlrpcCodec, "text/xml")
 

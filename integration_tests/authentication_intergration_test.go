@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/uyuni-project/hub-xmlrpc-api/client"
+	"github.com/uyuni-project/hub-xmlrpc-api/uyuni/client"
 )
 
 func Test_LoginWithManualMode(t *testing.T) {
