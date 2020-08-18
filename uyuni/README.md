@@ -1,1 +1,1 @@
-Implementation of functions specific to Uyuni.
+Adapter to communicate with the Uyuni API.
