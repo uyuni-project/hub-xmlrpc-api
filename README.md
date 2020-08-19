@@ -36,7 +36,7 @@ Default values should suffice in most settings.
 
 ### Note
 
-In order to use https to connect to peripheral Servers, in addition to setting `HUB_CONNECT_USING_SSL` flag to true, SSL certificates for all the peripheral Servers need to be installed on the machine where the `hub-xmlrpc-api` service runs. This can be achieved by copying the `RHN-ORG-TRUSTED-SSL-CERT` certificate file from each peripheral Server's `pub` directory (`https://<server-url>/pub/`) to `/etc/pki/trust/anchors/` and then running the `update-ca-certificates` command.
+In order to use https to connect to peripheral Servers, in addition to setting `HUB_CONNECT_USING_SSL` flag to true, SSL certificates for all the peripheral Servers need to be installed on the machine where the `hub-xmlrpc-api` service runs. This can be achieved by copying the `RHN-ORG-TRUSTED-SSL-CERT` certificate file from each peripheral Server's `pub` directory (`http://<server-url>/pub/`) to `/etc/pki/trust/anchors/` and then running the `update-ca-certificates` command.
 
 
 ## Usage
