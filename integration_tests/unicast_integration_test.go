@@ -33,26 +33,26 @@ func Test_Unicast(t *testing.T) {
 			client := client.NewClient(10, 10)
 			//login to Hub server
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAuthRelayMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(string)
 			//login to peripheral server 1
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.attachToServers", []interface{}{hubSessionKey, []interface{}{peripheralServer1.id}})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing attachToServers: %v", err)
 			}
 			//execute unicast call for peripheral server 1
 			unicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, peripheralServer1.id})
-			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing unicast call: %v", err)
 			}
-			if err == nil && !tc.unicastResponseAnalizer(unicastResponse) {
+			if err == nil && (tc.expectedError != "" || !tc.unicastResponseAnalizer(unicastResponse)) {
 				t.Fatalf("Expected and actual unicast responses don't match. Actual response is: %v", unicastResponse)
 			}
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})

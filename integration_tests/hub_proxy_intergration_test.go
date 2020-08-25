@@ -33,21 +33,21 @@ func Test_ProxyCallToHub(t *testing.T) {
 			client := client.NewClient(10, 10)
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.login", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(string)
 			//execute call
 			callResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey})
-			if err != nil && !strings.Contains(err.Error(), tc.expectedError) {
-				t.Fatalf("Error occurred when executing call: %v", err)
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
+				t.Fatalf("expected and actual errors don't match. Expected was:\n%v\nActual is:\n%v:", tc.expectedError, err.Error())
 			}
-			if err == nil && !tc.proxyCallToHubResponseAnalizer(callResponse) {
+			if err == nil && (tc.expectedError != "" || !tc.proxyCallToHubResponseAnalizer(callResponse)) {
 				t.Fatalf("Expected and actual responses don't match. Actual response is: %v", callResponse)
 			}
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})
