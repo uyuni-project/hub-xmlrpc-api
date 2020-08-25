@@ -1,6 +1,7 @@
 package integration_tests
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/uyuni/client"
@@ -32,22 +33,22 @@ func Test_Multicast(t *testing.T) {
 			client := client.NewClient(10, 10)
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing login: %v", err)
 			}
 			hubSessionKey := loginResponse.(map[string]interface{})["SessionKey"].(string)
 			loggedInServerIDs := getLoggedInServerIDsFromLoginResponse(loginResponse)
 			//execute multicast call
 			multicastResponse, err := client.ExecuteCall(gatewayServerURL, tc.call, []interface{}{hubSessionKey, loggedInServerIDs})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing multicast call: %v", err)
 			}
-			if err == nil && !tc.multicastResponseAnalizer(multicastResponse) {
+			if err == nil && (tc.expectedError != "" || !tc.multicastResponseAnalizer(multicastResponse)) {
 				t.Fatalf("Expected and actual multicast responses don't match. Actual response is: %v", multicastResponse)
 			}
 			//logout
 			_, err = client.ExecuteCall(gatewayServerURL, "hub.logout", []interface{}{hubSessionKey})
-			if err != nil && tc.expectedError != err.Error() {
+			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {
 				t.Fatalf("Error occurred when executing logout: %v", err)
 			}
 		})
