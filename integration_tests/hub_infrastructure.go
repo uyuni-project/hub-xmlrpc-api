@@ -31,6 +31,7 @@ func initServer(port int64, uyuniServer *UyuniServer) {
 		codec.RegisterMapping("auth.login", "UyuniServer.Login", parser.LoginRequestParser)
 		codec.RegisterMapping("auth.logout", "UyuniServer.Logout", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listSystems", "UyuniServer.ListSystems", parser.LoginRequestParser)
+		codec.RegisterMapping("system.listSystemsWithEntitlement", "UyuniServer.ListSystemsWithEntitlement", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listUserSystems", "UyuniServer.ListUserSystems", parser.LoginRequestParser)
 		codec.RegisterMapping("system.listFqdns", "UyuniServer.ListFqdns", parser.LoginRequestParser)
 
@@ -98,6 +99,18 @@ func (u *UyuniServer) ListUserSystems(r *http.Request, args *struct{ SessionKey,
 
 func (u *UyuniServer) ListSystems(r *http.Request, args *struct{ SessionKey string }, reply *struct{ Data []SystemInfoResponse }) error {
 	log.Println(u.serverName+" -> System.ListSystems", args.SessionKey)
+	if args.SessionKey == u.sessionKey {
+		minions := make([]SystemInfoResponse, 0, len(u.minionsByID))
+		for _, minion := range u.minionsByID {
+			minions = append(minions, SystemInfoResponse{minion.id, minion.name})
+		}
+		reply.Data = minions
+	}
+	return nil
+}
+
+func (u *UyuniServer) ListSystemsWithEntitlement(r *http.Request, args *struct{ SessionKey, Entitlement string }, reply *struct{ Data []SystemInfoResponse }) error {
+	log.Println(u.serverName+" -> System.ListSystemsWithEntitlement", args.SessionKey)
 	if args.SessionKey == u.sessionKey {
 		minions := make([]SystemInfoResponse, 0, len(u.minionsByID))
 		for _, minion := range u.minionsByID {

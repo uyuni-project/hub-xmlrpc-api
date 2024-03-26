@@ -8,10 +8,12 @@ import (
 )
 
 const (
-	listSystemsPath     = "system.listSystems"
-	listSystemFQDNsPath = "system.listFqdns"
-	listUserSystemsPath = "system.listUserSystems"
-	systemIDField       = "id"
+	listSystemsPath                = "system.listSystems"
+	listSystemsWithEntitlementPath = "system.listSystemsWithEntitlement"
+	listSystemFQDNsPath            = "system.listFqdns"
+	listUserSystemsPath            = "system.listUserSystems"
+	systemIDField                  = "id"
+	peripheralServerEntitlement    = "peripheral_server"
 )
 
 type uyuniTopologyInfoRetriever struct {
@@ -29,23 +31,50 @@ func (h *uyuniTopologyInfoRetriever) RetrieveUserServerIDs(endpoint, sessionKey,
 		log.Printf("Error ocurred while trying to login into the user systems: %v", err)
 		return nil, err
 	}
+
+	allServers, err := h.ListServerIDs(endpoint, sessionKey)
+	if err != nil {
+		return nil, err
+	}
+
 	userServersSlice := userServers.([]interface{})
 
 	serverIDs := make([]int64, 0, len(userServersSlice))
 	for _, userSystem := range userServersSlice {
 		serverID := userSystem.(map[string]interface{})[systemIDField].(int64)
-		serverIDs = append(serverIDs, serverID)
+		if contains(allServers, serverID) {
+			serverIDs = append(serverIDs, serverID)
+		}
 	}
 	return serverIDs, nil
 }
 
+func contains(s []int64, v int64) bool {
+	for _, lv := range s {
+		if lv == v {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) ([]int64, error) {
-	systemList, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsPath, []interface{}{sessionKey})
+	systemList, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsWithEntitlementPath, []interface{}{sessionKey, peripheralServerEntitlement})
 	if err != nil {
 		log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
 		return nil, err
 	}
 	systemsSlice := systemList.([]interface{})
+	if len(systemsSlice) == 0 {
+	        // No entitled servers - fallback to full list, for legacy HUB server
+		systemList, err = h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsPath, []interface{}{sessionKey})
+		if err != nil {
+			log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
+			return nil, err
+		}
+		systemsSlice = systemList.([]interface{})
+	}
 
 	systemIDs := make([]int64, len(systemsSlice))
 	for i, system := range systemsSlice {
