@@ -1,0 +1,53 @@
+- update go build version to 1.18-openssl
+
+-------------------------------------------------------------------
+Thu Sep 29 08:47:14 UTC 2022 - Marina Latini <marina.latini@suse.com>
+
+- Use golang(API) = 1.18 for building on SUSE (bsc#1203599)
+  This source fails to build with the current go1.19 on SUSE and we
+  need to use go1.18 instead.
+
+-------------------------------------------------------------------
+Fri Jan 21 20:11:30 UTC 2022 - Stefan Bluhm <stefan.bluhm@clacee.eu>
+
+- Updated to build on Enterprise Linux 8.
+
+-------------------------------------------------------------------
+Wed Sep  8 08:13:56 UTC 2021 - Ricardo Mateus <rmateus@suse.com>
+
+- use rpm systemd macro to restart service in replace of systemctl
+
+-------------------------------------------------------------------
+Wed Aug 19 11:34:05 UTC 2020 - Silvio Moioli <moio@suse.com>
+
+- version 0.7
+- one configuration flag was renamed for clarity
+
+-------------------------------------------------------------------
+Wed Jul 15 21:13:22 UTC 2020 - Abid Mehmood <amehmood@suse.com>
+
+- version 0.6
+- Added USE_SSL flag to https insted of plain http
+- Updated docs
+- Bugfixes
+
+-------------------------------------------------------------------
+Thu Jun 18 14:05:19 UTC 2020 - Silvio Moioli <moio@suse.com>
+
+- version 0.5
+- Changed configuration to plain variables
+- Bugfixes
+
+-------------------------------------------------------------------
+Thu Mar 30 2020 - Abid Mehmood <amehmood@suse.de>
+
+- version 0.1.4
+- Added systemd unit file for the api
+- Refactoring to make code more rebust
+- Better error handling in case of problems
+- Unit and Integration tests have been added
+
+-------------------------------------------------------------------
+Thu Feb 07 2020 - Abid Mehmood <amehmood@suse.de>
+
+- Initial commit 0.1.3
