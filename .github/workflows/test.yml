@@ -12,11 +12,11 @@ jobs:
       GO111MODULE: off
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.2.20
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e #v2.4.2
       with:
         path: ./src/github.com/${{ github.repository }}
     - name: Test
