@@ -13,11 +13,11 @@ jobs:
       GO111MODULE: off
     steps:
     - name: Install Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@bfdd3570ce990073878bf10f6b2d79082de49492 #v2.2.20
       with:
         go-version: 1.12.x
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e #v2.4.2
       with:
         path: ./src/github.com/${{ github.repository }}
     - name: Build
@@ -27,7 +27,7 @@ jobs:
       run:  tar cvzf hub-xmlrpc-api-linux-amd64.tar.gz hub-xmlrpc-api README.md
       working-directory: ${{ github.workspace }}/src/github.com/${{ github.repository }}
     - name: Create a Release
-      uses: actions/create-release@v1
+      uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e #v1.1.4 WARNING: Deprecated and archived! See the repository!
       id: create_release
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -37,7 +37,7 @@ jobs:
     
     - name: Upload Release Asset
       id: upload-release-asset 
-      uses: actions/upload-release-asset@v1.0.1
+      uses: actions/upload-release-asset@64e5e85fc528f162d7ba7ce2d15a3bb67efb3d80 #v1.0.1 WARNING: Deprecated and archived! See the repository!
       env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
