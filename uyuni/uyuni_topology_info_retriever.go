@@ -3,6 +3,7 @@ package uyuni
 import (
 	"errors"
 	"log"
+	"sync"
 
 	"github.com/uyuni-project/hub-xmlrpc-api/gateway"
 )
@@ -12,6 +13,7 @@ const (
 	listSystemsWithEntitlementPath = "system.listSystemsWithEntitlement"
 	listSystemFQDNsPath            = "system.listFqdns"
 	listUserSystemsPath            = "system.listUserSystems"
+	listPeripheralServersPath      = "sync.hub.listPeripheralServers"
 	systemIDField                  = "id"
 	peripheralServerEntitlement    = "peripheral_server"
 )
@@ -19,10 +21,16 @@ const (
 type uyuniTopologyInfoRetriever struct {
 	uyuniCallExecutor *uyuniCallExecutor
 	useSSL            bool
+	serverEndpoints   map[int64]string
+	mu                sync.RWMutex
 }
 
 func NewUyuniTopologyInfoRetriever(uyuniCallExecutor *uyuniCallExecutor, useSSL bool) *uyuniTopologyInfoRetriever {
-	return &uyuniTopologyInfoRetriever{uyuniCallExecutor, useSSL}
+	return &uyuniTopologyInfoRetriever{
+		uyuniCallExecutor: uyuniCallExecutor,
+		useSSL:            useSSL,
+		serverEndpoints:   make(map[int64]string),
+	}
 }
 
 func (h *uyuniTopologyInfoRetriever) RetrieveUserServerIDs(endpoint, sessionKey, username string) ([]int64, error) {
@@ -60,6 +68,33 @@ func contains(s []int64, v int64) bool {
 }
 
 func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) ([]int64, error) {
+	peripheralServers, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listPeripheralServersPath, []interface{}{sessionKey})
+	if err != nil {
+		log.Printf("Error occured while calling listPeripheralServersPath: %v", err)
+	} else {
+		serversSlice := peripheralServers.([]interface{})
+		systemIDs := make([]int64, len(serversSlice))
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		for i, s := range serversSlice {
+			server := s.(map[string]interface{})
+			id := server["id"].(int64)
+			fqdn := server["fqdn"].(string)
+			rootCA := server["root_ca"].(string)
+			systemIDs[i] = id
+
+			serverEndpoint := constructEndpoint(fqdn, h.useSSL)
+			h.serverEndpoints[id] = serverEndpoint
+			if rootCA != "" {
+				err := h.uyuniCallExecutor.client.AddRootCA([]byte(rootCA))
+				if err != nil {
+					log.Printf("Error ocurred while adding root CA for serverID %v: %v", id, err)
+				}
+			}
+		}
+		return systemIDs, nil
+	}
+
 	systemList, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsWithEntitlementPath, []interface{}{sessionKey, peripheralServerEntitlement})
 	if err != nil {
 		log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
@@ -67,7 +102,7 @@ func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) 
 	}
 	systemsSlice := systemList.([]interface{})
 	if len(systemsSlice) == 0 {
-	        // No entitled servers - fallback to full list, for legacy HUB server
+		// No entitled servers - fallback to full list, for legacy HUB server
 		systemList, err = h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsPath, []interface{}{sessionKey})
 		if err != nil {
 			log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
@@ -87,12 +122,21 @@ func (h *uyuniTopologyInfoRetriever) RetrieveServerAPIEndpoints(endpoint, sessio
 	serverAPIEndpointByServer := make(map[int64]string)
 	failedServers := make(map[int64]string)
 	for _, serverID := range serverIDs {
-		serverAPIEndpoint, err := h.retrieveServerAPIEndpoint(endpoint, sessionKey, serverID)
-		if err != nil {
-			failedServers[serverID] = err.Error()
-		} else {
-			serverAPIEndpointByServer[serverID] = serverAPIEndpoint
+		h.mu.RLock()
+		serverAPIEndpoint, ok := h.serverEndpoints[serverID]
+		h.mu.RUnlock()
+		if !ok {
+			var err error
+			serverAPIEndpoint, err = h.retrieveServerAPIEndpoint(endpoint, sessionKey, serverID)
+			if err != nil {
+				failedServers[serverID] = err.Error()
+				continue
+			}
+			h.mu.Lock()
+			h.serverEndpoints[serverID] = serverAPIEndpoint
+			h.mu.Unlock()
 		}
+		serverAPIEndpointByServer[serverID] = serverAPIEndpoint
 	}
 	return &gateway.RetrieveServerAPIEndpointsResponse{serverAPIEndpointByServer, failedServers}, nil
 }
@@ -122,9 +166,13 @@ func parseFQDN(fqdnResponse interface{}, useSSL bool) (string, error) {
 		log.Printf("Error ocurred when parsing the FQDNs of peripheral servers")
 		return "", errors.New("Error ocurred when parsing the FQDNs of peripheral servers")
 	}
+	return constructEndpoint(firstFqdn, useSSL), nil
+}
+
+func constructEndpoint(fqdn string, useSSL bool) string {
 	protocol := "http://"
 	if useSSL {
 		protocol = "https://"
 	}
-	return protocol + firstFqdn + "/rpc/api", nil
+	return protocol + fqdn + "/rpc/api"
 }

@@ -6,6 +6,7 @@ type uyuniCallExecutor struct {
 
 type Client interface {
 	ExecuteCall(endpoint string, call string, args []interface{}) (response interface{}, err error)
+	AddRootCA(pem []byte) error
 }
 
 func NewUyuniCallExecutor(client Client) *uyuniCallExecutor {
