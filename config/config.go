@@ -13,6 +13,7 @@ type Config struct {
 	HubAPIURL                      string
 	ConnectTimeout, RequestTimeout int
 	UseSSL                         bool
+	TraceClient                    bool
 }
 
 // NewConfig reads configuration from environment variables
@@ -23,6 +24,7 @@ func NewConfig() *Config {
 		"HUB_CONNECT_TIMEOUT":   10,
 		"HUB_REQUEST_TIMEOUT":   10,
 		"HUB_CONNECT_USING_SSL": false,
+		"HUB_TRACE_CLIENT":      false,
 	}, "."), nil)
 
 	k.Load(env.Provider("HUB_", ".", nil), nil)
@@ -32,5 +34,6 @@ func NewConfig() *Config {
 		ConnectTimeout: k.Int("HUB_CONNECT_TIMEOUT"),
 		RequestTimeout: k.Int("HUB_REQUEST_TIMEOUT"),
 		UseSSL:         k.Bool("HUB_CONNECT_USING_SSL"),
+		TraceClient:    k.Bool("HUB_TRACE_CLIENT"),
 	}
 }

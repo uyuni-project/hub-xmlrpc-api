@@ -73,7 +73,7 @@ func TestExecuteCall(t *testing.T) {
 			//init server
 
 			//init client
-			client := NewClient(tc.connectTimeout, tc.requestTimeout)
+			client := NewClient(tc.connectTimeout, tc.requestTimeout, false)
 
 			response, err := client.ExecuteCall(tc.url, tc.methodName, tc.args)
 
@@ -96,18 +96,44 @@ func TestExecuteCallWithTimeout(t *testing.T) {
 		sleepTime        time.Duration
 		expectedResponse interface{}
 		expectedError    string
+		sentResponse     string
 	}{
 		{name: "ExecuteCall Pass",
 			connectTimeout:   1,
 			requestTimeout:   1,
 			sleepTime:        0,
 			expectedResponse: "hello world",
+			sentResponse:     sampleResponse,
 		},
 		{name: "ExecuteCall Fail",
 			connectTimeout: 1,
 			requestTimeout: 1,
 			sleepTime:      2,
 			expectedError:  "i/o timeout",
+			sentResponse:   sampleResponse,
+		},
+		{name: "ListPeripheralServers Error",
+			connectTimeout: 1,
+			requestTimeout: 1,
+			sleepTime:      0,
+			expectedError:  "Example error",
+			sentResponse: `<?xml version="1.0" encoding="UTF-8"?>
+				<methodResponse>
+				  <fault>
+				    <value>
+				      <struct>
+				        <member>
+				          <name>faultCode</name>
+				          <value><int>-1</int></value>
+				        </member>
+				        <member>
+				          <name>faultString</name>
+				          <value><string>Example error</string></value>
+				        </member>
+				      </struct>
+				    </value>
+				  </fault>
+				</methodResponse>`,
 		},
 	}
 
@@ -117,18 +143,18 @@ func TestExecuteCallWithTimeout(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				log.Println("Sleeping...")
 				time.Sleep(tc.sleepTime * time.Second)
-				io.WriteString(w, sampleResponse)
+				io.WriteString(w, tc.sentResponse)
 			}))
 			defer ts.Close()
 
 			//init client
-			client := NewClient(tc.connectTimeout, tc.requestTimeout)
+			client := NewClient(tc.connectTimeout, tc.requestTimeout, false)
 			response, err := client.ExecuteCall(ts.URL, "test", []interface{}{})
 
 			//We expect error
 			if len(tc.expectedError) > 0 {
 				if err == nil || !strings.Contains(err.Error(), tc.expectedError) {
-					t.Fatalf("expected and actual doesn't match, Actuval was: %v, Expected was: %v", err, tc.expectedError)
+					t.Fatalf("expected and actual doesn't match, Actual was: %v, Expected was: %v", err, tc.expectedError)
 				}
 
 			} else {

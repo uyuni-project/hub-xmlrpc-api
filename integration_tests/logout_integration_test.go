@@ -33,7 +33,7 @@ func Test_Logout(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 			//setup env
-			client := client.NewClient(10, 10)
+			client := client.NewClient(10, 10, false)
 			//login
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.login", []interface{}{tc.loginCredentials.username, tc.loginCredentials.password})
 			if err != nil && (tc.expectedError == "" || !strings.Contains(err.Error(), tc.expectedError)) {

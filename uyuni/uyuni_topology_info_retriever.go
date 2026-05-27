@@ -70,7 +70,7 @@ func contains(s []int64, v int64) bool {
 func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) ([]int64, error) {
 	peripheralServers, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listPeripheralServersPath, []interface{}{sessionKey})
 	if err != nil {
-		log.Printf("Error occured while calling listPeripheralServersPath: %v", err)
+		log.Printf("Error occurred while calling listPeripheralServersPath: %v", err)
 	} else {
 		serversSlice := peripheralServers.([]interface{})
 		systemIDs := make([]int64, len(serversSlice))
@@ -88,7 +88,7 @@ func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) 
 			if rootCA != "" {
 				err := h.uyuniCallExecutor.client.AddRootCA([]byte(rootCA))
 				if err != nil {
-					log.Printf("Error ocurred while adding root CA for serverID %v: %v", id, err)
+					log.Printf("Error occurred while adding root CA for serverID %v: %v", id, err)
 				}
 			}
 		}
@@ -97,7 +97,7 @@ func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) 
 
 	systemList, err := h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsWithEntitlementPath, []interface{}{sessionKey, peripheralServerEntitlement})
 	if err != nil {
-		log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
+		log.Printf("Error occurred while retrieving the list of serverIDs: %v", err)
 		return nil, err
 	}
 	systemsSlice := systemList.([]interface{})
@@ -105,7 +105,7 @@ func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) 
 		// No entitled servers - fallback to full list, for legacy HUB server
 		systemList, err = h.uyuniCallExecutor.ExecuteCall(endpoint, listSystemsPath, []interface{}{sessionKey})
 		if err != nil {
-			log.Printf("Error occured while retrieving the list of serverIDs: %v", err)
+			log.Printf("Error occurred while retrieving the list of serverIDs: %v", err)
 			return nil, err
 		}
 		systemsSlice = systemList.([]interface{})

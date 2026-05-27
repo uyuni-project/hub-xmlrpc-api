@@ -24,7 +24,7 @@ func InitServer() {
 	conf := config.NewConfig()
 
 	//init xmlrpc client implementation
-	client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout)
+	client := client.NewClient(conf.ConnectTimeout, conf.RequestTimeout, conf.TraceClient)
 
 	//init uyuni adapters
 	uyuniCallExecutor := uyuni.NewUyuniCallExecutor(client)

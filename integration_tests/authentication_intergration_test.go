@@ -23,7 +23,7 @@ func Test_LoginWithManualMode(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 
-			client := client.NewClient(10, 10)
+			client := client.NewClient(10, 10, false)
 
 			//login
 			credentials := []interface{}{tc.username, tc.password}
@@ -62,7 +62,7 @@ func Test_LoginWithAutoconnectMode(t *testing.T) {
 	}
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			client := client.NewClient(10, 10)
+			client := client.NewClient(10, 10, false)
 			//login
 			credentials := []interface{}{tc.username, tc.password}
 			loginResponse, err := client.ExecuteCall(gatewayServerURL, "hub.loginWithAutoconnectMode", credentials)
@@ -98,7 +98,7 @@ func Test_LoginWithAuthRelayMode(t *testing.T) {
 
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
-			client := client.NewClient(10, 10)
+			client := client.NewClient(10, 10, false)
 
 			//login
 			credentials := []interface{}{tc.username, tc.password}
@@ -135,7 +135,7 @@ func Test_AttachToServers(t *testing.T) {
 	for _, tc := range tt {
 		t.Run(tc.name, func(t *testing.T) {
 
-			client := client.NewClient(10, 10)
+			client := client.NewClient(10, 10, false)
 
 			//login
 			credentials := []interface{}{tc.username, tc.password}
