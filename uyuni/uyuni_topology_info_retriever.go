@@ -80,7 +80,10 @@ func (h *uyuniTopologyInfoRetriever) ListServerIDs(endpoint, sessionKey string) 
 			server := s.(map[string]interface{})
 			id := server["id"].(int64)
 			fqdn := server["fqdn"].(string)
-			rootCA := server["root_ca"].(string)
+			var rootCA string
+			if rootCAObj, ok := server["root_ca"]; ok {
+				rootCA = rootCAObj.(string)
+			}
 			systemIDs[i] = id
 
 			serverEndpoint := constructEndpoint(fqdn, h.useSSL)

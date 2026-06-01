@@ -24,10 +24,14 @@ type Client struct {
 }
 
 func NewClient(connectTimeout, requestTimeout int, trace bool) *Client {
+	certPool, err := x509.SystemCertPool()
+	if err != nil {
+		log.Printf("Failed to get system CA cert pool: %v", err)
+	}
 	return &Client{
 		connectTimeout: connectTimeout,
 		requestTimeout: requestTimeout,
-		rootCAs:        x509.NewCertPool(),
+		rootCAs:        certPool,
 		trace:          trace,
 	}
 }
