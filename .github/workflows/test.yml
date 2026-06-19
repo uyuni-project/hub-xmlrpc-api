@@ -19,5 +19,7 @@ jobs:
       uses: actions/checkout@7884fcad6b5d53d10323aee724dc68d8b9096a2e #v2.4.2
       with:
         path: ./src/github.com/${{ github.repository }}
+    - name: Build
+        run: go build -v ./...
     - name: Test
       run: go test ./...
